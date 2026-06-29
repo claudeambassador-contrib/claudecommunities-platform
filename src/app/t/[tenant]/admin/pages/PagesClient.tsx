@@ -19,6 +19,7 @@ import {
   type WebinarBlock,
 } from "@/lib/cms/blocks";
 import { resizeImage, uploadFile } from "@/lib/upload-client";
+import { uuid } from "@/lib/uuid";
 import { saveHomePage } from "./actions";
 
 // ── Shared styling tokens (mirrors the settings precedent) ───────────────────
@@ -655,7 +656,7 @@ export default function PagesClient({ initialBlocks }: { initialBlocks: Block[] 
   /** Append a fresh, empty rich-text section — the tenant's "add your own content" path. */
   function addRichText() {
     const block: RichTextBlock = {
-      id: crypto.randomUUID(),
+      id: uuid(),
       type: "richText",
       enabled: true,
       heading: "",

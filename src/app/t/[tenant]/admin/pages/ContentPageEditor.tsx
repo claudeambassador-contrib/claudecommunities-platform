@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Can } from "@/components/admin/Can";
 import { useTenantRouter } from "@/components/TenantBaseProvider";
 import type { Block, RichTextBlock } from "@/lib/cms/blocks";
+import { uuid } from "@/lib/uuid";
 import { createPage, updatePage } from "./actions";
 
 // Shared styling tokens (mirror the home editor / settings precedent).
@@ -13,7 +14,7 @@ const INPUT =
 const LABEL = "block text-sm font-medium text-[#A8A29E] mb-1.5";
 
 function newSection(): RichTextBlock {
-  return { id: crypto.randomUUID(), type: "richText", enabled: true, heading: "", body: "" };
+  return { id: uuid(), type: "richText", enabled: true, heading: "", body: "" };
 }
 
 function isRichText(block: Block): block is RichTextBlock {

@@ -3,6 +3,7 @@
 import { GripVertical, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useState } from "react";
 import LessonContent from "@/components/LessonContent";
+import { uuid } from "@/lib/uuid";
 
 export interface Lesson {
   id: string;
@@ -66,7 +67,7 @@ export default function CourseModuleForm({
     onLessonsChange([
       ...lessons,
       {
-        id: `temp-${crypto.randomUUID()}`,
+        id: `temp-${uuid()}`,
         title: "",
         description: "",
         content: "",
