@@ -47,6 +47,81 @@ emits the D1-compatible client. `bun run preview` builds with
 `opennextjs-cloudflare` and serves through Wrangler — use it when verifying
 D1, R2, MCP, or Browser-binding behavior end-to-end.
 
+## Multi-tenant platform
+
+This codebase is **multi-tenant**: one Worker + one shared D1 database serve many
+communities. Every tenant-scoped row carries a `tenantId` that a Prisma
+`$extends` chokepoint (`src/lib/tenant-scope.ts`) injects and enforces, and
+`src/middleware.ts` maps each request to a tenant from the URL/host alone — by
+**custom domain** (`acme.com`), **subdomain** (`acme.<base>`), **path-prefix**
+(`<base>/acme`), or the deploy's **home tenant** (the apex). A "platform" deploy
+(e.g. `staging.claudecommunities.com`) is one whose home tenant is a generic
+platform shell, from which a **global super_admin** provisions and manages
+communities at `/admin` → Tenants.
+
+`docs/multi-tenancy-setup.md` is the full from-scratch runbook (deploy, DNS,
+provisioning); this is the short path.
+
+### What you actually need
+
+| For… | Requirements |
+|---|---|
+| **Local dev** | Bun + a **Clerk** application (publishable + secret key). Wrangler ships as a dev dependency and runs D1 **locally** under `.wrangler/state` — **no Cloudflare account or `wrangler login` needed.** |
+| **Deploying** | A **Cloudflare** account on the **Workers Paid** plan (Workflows + Browser Rendering are used) with `wrangler login`, plus the Clerk JWT issuer domain for the MCP server. |
+
+Clerk keys go in `.env.local`: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`,
+`CLERK_SECRET_KEY` (and `CLERK_JWT_ISSUER_DOMAIN` for the MCP server). A dummy
+publishable key renders public pages but you can't sign in — and you must sign in
+to administer — so use a real (free) Clerk app for platform dev. See
+`docs/auth.md` for Clerk configuration.
+
+### Local platform dev
+
+```bash
+bun install
+
+# .env.local — the Clerk keys above, plus point the apex at the platform shell:
+#   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_…
+#   CLERK_SECRET_KEY=sk_test_…
+#   HOME_TENANT=platform      # else the apex resolves to NEXT_PUBLIC_REGION (au)
+# localhost is already a platform host AND a subdomain base by default, so no
+# other routing knobs are needed locally.
+
+bun run local:d1:migrate     # create the local D1 schema under .wrangler/state
+bun run local:d1:seed        # base reference data
+
+# Seed the "platform" home tenant AND make yourself a GLOBAL super_admin in one
+# step — this is what unlocks the /admin → Tenants console:
+PLATFORM_OWNER_EMAIL=you@example.com bun run local:platform:seed-admin
+
+bun run dev                  # http://localhost:3000
+```
+
+Then **sign up with `you@example.com`** — you're a global super_admin. Open
+**`/admin` → Tenants** to create / suspend / delete communities. Each new
+community is live the instant it's created:
+
+| Routing | URL |
+|---|---|
+| Path-prefix | `http://localhost:3000/<slug>` |
+| Subdomain | `http://<slug>.localhost:3000` (`*.localhost` → loopback, no `/etc/hosts`) |
+| Home (platform shell) | `http://localhost:3000/` |
+
+Prefer scripts to the UI? `bun run local:tenant:provision -- <slug> "<Name>" <ownerEmail>`
+creates a community you can administer by signing up with `<ownerEmail>`.
+
+### Deploying a platform
+
+```bash
+bun run platform:staging:deploy   # → staging.claudecommunities.com (.env.staging.platform)
+```
+
+Per-env hostnames live in `wrangler.jsonc` (`HOME_TENANT`, `PLATFORM_HOSTS`,
+`TENANT_SUBDOMAIN_BASES`); runtime secrets go in with
+`wrangler secret put <NAME> --env staging-platform` (`CLERK_SECRET_KEY`,
+`CLERK_JWT_ISSUER_DOMAIN`, …). The full resource-creation + secrets + DNS
+checklist is in `docs/multi-tenancy-setup.md` §2.
+
 ## Build & deploy
 
 | Script | What it does |
@@ -132,6 +207,8 @@ eslint.config.mjs      # Slim Next-only ESLint config + import lockdown
 ## Further reading
 
 - `CLAUDE.md` — gotchas, conventions, and import-lockdown rules agents need to follow
+- `docs/multi-tenancy-setup.md` — full multi-tenant runbook: local dev, Cloudflare deploy, tenant provisioning, first-admin bootstrap, routing knobs
+- `docs/multi-tenancy-isolation-spec.md` — the isolation contract: the `tenantId` chokepoint and routing root-of-trust
 - `docs/auth.md` — Clerk configuration, Worker secrets, dashboards
 - `docs/biome-strict-backlog.md` — outstanding `warn`-level rules to ratchet to `error`
 - `docs/slide-generator-gap-analysis.md` — slide generator scope + caveats
