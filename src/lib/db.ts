@@ -49,6 +49,25 @@ export async function queryIn<T>(
   return out;
 }
 
+// Run several statements as ONE D1 transaction (`env.DB.batch`). All succeed or
+// all roll back. Statements execute in array order within a single transaction,
+// so a leading `PRAGMA defer_foreign_keys=ON` defers FK enforcement to COMMIT
+// for the whole batch (the only reliable way to bulk-delete across FK-linked
+// tables without a hand-maintained topo order).
+export async function runBatch(statements: { sql: string; params?: unknown[] }[]): Promise<void> {
+  const db = await getD1();
+  const prepared = statements.map((s) => {
+    const stmt = db.prepare(s.sql);
+    return s.params && s.params.length > 0 ? stmt.bind(...s.params) : stmt;
+  });
+  try {
+    await db.batch(prepared);
+  } catch (error) {
+    console.error("SQL Batch Error:", error);
+    throw error;
+  }
+}
+
 export async function run(sql: string, params: unknown[] = []) {
   try {
     await executeD1SQL(sql, params);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { SYSTEM_ROLES } from "@/lib/permissions";
-import { updateTenant } from "@/lib/services/tenants";
+import { deleteTenant, updateTenant } from "@/lib/services/tenants";
 
 /**
  * Platform-console edit of a single community's registry row (name / custom
@@ -48,6 +48,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const isClientError = /invalid|taken|required/i.test(message);
+    return NextResponse.json({ ok: false, error: message }, { status: isClientError ? 400 : 500 });
+  }
+}
+
+/**
+ * Permanently delete a community and ALL its data. Same global-super_admin gate
+ * as PATCH — a cross-tenant platform power. Irreversible; the UI confirms by
+ * requiring the operator to retype the slug.
+ */
+export async function DELETE(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const gate = await requirePlatformSuperAdmin();
+  if (gate.error) return gate.error;
+
+  const { slug } = await params;
+
+  try {
+    const result = await deleteTenant(slug);
+    return NextResponse.json({ ok: true, ...result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const isClientError = /not found|refusing|invalid/i.test(message);
     return NextResponse.json({ ok: false, error: message }, { status: isClientError ? 400 : 500 });
   }
 }

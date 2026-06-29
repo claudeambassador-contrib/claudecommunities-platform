@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   Power,
+  Trash2,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -28,15 +29,37 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,37}[a-z0-9]$/;
 function TenantManageRow({
   tenant,
   onChange,
+  onDelete,
 }: {
   tenant: TenantRow;
   onChange: (next: TenantRow) => void;
+  onDelete: (slug: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
   const [name, setName] = useState(tenant.name);
   const [customDomain, setCustomDomain] = useState(tenant.customDomain ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function handleDelete() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/tenants/${tenant.slug}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        onDelete(tenant.slug); // row unmounts — no need to reset local state
+      } else {
+        setError(data.error || "Delete failed");
+        setBusy(false);
+      }
+    } catch {
+      setError("Something went wrong");
+      setBusy(false);
+    }
+  }
 
   async function patch(body: Record<string, unknown>) {
     setBusy(true);
@@ -120,8 +143,76 @@ function TenantManageRow({
           >
             <Pencil className="w-4 h-4" />
           </button>
+          <button
+            type="button"
+            title="Delete community"
+            disabled={busy}
+            onClick={() => {
+              setConfirmingDelete((v) => !v);
+              setConfirmText("");
+              setError(null);
+            }}
+            className="p-2 rounded-lg text-[#A8A29E] hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
+
+      {confirmingDelete && (
+        <div className="mt-3 p-4 rounded-lg border border-red-500/30 bg-red-500/[0.06]">
+          <div className="flex items-start gap-2 text-red-400">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium">Permanently delete “{tenant.name}”?</p>
+              <p className="text-red-400/80 mt-1">
+                This erases every post, event, member record, course, email and setting for{" "}
+                <code className="text-red-300">/{tenant.slug}</code>. It cannot be undone. Uploaded
+                files in storage are not removed.
+              </p>
+            </div>
+          </div>
+          <div className="mt-3">
+            <label
+              htmlFor={`confirm-${tenant.slug}`}
+              className="block text-xs text-[#A8A29E] mb-1.5"
+            >
+              Type <span className="text-red-300 font-mono">{tenant.slug}</span> to confirm
+            </label>
+            <input
+              id={`confirm-${tenant.slug}`}
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder={tenant.slug}
+              autoComplete="off"
+              className="w-full sm:max-w-xs px-3 py-2 bg-[#1C1917] border border-white/[0.06] rounded-lg text-white text-sm placeholder-[#78716C] focus:outline-none focus:border-red-500/50"
+            />
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              disabled={busy || confirmText.trim() !== tenant.slug}
+              onClick={handleDelete}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-red-600/40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg"
+            >
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {busy ? "Deleting…" : "Delete permanently"}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setConfirmingDelete(false);
+                setConfirmText("");
+              }}
+              className="px-4 py-2 text-[#A8A29E] hover:text-white text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {editing && (
         <div className="mt-3 grid sm:grid-cols-2 gap-3">
@@ -365,6 +456,7 @@ export default function TenantsClient({ initialTenants }: { initialTenants: Tena
                   onChange={(next) =>
                     setTenants((prev) => prev.map((x) => (x.slug === next.slug ? next : x)))
                   }
+                  onDelete={(slug) => setTenants((prev) => prev.filter((x) => x.slug !== slug))}
                 />
               ))}
             </div>

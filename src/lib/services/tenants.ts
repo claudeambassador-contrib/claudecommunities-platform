@@ -10,10 +10,14 @@
  */
 import { randomBytes } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
+// eslint-disable-next-line no-restricted-imports -- deliberate cross-tenant platform purge: deleteTenant() removes one community's data across all tables, every statement explicitly filtered `WHERE "tenantId" = ?` (the audited-safe raw-SQL pattern). No scoped client can run a deferred-FK batch delete.
+import { runBatch } from "@/lib/db";
 import { ALL_PERMISSIONS, SYSTEM_ROLES } from "@/lib/permissions";
 import { getPlatformPrisma } from "@/lib/prisma";
+import { REGION } from "@/lib/region";
 import { parseTenantConfig, type TenantConfig } from "@/lib/tenant-config";
 import { DEFAULT_LEADERBOARD_LEVELS, DEFAULT_SPACES } from "@/lib/tenant-defaults";
+import { TENANT_SCOPED_MODELS } from "@/lib/tenant-models";
 import { isValidTenantSlug } from "@/lib/tenant-resolve";
 
 export interface ProvisionTenantInput {
@@ -378,6 +382,71 @@ export async function updateTenant(slug: string, input: UpdateTenantInput) {
     data.customDomain = customDomain;
   }
   return db.tenant.update({ where: { slug }, data });
+}
+
+export interface DeleteTenantResult {
+  slug: string;
+  /** Tenant-scoped tables purged (the registry + settings rows are extra). */
+  tablesPurged: number;
+}
+
+/**
+ * The ordered statement list {@link deleteTenant} runs as one D1 batch: a leading
+ * `PRAGMA defer_foreign_keys=ON`, then a `DELETE … WHERE tenantId = ?` for every
+ * tenant-scoped table (derived from {@link TENANT_SCOPED_MODELS}), then the
+ * settings + registry rows. Pure (no I/O) and exported so the purge's
+ * completeness, ordering and parameterization are lockable in tests.
+ */
+export function tenantPurgeStatements(slug: string): { sql: string; params?: unknown[] }[] {
+  return [
+    { sql: "PRAGMA defer_foreign_keys=ON" },
+    ...[...TENANT_SCOPED_MODELS].map((t) => ({
+      sql: `DELETE FROM "${t}" WHERE "tenantId" = ?`,
+      params: [slug],
+    })),
+    { sql: `DELETE FROM "TenantSetting" WHERE "tenantId" = ?`, params: [slug] },
+    { sql: `DELETE FROM "Tenant" WHERE "slug" = ?`, params: [slug] },
+  ];
+}
+
+/**
+ * Permanently delete a community: every tenant-scoped row plus the registry +
+ * settings. Irreversible.
+ *
+ * Tenant-scoped tables carry a loose `tenantId` column with NO foreign key to
+ * the Tenant registry (only `TenantSetting` cascades), so deleting the Tenant
+ * row alone would orphan ~70 tables. We instead purge each scoped table by
+ * `tenantId` — the list derives from {@link TENANT_SCOPED_MODELS}, so a newly
+ * added scoped model is swept automatically — then the settings + registry rows,
+ * all as ONE D1 transaction via {@link runBatch}. A leading
+ * `PRAGMA defer_foreign_keys=ON` defers FK enforcement to COMMIT, so delete
+ * order across the FK-linked tables is irrelevant (15 of 78 FKs are not
+ * ON DELETE CASCADE — order would otherwise matter). Atomic: a mid-way failure
+ * rolls the whole batch back, never stranding a half-deleted tenant.
+ *
+ * Left intact by design: GLOBAL rows — `User` identities (a person may belong to
+ * other communities), `EmailSuppressionList` (platform-wide unsubscribes), and
+ * the `ImpactLab*` portal. KNOWN LIMITATION: R2 blobs (avatars, covers, slide
+ * renders) are keyed `<folder>/<uuid>` with no tenant prefix, so they are not
+ * enumerable by tenant and are NOT swept — the DB rows referencing them are
+ * gone, leaving harmless orphaned objects in the bucket.
+ *
+ * Refuses to delete this deployment's own home-region community (slug === REGION).
+ */
+export async function deleteTenant(slug: string): Promise<DeleteTenantResult> {
+  const normalized = slug.toLowerCase().trim();
+  if (normalized === REGION) {
+    throw new Error(
+      `Refusing to delete "${normalized}" — it is this deployment's home-region community.`,
+    );
+  }
+  const db = await getPlatformPrisma();
+  const tenant = await db.tenant.findUnique({ where: { slug: normalized } });
+  if (!tenant) throw new Error(`Tenant not found: "${normalized}".`);
+
+  await runBatch(tenantPurgeStatements(normalized));
+
+  return { slug: normalized, tablesPurged: TENANT_SCOPED_MODELS.size };
 }
 
 /**

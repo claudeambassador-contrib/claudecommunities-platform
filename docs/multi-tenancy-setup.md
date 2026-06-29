@@ -277,6 +277,31 @@ wrangler d1 execute DB --remote --env <env> --file=/tmp/t.sql
   domains in Cloudflare, and set `Tenant.customDomain = "acme.com"` (the
   provision script's optional 4th arg, or an UPDATE).
 
+### 3.4 Deleting a tenant (irreversible)
+
+From **`/admin` → Tenants**, each row has a **trash action** that permanently
+deletes a community and **all** its data. The confirm panel requires retyping
+the slug. Same global-`super_admin` gate as create/edit.
+
+- API — `DELETE /api/admin/tenants/<slug>` → `deleteTenant()` in
+  `services/tenants.ts`.
+- Mechanics — tenant-scoped tables carry a **loose `tenantId` column with no FK
+  to the registry** (only `TenantSetting` cascades), so deleting the `Tenant`
+  row alone would orphan ~70 tables. `deleteTenant` instead purges every table
+  in `TENANT_SCOPED_MODELS` by `tenantId` (the list is derived, so a new scoped
+  model is swept automatically), then settings + registry, as **one
+  `env.DB.batch()` transaction** led by `PRAGMA defer_foreign_keys=ON` — delete
+  order is irrelevant (15 of 78 FKs aren't `ON DELETE CASCADE`) and the whole
+  thing is atomic. Locked by `test/iso/delete-tenant.test.ts`.
+- **Left intact** — GLOBAL rows: `User` identities (a person may belong to other
+  communities), `EmailSuppressionList` (platform-wide unsubscribes), Impact Lab.
+- **Refused** — the deploy's own home-region community (`slug === REGION`, e.g.
+  `au`/`nz`); use the DB directly if you truly mean to.
+- **Known gap** — R2 blobs (avatars, covers, slide renders) are keyed
+  `<folder>/<uuid>` with no tenant prefix, so they aren't enumerable by tenant
+  and are **not** swept; the DB rows referencing them are gone, leaving harmless
+  orphaned objects in the bucket.
+
 ---
 
 ## 4. The first super_admin (home tenant) + bootstrap
