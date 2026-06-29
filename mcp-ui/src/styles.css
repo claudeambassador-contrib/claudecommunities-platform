@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+/* Pull in Tailwind classes from the parent project's shared components
+ * (slide-generator layouts) which we import via the `@app` alias.
+ */
+@source "../../src/components/slide-generator/**/*.{ts,tsx}";
+
+@theme {
+  --color-claude-coral: #d4836a;
+  --color-claude-coral-light: #e09880;
+  --color-claude-coral-dark: #c4735a;
+  --color-claude-cream: #faf9f6;
+  --color-claude-dark: #1c1917;
+  --color-claude-dark-lighter: #292524;
+  --color-claude-dark-card: #2d2926;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-claude-dark);
+  color: var(--color-claude-cream);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}

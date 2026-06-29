@@ -1,0 +1,27 @@
+# Normalize all text files to LF in the repo *and* the working tree on every
+# OS. Without this, `core.autocrlf=true` on Windows checks files out as CRLF,
+# which Biome (LF-only) then rejects — invisible on Linux/WSL, breaks on Windows.
+# `eol=lf` forces LF on checkout regardless of each developer's local git config.
+* text=auto eol=lf
+
+# Binary assets git must never touch / convert.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.avif  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.eot   binary
+*.mp4   binary
+*.webm  binary
+*.mov   binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.tar   binary
+*.pen   binary

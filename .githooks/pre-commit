@@ -1,0 +1,20 @@
+#!/bin/sh
+# Cross-platform pre-commit hook (Linux, macOS, and Windows via Git's bundled bash).
+# Wired up by the package.json "prepare" script: git config core.hooksPath .githooks
+# Runs the full clean-codebase gate: biome lint+format, eslint, and tsc.
+#
+# Skip in a pinch with:  git commit --no-verify
+
+set -e
+
+if command -v bun >/dev/null 2>&1; then
+  RUN="bun run"
+else
+  echo "pre-commit: bun not found on PATH; falling back to npm" >&2
+  RUN="npm run"
+fi
+
+echo "pre-commit: running 'bun run check' (biome + eslint + tsc)…"
+$RUN check
+
+echo "pre-commit: clean ✔"

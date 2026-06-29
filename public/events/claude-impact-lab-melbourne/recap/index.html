@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Claude Impact Lab — Melbourne Edition</title>
+<meta name="description" content="A recap of the Claude Impact Lab, Melbourne Edition — a one-day hackathon building for the city's local challenges." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Silkscreen:wght@400;700&family=Hanken+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/events/claude-impact-lab-melbourne/recap/styles.css" />
+</head>
+<body>
+
+<!-- ============================== NAV ============================== -->
+<header class="nav" id="nav">
+  <div class="container nav__inner">
+    <a class="brand" href="#top" aria-label="Impact Lab — Claude Community Australia">
+      <span class="brand__mark" aria-hidden="true">
+        <img src="/events/claude-impact-lab-melbourne/recap/assets/logos/claude-community-australia.png" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />
+      </span>
+      <span class="brand__name"><b>Impact Lab</b></span>
+      <span class="brand__tag">Melbourne</span>
+    </a>
+    <nav class="nav__links" aria-label="Sections">
+      <a href="#instead" data-opentab="numbers">By the numbers</a>
+      <a href="#instead" data-opentab="mentors">The line-up</a>
+      <a href="#gallery">Who was there</a>
+      <a href="#projects">What they built</a>
+      <a href="#winners">Winners</a>
+      <a class="btn btn-primary nav__cta" href="https://claudecommunity.com.au/signup">Get involved</a>
+    </nav>
+    <button class="nav__menu-btn btn btn-ghost" id="menuBtn" aria-label="Open menu">Menu</button>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============================== HERO ============================== -->
+<section class="hero" data-hero="editorial" id="hero" data-screen-label="Hero">
+
+  <!-- Direction A · Editorial -->
+  <div class="h-editorial">
+    <div class="container">
+      <div class="hero__grid">
+        <div class="hero__copy">
+          <span class="eyebrow">Inaugural APAC · Melbourne 2026</span>
+          <h1 class="display hero__title">Building for <em>Melbourne</em>, in a single day.</h1>
+          <p class="lead">On Saturday 23 May 2026, ~60 builders gathered at Inspire9 in Richmond for the first Claude Impact Lab in APAC, building on real Australian data with Claude Code.</p>
+          <div class="hero__meta">
+            <span><span class="k">Date</span><br/><b>Sat 23 May 2026</b></span>
+            <span><span class="k">Place</span><br/><b>Inspire9, Richmond</b></span>
+            <span><span class="k">Format</span><br/><b>One-day hackathon</b></span>
+            <span><span class="k">Teams</span><br/><b>8 · 60 builders</b></span>
+          </div>
+          <div class="hero__actions">
+            <a class="btn btn-primary" href="#projects">See what we built</a>
+            <a class="btn btn-ghost" href="#instead">Read the recap</a>
+          </div>
+        </div>
+        <div class="hero__media">
+          <div class="hero__disc" aria-hidden="true"></div>
+          <video class="hero__video" autoplay muted loop playsinline preload="auto" poster="/events/claude-impact-lab-melbourne/recap/assets/web/hero-video-poster.jpg">
+            <source src="/api/files/recap/impact-lab-hero.mp4" type="video/mp4" />
+          </video>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Direction B · Split clay -->
+  <div class="h-clay">
+    <div class="hero__grid">
+      <div class="hero__panel">
+        <span class="eyebrow">Inaugural APAC · Melbourne 2026</span>
+        <h1 class="display hero__title">Building for <em>Melbourne</em>, in a single day.</h1>
+        <p class="lead">~60 builders. Three civic-data tracks. One Saturday at Inspire9 in Richmond, with Claude Code.</p>
+        <div class="hero__meta">
+          <span><span class="k">Date</span><br/><b>Sat 23 May 2026</b></span>
+          <span><span class="k">Place</span><br/><b>Inspire9, Richmond</b></span>
+          <span><span class="k">Teams</span><br/><b>8 · 60 builders</b></span>
+        </div>
+        <div class="hero__actions">
+          <a class="btn btn-primary" href="#projects">See what we built</a>
+          <a class="btn btn-ghost" href="#instead">Read the recap</a>
+        </div>
+      </div>
+      <div class="hero__media">
+        <image-slot id="hero-clay" src="/events/claude-impact-lab-melbourne/recap/assets/web/hero.jpg" shape="rect" placeholder="Drop a full-bleed hero photo"></image-slot>
+      </div>
+    </div>
+  </div>
+
+  <!-- Direction C · Dark -->
+  <div class="h-dark">
+    <div class="hero__inner">
+      <div class="container">
+        <div class="hero__stage">
+          <span class="eyebrow">Inaugural APAC · Melbourne 2026</span>
+          <h1 class="display hero__title">Building for <em>Melbourne</em>, in a single day.</h1>
+          <p class="lead">On Saturday 23 May 2026, ~60 builders gathered at Inspire9 in Richmond for the first Claude Impact Lab in APAC, building on real Australian data with Claude Code.</p>
+          <div class="hero__meta">
+            <span><span class="k">Date</span> <b>Sat 23 May 2026</b></span>
+            <span><span class="k">Place</span> <b>Inspire9, Richmond</b></span>
+            <span><span class="k">Teams</span> <b>8 · 60 builders</b></span>
+          </div>
+          <div class="hero__actions">
+            <a class="btn btn-primary" href="#projects">See what we built</a>
+            <a class="btn btn-ghost" href="#instead">Read the recap</a>
+          </div>
+        </div>
+      </div>
+      <div class="hero__band">
+        <image-slot id="hero-dark" src="/events/claude-impact-lab-melbourne/recap/assets/web/hero.jpg" shape="rect" placeholder="Drop a wide hero photo"></image-slot>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== INTRO (built with Claude) ============================== -->
+<section class="intro" id="intro" data-screen-label="The idea">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="ix-sunburst" viewBox="0 0 40 40">
+      <ellipse cx="20" cy="9" rx="1.7" ry="8"/>
+      <ellipse cx="20" cy="9" rx="1.7" ry="8" transform="rotate(30 20 20)"/>
+      <ellipse cx="20" cy="9" rx="1.7" ry="8" transform="rotate(60 20 20)"/>
+      <ellipse cx="20" cy="9" rx="1.7" ry="8" transform="rotate(90 20 20)"/>
+      <ellipse cx="20" cy="9" rx="1.7" ry="8" transform="rotate(120 20 20)"/>
+      <ellipse cx="20" cy="9" rx="1.7" ry="8" transform="rotate(150 20 20)"/>
+      <ellipse cx="20" cy="9" rx="1.7" ry="8" transform="rotate(180 20 20)"/>
+      <ellipse cx="20" cy="9" rx="1.7" ry="8" transform="rotate(210 20 20)"/>
+      <ellipse cx="20" cy="9" rx="1.7" ry="8" transform="rotate(240 20 20)"/>
+      <ellipse cx="20" cy="9" rx="1.7" ry="8" transform="rotate(270 20 20)"/>
+      <ellipse cx="20" cy="9" rx="1.7" ry="8" transform="rotate(300 20 20)"/>
+      <ellipse cx="20" cy="9" rx="1.7" ry="8" transform="rotate(330 20 20)"/>
+    </symbol>
+  </defs></svg>
+
+  <div class="intro__menubar" aria-hidden="true">
+    <div class="mb-left">
+      <span class="mb-brand"><img class="mb-mark" src="/events/claude-impact-lab-melbourne/recap/assets/logos/claude-sunburst.png" alt="" /> Claude</span>
+      <span class="mb-menus">File · Edit · View · Window · Help</span>
+    </div>
+    <div class="mb-right"><span>Sat 23 May</span><span>5:42 PM</span></div>
+  </div>
+
+  <div class="intro__lede">
+    <p class="q">What happens when you use the <em>magic of Claude</em> and connect it to real Melbourne community issues…</p>
+  </div>
+
+  <div class="intro__window">
+    <div class="winbar">
+      <span class="intro__dots"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+      <span class="winbar__title"><img src="/events/claude-impact-lab-melbourne/recap/assets/logos/claude-sunburst.png" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;" /> Claude</span>
+    </div>
+    <div class="intro__canvas">
+      <span class="intro__menu" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span>
+      <div class="container intro__stage">
+        <div class="intro__greet">
+          <span class="intro__mark" aria-hidden="true"><img src="/events/claude-impact-lab-melbourne/recap/assets/logos/claude-sunburst.png" alt="" style="width:100%;height:100%;object-fit:contain;display:block;" /></span>
+        </div>
+        <p class="intro__sub">Saturday 23 May 2026 · Melbourne</p>
+
+        <div class="composer">
+          <p class="composer__text">Create real impact for Melbourne, solve genuine local problems, improve people's lives. Make no mistakes.</p>
+          <div class="composer__row">
+            <button class="composer__add" tabindex="-1" aria-hidden="true">+</button>
+            <button class="composer__send" tabindex="-1" aria-label="Send">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="composer__meta">
+          <div class="composer__chips">
+            <span class="chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>
+              Impact Lab · Melbourne
+            </span>
+            <span class="chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v6m0-5a1.5 1.5 0 0 1 3 0v5m0-4a1.5 1.5 0 0 1 3 0v6a6 6 0 0 1-6 6h-1.2a4 4 0 0 1-3-1.3L5 15"/></svg>
+              Build
+            </span>
+          </div>
+          <div class="composer__model">Claude Opus · Deep thinking</div>
+        </div>
+
+        <div class="composer__hint"><span class="kbd">⌘</span><span class="kbd">⏎</span> to start building</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="intro__verdict intro__nlt--below">
+    <span class="verdict__line verdict__no"><em>Not</em> like this…</span>
+    <span class="verdict__line verdict__yes">but like <em>this:</em></span>
+  </div>
+</section>
+
+<!-- ============================== BUT INSTEAD (tabbed ingredients) ============================== -->
+<section class="section instead" id="instead" data-screen-label="But instead">
+  <div class="container">
+    <p class="instead__lead"><span class="ing-intro">We started by bringing together some</span><span class="ing-sep"> </span><button class="tab is-active" data-tab="numbers">incredible people</button><span class="ing-sep">, with </span><button class="tab" data-tab="people">incredible experience</button><span class="ing-sep">, some </span><button class="tab" data-tab="mentors">incredible mentors</button><span class="ing-sep">, </span><button class="tab" data-tab="data">real local data</button><span class="ing-sep">, and some </span><button class="tab" data-tab="coffee">good coffee</button><span class="ing-sep">.</span></p>
+
+    <div class="instead__panels">
+      <!-- Incredible people — by the numbers -->
+      <div class="instead__panel is-active" data-panel="numbers">
+        <div class="panel__head">
+          <span class="eyebrow">Incredible people</span>
+          <h3 class="panel__title">Demand outstripped capacity by almost 7×.</h3>
+          <p class="panel__sub">~400 applied for ~60 seats. The inaugural APAC Impact Lab, in a single Saturday at Inspire9, Richmond.</p>
+        </div>
+        <figure class="panel__media">
+          <img src="/events/claude-impact-lab-melbourne/recap/assets/web/hero-room.webp" loading="lazy" alt="Builders at work during the Claude Impact Lab, Inspire9 Richmond" />
+        </figure>
+        <div class="panel__stats">
+          <div class="pstat"><div class="pstat__num">400<span>+</span></div><div class="pstat__label">Registrations</div></div>
+          <div class="pstat"><div class="pstat__num">60</div><div class="pstat__label">Confirmed seats</div></div>
+          <div class="pstat"><div class="pstat__num">6.7<span>×</span></div><div class="pstat__label">Oversubscribed</div></div>
+          <div class="pstat"><div class="pstat__num">8</div><div class="pstat__label">Teams</div></div>
+        </div>
+      </div>
+
+      <!-- Experience -->
+      <div class="instead__panel" data-panel="people">
+        <div class="panel__head">
+          <span class="eyebrow">Incredible experience</span>
+          <h3 class="panel__title">Senior operators across Australia's tech ecosystem.</h3>
+        </div>
+        <div class="room__grid">
+          <div class="room-card"><div class="room-card__num">13</div><div><div class="room-card__title">Founders / CTOs</div><div class="room-card__orgs">Envato · Heumans · Slate · Wibci · Real Minds AI · Seed Blocks</div></div></div>
+          <div class="room-card"><div class="room-card__num">7</div><div><div class="room-card__title">Senior engineering leads</div><div class="room-card__orgs">Zendesk · Foxtel · Clarity · Harmony Intelligence · Versent</div></div></div>
+          <div class="room-card"><div class="room-card__num">5</div><div><div class="room-card__title">AI / ML specialists</div><div class="room-card__orgs">CBA · BMW Financial · Cairn AI · Helfie AI · Defence</div></div></div>
+          <div class="room-card"><div class="room-card__num">12</div><div><div class="room-card__title">Engineers / developers</div><div class="room-card__orgs">MongoDB · Linktree · Twilio · Sitemate · MYOB · MCRI · Canva</div></div></div>
+          <div class="room-card"><div class="room-card__num">8</div><div><div class="room-card__title">Designers (Product/UX)</div><div class="room-card__orgs">MYOB · UpGuard · Westpac · JET Charge · Telstra Health</div></div></div>
+          <div class="room-card"><div class="room-card__num">6</div><div><div class="room-card__title">Students / early career</div><div class="room-card__orgs">Monash · Melbourne · Sydney · Swinburne · IAG</div></div></div>
+          <div class="room-card"><div class="room-card__num">3</div><div><div class="room-card__title">Consultants / generalists</div><div class="room-card__orgs">Independent · M&amp;A consulting · PuntyAI</div></div></div>
+          <div class="room-card"><div class="room-card__num">6</div><div><div class="room-card__title">Other</div><div class="room-card__orgs">MCG (data) · marketing · Team Topologies (APAC)</div></div></div>
+        </div>
+      </div>
+
+      <!-- Mentors -->
+      <div class="instead__panel" data-panel="mentors">
+        <div class="panel__head">
+          <span class="eyebrow">Incredible mentors</span>
+          <h3 class="panel__title">The people who made it run.</h3>
+          <p class="panel__sub">Speakers, mentors and judges who gave their Saturday to the room, rotating through every team on the hour, unblocking and pushing the work further.</p>
+        </div>
+        <div class="people">
+          <div class="person"><div class="person__photo"><image-slot id="person-19" src="/events/claude-impact-lab-melbourne/recap/assets/people/rye-smith.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Rye Smith</div><div class="person__role">Claude Ambassador &amp; organiser</div><div class="person__org">Anthropic</div></div>
+          <div class="person"><div class="person__photo"><image-slot id="person-18" src="/events/claude-impact-lab-melbourne/recap/assets/people/gary-williams.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Gary Williams</div><div class="person__role">Organiser</div><div class="person__org">&nbsp;</div></div>
+          <div class="person"><div class="person__photo"><image-slot id="person-5" src="/events/claude-impact-lab-melbourne/recap/assets/people/dominik-fretz.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Dominik Fretz</div><div class="person__role">Speaker</div><div class="person__org">Claude Code Ambassador</div></div>
+          <div class="person"><div class="person__photo"><image-slot id="person-15" src="/events/claude-impact-lab-melbourne/recap/assets/people/matthew-mckinlay.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Matthew McKinlay</div><div class="person__role">Organiser</div><div class="person__org">&nbsp;</div></div>
+          <div class="person"><div class="person__photo"><image-slot id="person-2" src="/events/claude-impact-lab-melbourne/recap/assets/people/liz-blink.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Liz Blink</div><div class="person__role">Speaker · Platform PM</div><div class="person__org">ex-Block</div></div>
+          <div class="person"><div class="person__photo"><image-slot id="person-3" src="/events/claude-impact-lab-melbourne/recap/assets/people/dave-king.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Dave King</div><div class="person__role">Speaker</div><div class="person__org">Radical Intelligence</div></div>
+          <div class="person"><div class="person__photo"><image-slot id="person-4" src="/events/claude-impact-lab-melbourne/recap/assets/people/ben-flint.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Ben Flint</div><div class="person__role">Speaker</div><div class="person__org">Supernormal Systems</div></div>
+          <div class="person"><div class="person__photo"><image-slot id="person-6" src="/events/claude-impact-lab-melbourne/recap/assets/people/matthew-morgan.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Matthew Morgan</div><div class="person__role">Speaker</div><div class="person__org">Government &amp; public sector</div></div>
+          <div class="person"><div class="person__photo"><image-slot id="person-7" src="/events/claude-impact-lab-melbourne/recap/assets/people/jeanette-cheah.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Jeanette Cheah</div><div class="person__role">Mentor &amp; judge</div><div class="person__org">HEX</div></div>
+          <div class="person"><div class="person__photo"><image-slot id="person-12" src="/events/claude-impact-lab-melbourne/recap/assets/people/luke-marshall-v2.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Luke “Marshy” Marshall</div><div class="person__role">Mentor</div><div class="person__org">Pointer</div></div>
+          <div class="person"><div class="person__photo"><image-slot id="person-16" src="/events/claude-impact-lab-melbourne/recap/assets/people/lucy-lin.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Lucy Lin</div><div class="person__role">Mentor</div><div class="person__org">&nbsp;</div></div>
+          <div class="person"><div class="person__photo"><image-slot id="person-17" src="/events/claude-impact-lab-melbourne/recap/assets/people/stephen-johnstone.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Stephen Johnstone</div><div class="person__role">Mentor</div><div class="person__org">&nbsp;</div></div>
+          <div class="person"><div class="person__photo"><image-slot id="person-20" src="/events/claude-impact-lab-melbourne/recap/assets/people/geremy-mckay.jpg" shape="rounded" radius="20" placeholder="Headshot"></image-slot></div><div class="person__name">Geremy McKay</div><div class="person__role">Mentor</div><div class="person__org">&nbsp;</div></div>
+        </div>
+      </div>
+
+      <!-- Gov data -->
+      <div class="instead__panel" data-panel="data">
+        <div class="panel__head">
+          <span class="eyebrow">Real local data</span>
+          <h3 class="panel__title">Custom local data, built for the day.</h3>
+        </div>
+        <p class="panel__lead panel__lead--full">Teams didn't start from a blank page. Building was grounded in real, public Australian datasets from partners who opened their data specifically for the Lab, so prototypes pointed at how Victoria and Melbourne actually move, live and work.</p>
+        <div class="datasets">
+          <article class="dataset">
+            <div class="dataset__logo"><img src="/events/claude-impact-lab-melbourne/recap/assets/logos/vic-gov.webp" alt="Victorian State Government" /></div>
+            <div class="dataset__body">
+              <h4 class="dataset__name">Victorian Government Open Data</h4>
+              <p class="dataset__desc">Transport, health, environment, education and public safety. The broadest pool of Victorian government data available to builders.</p>
+            </div>
+            <div class="dataset__meta"><span class="dataset__src">data.vic.gov.au</span></div>
+          </article>
+          <article class="dataset">
+            <div class="dataset__logo"><img src="/events/claude-impact-lab-melbourne/recap/assets/logos/city-of-melbourne.png" alt="City of Melbourne" /></div>
+            <div class="dataset__body">
+              <h4 class="dataset__name">City of Melbourne Open Data</h4>
+              <p class="dataset__desc">Pedestrian counts, planning and urban services, with the Lord Mayor's office invited onto the judging panel.</p>
+            </div>
+            <div class="dataset__meta"><span class="dataset__src">data.melbourne.vic.gov.au</span></div>
+          </article>
+          <article class="dataset">
+            <div class="dataset__logo"><img src="/events/claude-impact-lab-melbourne/recap/assets/logos/glow.svg" alt="Glow" /></div>
+            <div class="dataset__body">
+              <h4 class="dataset__name">Glow sustainability data</h4>
+              <p class="dataset__desc">Sustainability demand signals provided specifically for the Impact Lab. A bespoke dataset for the day.</p>
+            </div>
+            <div class="dataset__meta"><span class="dataset__stat">12,000<span>+</span></span><span class="dataset__statlabel">Australians</span></div>
+          </article>
+        </div>
+      </div>
+
+      <!-- Coffee -->
+      <div class="instead__panel" data-panel="coffee">
+        <div class="panel__head">
+          <span class="eyebrow">Good coffee</span>
+          <h3 class="panel__title">This is Melbourne, after all.</h3>
+        </div>
+        <div class="coffee">
+          <figure class="coffee__media">
+            <image-slot id="coffee-photo" src="/events/claude-impact-lab-melbourne/recap/assets/web/hectors.jpg" shape="rounded" radius="18" placeholder="Hectors Richmond"></image-slot>
+            <figcaption class="coffee__credit">Hectors, Richmond. Next door.</figcaption>
+          </figure>
+          <div class="coffee__copy">
+            <div class="coffee__num">∞</div>
+            <p class="coffee__txt">Food and coffee flowing all day, because people build better when they're fed. With Hectors right next door, nobody went short. This is Melbourne, after all.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== BUT BEFORE WE START (tabbed) ============================== -->
+<section class="section instead" id="before" data-screen-label="But before we start">
+  <div class="container">
+    <p class="instead__lead"><span class="ing-intro">And then add some extra ingredients:</span><span class="ing-sep"> a </span><button class="tab is-active" data-tab="martine">conversation with Martine</button><span class="ing-sep">, a </span><button class="tab" data-tab="rye">guide from Rye and Gary</button><span class="ing-sep">, a </span><button class="tab" data-tab="portal">custom admin dashboard built with Claude</button><span class="ing-sep">, and a </span><button class="tab" data-tab="problem">specific problem to choose from</button><span class="ing-sep">.</span></p>
+
+    <div class="instead__panels">
+      <!-- Martine -->
+      <div class="instead__panel is-active" data-panel="martine">
+        <div class="panel__head">
+          <span class="eyebrow">9:00 AM · The day opens</span>
+          <h3 class="panel__title">A few words from <em>Anthropic.</em></h3>
+        </div>
+        <div class="talk__grid">
+          <div class="talk__media"><image-slot id="talk-photo" src="/events/claude-impact-lab-melbourne/recap/assets/web/martine.jpg" shape="rounded" radius="18" placeholder="Photo — Martine joins the room"></image-slot></div>
+          <div class="talk__copy">
+            <p class="lead">Martine Nilsen, from the Claude Code community team at Anthropic, joined remotely to welcome the room and frame the day.</p>
+            <p>Martine welcomed the room with a milestone worth marking: this was the <strong>first Claude Impact Lab in the Southern Hemisphere.</strong></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rye -->
+      <div class="instead__panel" data-panel="rye">
+        <div class="panel__head">
+          <span class="eyebrow">A guide from Rye &amp; Gary</span>
+          <h3 class="panel__title">Why Impact Labs matter.</h3>
+        </div>
+        <div class="talk__grid">
+          <div class="talk__media"><image-slot id="rye-photo" src="/events/claude-impact-lab-melbourne/recap/assets/web/rye.jpg" shape="rounded" radius="18" placeholder="Photo — Rye opens the Lab"></image-slot></div>
+          <div class="talk__copy">
+            <p class="lead">Rye framed the Impact Lab model: build genuinely useful tools on real public data, for the community. Gary welcomed the room to Melbourne and set the spirit for the day.</p>
+            <div class="panel__list">
+              <div class="panel__item"><b>The model</b><span>One-day, community-run, sponsored by Anthropic through the Ambassadors Program. Impact over prizes.</span></div>
+              <div class="panel__item"><b>The momentum</b><span>San Diego, Mexico City, Miami, Santiago, and now APAC.</span></div>
+              <div class="panel__item"><b>The spirit</b><span>Collaborative, curious and pointed at the city. Make something real, and have a good Saturday doing it.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Portal -->
+      <div class="instead__panel" data-panel="portal">
+        <div class="panel__head">
+          <span class="eyebrow">A custom admin dashboard</span>
+          <h3 class="panel__title">A portal for the day, built with Claude.</h3>
+        </div>
+        <div class="talk__grid">
+          <div class="talk__media"><image-slot id="portal-photo" src="/events/claude-impact-lab-melbourne/recap/assets/web/portal.jpg" shape="rounded" radius="18" placeholder="Impact Lab portal"></image-slot></div>
+          <div class="talk__copy">
+            <p class="lead">Rye built a custom Melbourne Impact Lab portal at claudecommunity.com.au/impact-lab, built to run the day end to end and help everyone navigate it.</p>
+            <div class="panel__list">
+              <div class="panel__item"><b>Participant check-in</b><span>Gated entry that organisers open when the doors do, so participants, mentors and judges each get their own view.</span></div>
+              <div class="panel__item"><b>Run the day</b><span>Schedule, teams and tracks in one place, with an organiser sign-in behind the scenes.</span></div>
+              <div class="panel__item"><b>And the essentials</b><span>Coffee vouchers included, because no Melbourne build day runs without them.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Problem statement -->
+      <div class="instead__panel" data-panel="problem">
+        <div class="panel__head">
+          <span class="eyebrow">A specific problem to choose from</span>
+          <h3 class="panel__title">Pick a problem worth solving.</h3>
+        </div>
+        <div class="panel__split">
+          <p class="panel__lead">Three civic-data tracks on the board. Teams chose the problem that pulled at them, then turned a dataset into something a Melburnian could actually use.</p>
+          <div class="panel__list">
+            <div class="panel__item"><b>Heat &amp; liveability</b><span>Smarter green space, canopy and public amenity for the people most exposed.</span></div>
+            <div class="panel__item"><b>Transport &amp; access</b><span>Safer, fairer, more sustainable movement — wherever you live.</span></div>
+            <div class="panel__item"><b>Community &amp; citizen initiatives</b><span>Resilience built from the ground up by residents and communities.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== TIME TO GO FOR IT ============================== -->
+<section class="section goforit" id="goforit" data-screen-label="Time to go for it">
+  <div class="container goforit__inner reveal">
+    <span class="eyebrow">Teams locked · clock started</span>
+    <h2 class="display goforit__title">Time to go for it.</h2>
+    <p class="lead">Three civic-data tracks on the board. Teams voted, locked a direction, and got building. <em class="serif">The room chose community &amp; citizen initiatives: how might residents and communities drive their own solutions — from circular economy models to local resource sharing — that build resilience from the ground up?</em></p>
+  </div>
+</section>
+
+<!-- ============================== GALLERY ============================== -->
+<section class="section" id="gallery" data-screen-label="Gallery">
+  <div class="container">
+    <div class="head reveal">
+      <div class="head__l">
+        <span class="eyebrow">The day</span>
+        <h2 class="display head__title">Six sprints, heads down.</h2>
+        <p class="head__sub">Teams worked through six sprint blocks across the day, focused on talking and building, then submitted their ideas and pitched them at 5pm.</p>
+      </div>
+    </div>
+    <div class="gallery reveal">
+      <button class="g-item g-wide" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-01.jpg" aria-label="Open photo 1"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-01.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 1" /></button>
+      <button class="g-item" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-02.jpg" aria-label="Open photo 2"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-02.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 2" /></button>
+      <button class="g-item g-tall" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-03.jpg" aria-label="Open photo 3"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-03.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 3" /></button>
+      <button class="g-item" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-04.jpg" aria-label="Open photo 4"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-04.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 4" /></button>
+      <button class="g-item g-wide g-tall" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-05.jpg" aria-label="Open photo 5"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-05.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 5" /></button>
+      <button class="g-item" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-06.jpg" aria-label="Open photo 6"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-06.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 6" /></button>
+      <button class="g-item" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-07.jpg" aria-label="Open photo 7"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-07.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 7" /></button>
+      <button class="g-item g-wide" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-08.jpg" aria-label="Open photo 8"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-08.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 8" /></button>
+      <button class="g-item" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-09.jpg" aria-label="Open photo 9"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-09.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 9" /></button>
+      <button class="g-item" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-10.jpg" aria-label="Open photo 10"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-10.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 10" /></button>
+      <button class="g-item g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-11.jpg" aria-label="Open photo 11"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-11.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 11" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-12.jpg" aria-label="Open photo 12"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-12.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 12" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-13.jpg" aria-label="Open photo 13"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-13.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 13" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-14.jpg" aria-label="Open photo 14"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-14.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 14" /></button>
+      <button class="g-item g-wide g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-15.jpg" aria-label="Open photo 15"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-15.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 15" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-16.jpg" aria-label="Open photo 16"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-16.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 16" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-17.jpg" aria-label="Open photo 17"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-17.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 17" /></button>
+      <button class="g-item g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-18.jpg" aria-label="Open photo 18"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-18.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 18" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-19.jpg" aria-label="Open photo 19"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-19.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 19" /></button>
+      <button class="g-item g-wide g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-20.jpg" aria-label="Open photo 20"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-20.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 20" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-21.jpg" aria-label="Open photo 21"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-21.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 21" /></button>
+      <button class="g-item g-wide g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-22.jpg" aria-label="Open photo 22"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-22.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 22" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-23.jpg" aria-label="Open photo 23"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-23.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 23" /></button>
+      <button class="g-item g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-24.jpg" aria-label="Open photo 24"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-24.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 24" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-25.jpg" aria-label="Open photo 25"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-25.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 25" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-26.jpg" aria-label="Open photo 26"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-26.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 26" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-27.jpg" aria-label="Open photo 27"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-27.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 27" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-28.jpg" aria-label="Open photo 28"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-28.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 28" /></button>
+      <button class="g-item g-wide g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-29.jpg" aria-label="Open photo 29"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-29.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 29" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-30.jpg" aria-label="Open photo 30"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-30.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 30" /></button>
+      <button class="g-item g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-31.jpg" aria-label="Open photo 31"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-31.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 31" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-32.jpg" aria-label="Open photo 32"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-32.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 32" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-33.jpg" aria-label="Open photo 33"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-33.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 33" /></button>
+      <button class="g-item g-wide g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-34.jpg" aria-label="Open photo 34"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-34.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 34" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-35.jpg" aria-label="Open photo 35"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-35.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 35" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-36.jpg" aria-label="Open photo 36"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-36.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 36" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-37.jpg" aria-label="Open photo 37"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-37.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 37" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-38.jpg" aria-label="Open photo 38"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-38.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 38" /></button>
+      <button class="g-item g-wide g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-39.jpg" aria-label="Open photo 39"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-39.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 39" /></button>
+      <button class="g-item g-wide g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-40.jpg" aria-label="Open photo 40"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-40.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 40" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-41.jpg" aria-label="Open photo 41"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-41.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 41" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-42.jpg" aria-label="Open photo 42"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-42.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 42" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-43.jpg" aria-label="Open photo 43"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-43.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 43" /></button>
+      <button class="g-item g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-44.jpg" aria-label="Open photo 44"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-44.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 44" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-45.jpg" aria-label="Open photo 45"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-45.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 45" /></button>
+      <button class="g-item g-wide g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-46.jpg" aria-label="Open photo 46"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-46.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 46" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-47.jpg" aria-label="Open photo 47"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-47.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 47" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-48.jpg" aria-label="Open photo 48"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-48.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 48" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-49.jpg" aria-label="Open photo 49"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-49.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 49" /></button>
+      <button class="g-item g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-50.jpg" aria-label="Open photo 50"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-50.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 50" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-51.jpg" aria-label="Open photo 51"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-51.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 51" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-52.jpg" aria-label="Open photo 52"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-52.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 52" /></button>
+      <button class="g-item g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-53.jpg" aria-label="Open photo 53"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-53.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 53" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-54.jpg" aria-label="Open photo 54"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-54.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 54" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-55.jpg" aria-label="Open photo 55"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-55.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 55" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-56.jpg" aria-label="Open photo 56"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-56.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 56" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-57.jpg" aria-label="Open photo 57"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-57.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 57" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-58.jpg" aria-label="Open photo 58"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-58.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 58" /></button>
+      <button class="g-item g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-59.jpg" aria-label="Open photo 59"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-59.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 59" /></button>
+      <button class="g-item g-wide g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-60.jpg" aria-label="Open photo 60"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-60.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 60" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-61.jpg" aria-label="Open photo 61"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-61.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 61" /></button>
+      <button class="g-item g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-62.jpg" aria-label="Open photo 62"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-62.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 62" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-63.jpg" aria-label="Open photo 63"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-63.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 63" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-64.jpg" aria-label="Open photo 64"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-64.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 64" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-65.jpg" aria-label="Open photo 65"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-65.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 65" /></button>
+      <button class="g-item g-wide g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-66.jpg" aria-label="Open photo 66"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-66.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 66" /></button>
+      <button class="g-item g-wide g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-67.jpg" aria-label="Open photo 67"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-67.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 67" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-68.jpg" aria-label="Open photo 68"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-68.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 68" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-69.jpg" aria-label="Open photo 69"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-69.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 69" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-70.jpg" aria-label="Open photo 70"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-70.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 70" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-71.jpg" aria-label="Open photo 71"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-71.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 71" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-72.jpg" aria-label="Open photo 72"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-72.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 72" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-73.jpg" aria-label="Open photo 73"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-73.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 73" /></button>
+      <button class="g-item g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-74.jpg" aria-label="Open photo 74"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-74.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 74" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-75.jpg" aria-label="Open photo 75"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-75.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 75" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-76.jpg" aria-label="Open photo 76"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-76.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 76" /></button>
+      <button class="g-item g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-77.jpg" aria-label="Open photo 77"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-77.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 77" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-78.jpg" aria-label="Open photo 78"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-78.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 78" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-79.jpg" aria-label="Open photo 79"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-79.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 79" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-80.jpg" aria-label="Open photo 80"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-80.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 80" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-81.jpg" aria-label="Open photo 81"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-81.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 81" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-82.jpg" aria-label="Open photo 82"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-82.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 82" /></button>
+      <button class="g-item g-tall g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-83.jpg" aria-label="Open photo 83"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-83.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 83" /></button>
+      <button class="g-item g-hidden" data-full="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-84.jpg" aria-label="Open photo 84"><img src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-84.jpg" loading="lazy" alt="Claude Impact Lab Melbourne — photo 84" /></button>
+    </div>
+    <div class="gallery__more reveal"><button class="btn btn-ghost" id="galleryMore">Show all 84 photos</button></div>
+  </div>
+</section>
+
+
+<!-- ============================== WHAT TEAMS BUILT ============================== -->
+<section class="section chapter-outcomes" id="projects" data-screen-label="What teams built">
+  <div class="container">
+    <div class="head reveal">
+      <div class="head__l">
+        <span class="eyebrow">The outcomes</span>
+        <h2 class="display head__title head__title--xl">What teams built.</h2>
+        <p class="head__sub">By late afternoon, every team took the stage for a strict, timed pitch in front of a judging panel that included the Lord Mayor's office. Eight teams, eight civic problems — here's what they built.</p>
+      </div>
+    </div>
+
+    <div class="projects__grid">
+      <article class="project project--feature reveal">
+        <div class="project__media">
+          <image-slot id="proj-feature" src="/events/claude-impact-lab-melbourne/recap/assets/web/pitch.jpg" shape="rect" placeholder="Pitch photo"></image-slot>
+        </div>
+        <div class="project__body">
+          <span class="award">★ Demo day</span>
+          <h3 class="project__title">“Melbourne has a waste problem.”</h3>
+          <p class="project__desc">Each team brought its own local angle, and didn't just pitch an idea. Every one demoed a working prototype, built on live data.</p>
+          <div class="project__tagrow">
+            <span class="tag--ghost tag">8 teams pitched</span>
+            <span class="tag--ghost tag">Judged on real-world impact</span>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <div class="projects__grid projects__grid--teams" style="margin-top:30px;">
+      <article class="project reveal">
+        <div class="project__media"><image-slot id="team-1" src="/events/claude-impact-lab-melbourne/recap/assets/web/team-citystride.jpg" shape="rect" placeholder="CityStride"></image-slot></div>
+        <div class="project__body">
+          <div class="project__tagrow"><span class="tag tag--ghost">Safety &amp; mobility</span></div>
+          <h3 class="project__title">CityStride</h3>
+          <p class="project__desc">Live “comfort” walking routes that score every Melbourne street by how alive it feels right now — pedestrian sensors, lighting, tree canopy and venue density — then route you by Lively, Accessible or Shortest.</p>
+          <div class="project__team"><span>8 builders · <a href="https://citystride.vercel.app" target="_blank" rel="noopener">Live demo ↗</a></span></div>
+        </div>
+      </article>
+      <article class="project reveal">
+        <div class="project__media"><image-slot id="team-2" src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-80.jpg" shape="rect" placeholder="Ecoblock"></image-slot></div>
+        <div class="project__body">
+          <div class="project__tagrow"><span class="tag tag--ghost">Circular economy</span></div>
+          <h3 class="project__title">Ecoblock</h3>
+          <p class="project__desc">Tackling Melbourne's hard-waste problem with a circular-economy approach — keeping usable material out of landfill and back into the community.</p>
+          <div class="project__team"><span>10 builders · <a href="https://github.com/Gizmotronn/towershare" target="_blank" rel="noopener">GitHub ↗</a></span></div>
+        </div>
+      </article>
+      <article class="project reveal">
+        <div class="project__media"><image-slot id="team-3" src="/events/claude-impact-lab-melbourne/recap/assets/web/team-spacd.jpg" shape="rect" placeholder="spacd"></image-slot></div>
+        <div class="project__body">
+          <div class="project__tagrow"><span class="tag tag--ghost">Belonging</span></div>
+          <h3 class="project__title">spacd</h3>
+          <p class="project__desc">A map-based platform that helps international students and new residents beat isolation — surfacing low-pressure community events at public BBQs, gardens and shared kitchens, with AI onboarding and RSVPs.</p>
+          <div class="project__team"><span>7 builders · <a href="https://commaxx.netlify.app/" target="_blank" rel="noopener">Live demo ↗</a></span></div>
+        </div>
+      </article>
+      <article class="project reveal">
+        <div class="project__media"><image-slot id="team-4" src="/events/claude-impact-lab-melbourne/recap/assets/gallery/g-79.jpg" shape="rect" placeholder="The Loop"></image-slot></div>
+        <div class="project__body">
+          <div class="project__tagrow"><span class="tag tag--ghost">Waste &amp; reuse</span></div>
+          <h3 class="project__title">The Loop</h3>
+          <p class="project__desc">A circular-resource router that intercepts the moment of disposal and finds the nearest place to reuse, repair or recycle an item — ranked by impact, with an honest impact receipt and a Claude Desktop MCP server.</p>
+          <div class="project__team"><span>7 builders · <a href="https://github.com/ryannvijay/claude-impact-team7" target="_blank" rel="noopener">GitHub ↗</a></span></div>
+        </div>
+      </article>
+      <article class="project reveal">
+        <div class="project__media"><image-slot id="team-5" src="/events/claude-impact-lab-melbourne/recap/assets/web/team-goodshit-app.jpg" shape="rect" placeholder="Good Sh*t"></image-slot></div>
+        <div class="project__body">
+          <div class="project__tagrow"><span class="award">🏆 Winner</span></div>
+          <h3 class="project__title">Good Sh*t</h3>
+          <p class="project__desc">The day's winning build — a map that makes local businesses' civic and sustainability work visible. Shops publish their good deeds and earn “Heart Points” while Melburnians browse, applaud and follow a public leaderboard.</p>
+          <div class="project__team"><span>5 builders · <a href="https://github.com/blakeryaan/claude-impact/tree/20260523-143918-Tim" target="_blank" rel="noopener">GitHub ↗</a></span></div>
+        </div>
+      </article>
+      <article class="project reveal">
+        <div class="project__media"><image-slot id="team-6" src="/events/claude-impact-lab-melbourne/recap/assets/web/team-tapestry.jpg" shape="rect" placeholder="Tapestry"></image-slot></div>
+        <div class="project__body">
+          <div class="project__tagrow"><span class="tag tag--ghost">Newcomers</span></div>
+          <h3 class="project__title">Tapestry</h3>
+          <p class="project__desc">An AI concierge that helps relocating families settle and belong — building personalised practical and cultural transition plans, and routing newcomers into existing community groups.</p>
+          <div class="project__team"><span>7 builders · <a href="https://github.com/Jasper1609/melb_impact_lab" target="_blank" rel="noopener">GitHub ↗</a></span></div>
+        </div>
+      </article>
+      <article class="project reveal">
+        <div class="project__media"><image-slot id="team-7" src="/events/claude-impact-lab-melbourne/recap/assets/web/team-npulse.jpg" shape="rect" placeholder="Neighbourhood Pulse"></image-slot></div>
+        <div class="project__body">
+          <div class="project__tagrow"><span class="tag tag--ghost">Wellbeing</span></div>
+          <h3 class="project__title">Neighbourhood Pulse</h3>
+          <p class="project__desc">A voice-enabled check-in companion that helps isolated seniors find nearby support, paired with a privacy-safe council dashboard that surfaces community-connection gaps across suburbs.</p>
+          <div class="project__team"><span>7 builders · <a href="https://github.com/ryanhaqueIT/Anth-Hackathon" target="_blank" rel="noopener">GitHub ↗</a></span></div>
+        </div>
+      </article>
+      <article class="project reveal">
+        <div class="project__media"><image-slot id="team-8" src="/events/claude-impact-lab-melbourne/recap/assets/web/team-common-ground.jpg" shape="rect" placeholder="Finding Common Ground"></image-slot></div>
+        <div class="project__body">
+          <div class="project__tagrow"><span class="tag tag--ghost">Green space</span></div>
+          <h3 class="project__title">Finding Common Ground</h3>
+          <p class="project__desc">Helps neighbours turn forgotten urban green spaces into community gardens — checking site feasibility on sunlight, soil and water, then auto-generating permit applications and signage.</p>
+          <div class="project__team"><span>9 builders · <a href="https://finding-common-ground-pitch.lovable.app/" target="_blank" rel="noopener">Pitch deck ↗</a></span></div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== WINNERS ============================== -->
+<section class="section winners" id="winners" data-screen-label="Winners">
+  <div class="container">
+    <div class="head reveal">
+      <div class="head__l">
+        <span class="eyebrow">And now for the winners</span>
+        <h2 class="display head__title">And now for the winners!</h2>
+        <p class="head__sub">Judged on real-world impact by a panel that included the Lord Mayor's office. Final names and write-ups dropping in here soon.</p>
+      </div>
+    </div>
+
+    <div class="podium podium--solo reveal">
+      <!-- 2nd place — hidden until we have real runner-up content. Restore by deleting this wrapping comment + its closing marker below.
+      <article class="winner winner--second">
+        <div class="winner__media">
+          <span class="winner__rank"><span class="medal">🥈</span> Runner-up</span>
+          <image-slot id="win-2" shape="rect" placeholder="2nd place — screenshot / photo"></image-slot>
+        </div>
+        <div class="winner__body">
+          <span class="winner__cat">Category / track</span>
+          <h3 class="winner__title">Project name</h3>
+          <p class="winner__desc">One or two lines on what they built and why it placed — coming soon.</p>
+          <div class="winner__team">Built by <b>Team name</b> · members TBA</div>
+        </div>
+      </article>
+      -->
+
+      <!-- 1st -->
+      <article class="winner winner--first">
+        <div class="winner__media">
+          <span class="winner__rank"><span class="medal">🏆</span> Winner</span>
+          <image-slot id="win-1" src="/events/claude-impact-lab-melbourne/recap/assets/web/team-goodshit-app.jpg" shape="rect" placeholder="Good Sh*t — winner"></image-slot>
+        </div>
+        <div class="winner__body">
+          <span class="winner__cat">Overall impact</span>
+          <h3 class="winner__title">Good Sh*t</h3>
+          <p class="winner__desc">The standout build of the day: a map that turns local businesses' invisible civic and sustainability work into something Melburnians can see, follow and reward — shops earn “Heart Points” for good deeds and climb a public leaderboard.</p>
+          <div class="winner__team">Built by the <b>Good Sh*t</b> team · 5 builders · <a href="https://github.com/blakeryaan/claude-impact/tree/20260523-143918-Tim" target="_blank" rel="noopener">GitHub ↗</a></div>
+        </div>
+      </article>
+
+      <!-- 3rd place — hidden until we have real third-place content. Restore by deleting this wrapping comment + its closing marker below.
+      <article class="winner winner--third">
+        <div class="winner__media">
+          <span class="winner__rank"><span class="medal">🥉</span> Third place</span>
+          <image-slot id="win-3" shape="rect" placeholder="3rd place — screenshot / photo"></image-slot>
+        </div>
+        <div class="winner__body">
+          <span class="winner__cat">Category / track</span>
+          <h3 class="winner__title">Project name</h3>
+          <p class="winner__desc">One or two lines on what they built and why it placed — coming soon.</p>
+          <div class="winner__team">Built by <b>Team name</b> · members TBA</div>
+        </div>
+      </article>
+      -->
+    </div>
+
+    <!-- Community pick + Honourable mention — hidden until we have real content. Restore by deleting this wrapping comment + its closing marker below.
+    <div class="winners__mentions reveal">
+      <div class="mention">
+        <span class="mention__cat">Community pick</span>
+        <div><div class="mention__title">Project name</div><div class="mention__team">Built by Team name</div></div>
+      </div>
+      <div class="mention">
+        <span class="mention__cat">Honourable mention</span>
+        <div><div class="mention__title">Project name</div><div class="mention__team">Built by Team name</div></div>
+      </div>
+    </div>
+    -->
+  </div>
+</section>
+
+<!-- ============================== WRAP (gradient finale) ============================== -->
+<section class="wrap" id="wrap" data-screen-label="Wrap">
+  <div class="container wrap__inner">
+    <div class="wrap__head reveal">
+      <span class="eyebrow">The inaugural edition</span>
+      <h2 class="wrap__title">The first Claude Impact Lab in the Southern Hemisphere.</h2>
+      <p class="wrap__sub">8 teams · ~60 builders · 3 civic-data tracks · one Saturday.</p>
+    </div>
+    <div class="wrap__numeral" aria-hidden="true">
+      <span class="wrap__ghost wrap__ghost--a">01</span>
+      <span class="wrap__ghost wrap__ghost--b">01</span>
+      <span class="wrap__num">01</span>
+    </div>
+    <div class="wrap__date">Melbourne&nbsp;·&nbsp;Inaugural Edition&nbsp;·&nbsp;May 2026</div>
+  </div>
+</section>
+
+<!-- ============================== IMAGE BAND (Thanks Melbourne) ============================== -->
+<section class="imageband imageband--finale reveal" data-screen-label="Thanks Melbourne" aria-label="Thanks Melbourne — the Claude Impact Lab room">
+  <img src="/events/claude-impact-lab-melbourne/recap/assets/web/hero.jpg" alt="The Claude Impact Lab room at Inspire9, Richmond — Melbourne skyline behind" loading="lazy" />
+  <div class="imageband__veil" aria-hidden="true"></div>
+  <span class="imageband__cap">Thanks, Melbourne</span>
+</section>
+
+<!-- ============================== CLOSING ============================== -->
+<section class="section closing" id="closing" data-screen-label="Closing">
+  <div class="container">
+    <div class="closing__top reveal">
+      <div>
+        <span class="eyebrow">Until next time</span>
+        <h2 class="display closing__title">Thank you, Melbourne.<br/>We're just getting <em>started.</em></h2>
+      </div>
+      <div class="closing__cta">
+        <p class="lead">Want to be at the next Impact Lab, or any Claude event in Melbourne? We'd love to have you in the room.</p>
+      </div>
+    </div>
+    <div class="footer-row">
+      <div class="partners">
+        <image-slot id="partner-1" class="partner-slot" src="/events/claude-impact-lab-melbourne/recap/assets/logos/claude-community-australia.png" shape="rounded" radius="10" placeholder="Logo"></image-slot>
+        <image-slot id="partner-2" class="partner-slot" style="width:104px;height:52px;" fit="contain" src="/events/claude-impact-lab-melbourne/recap/assets/logos/inspire9.webp" shape="rounded" radius="10" placeholder="Inspire9"></image-slot>
+        <div class="partners__credit">
+          <span>Organised by <b>Claude Community Australia</b> · Sponsored by <b>Anthropic</b></span>
+          <span>Sponsors <b>Divergent Kind</b> &amp; <b>Real Minds AI</b> · Hosted at <b>Inspire9</b>, Richmond</span>
+        </div>
+      </div>
+      <div class="footer-credit">
+        <span class="brand__mark" style="width:22px;height:22px;" aria-hidden="true">
+          <img src="/events/claude-impact-lab-melbourne/recap/assets/logos/claude-community-australia.png" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />
+        </span>
+        <span class="footer-meta">Inaugural APAC Claude Impact Lab · 23 May 2026 · Melbourne</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-label="Photo viewer">
+  <div class="lightbox__scrim" data-lb-close></div>
+  <button class="lb-btn lb-close" data-lb-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <button class="lb-btn lb-prev" id="lbPrev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <div class="lightbox__stage"><img class="lightbox__img" id="lbImg" alt="" /></div>
+  <button class="lb-btn lb-next" id="lbNext" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+  <div class="lb-count" id="lbCount"></div>
+</div>
+
+</main>
+
+<!-- ============================== SCRIPTS ============================== -->
+<script src="/events/claude-impact-lab-melbourne/recap/image-slot.js"></script>
+<script>
+// Sticky nav border
+const nav = document.getElementById('nav');
+const onScroll = () => nav.classList.toggle('is-stuck', window.scrollY > 8);
+onScroll();
+window.addEventListener('scroll', onScroll, { passive: true });
+
+// Reveal on scroll
+const io = new IntersectionObserver((entries) => {
+  entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+}, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+// Mobile menu — reveal the nav links as a sheet
+const menuBtn = document.getElementById('menuBtn');
+const links = document.querySelector('.nav__links');
+if (menuBtn) {
+  menuBtn.addEventListener('click', () => {
+    const open = links.style.display === 'flex';
+    if (open) {
+      links.style.display = '';
+    } else {
+      Object.assign(links.style, {
+        display: 'flex', position: 'absolute', top: '70px', right: '20px',
+        flexDirection: 'column', alignItems: 'flex-start', gap: '18px',
+        background: 'var(--paper)', border: '1px solid var(--line)',
+        borderRadius: '14px', padding: '20px 24px', boxShadow: 'var(--shadow-md)'
+      });
+    }
+  });
+  links.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => {
+    if (window.innerWidth <= 980) links.style.display = '';
+  }));
+}
+
+// ---- Tabbed "ingredient" sections (scoped per section) ----
+document.querySelectorAll('.instead').forEach((sec) => {
+  const tabs = sec.querySelectorAll('.tab');
+  const panels = sec.querySelectorAll('.instead__panel');
+  const activate = (id) => {
+    tabs.forEach((t) => t.classList.toggle('is-active', t.dataset.tab === id));
+    panels.forEach((p) => p.classList.toggle('is-active', p.dataset.panel === id));
+  };
+  tabs.forEach((tab) => tab.addEventListener('click', () => activate(tab.dataset.tab)));
+  sec._activate = activate;
+});
+// Nav links that open a specific tab in the original "But instead" section
+document.querySelectorAll('[data-opentab]').forEach((link) => {
+  link.addEventListener('click', () => {
+    const sec = document.getElementById('instead');
+    if (sec && sec._activate) sec._activate(link.dataset.opentab);
+  });
+});
+
+// ---- Gallery lightbox ----
+(function(){
+  const lb = document.getElementById('lightbox');
+  if (!lb) return;
+  const tiles = [...document.querySelectorAll('.gallery .g-item')];
+  const srcs = tiles.map(t => t.dataset.full);
+  const imgEl = document.getElementById('lbImg');
+  const countEl = document.getElementById('lbCount');
+  let idx = 0;
+  const show = (i) => {
+    idx = (i + srcs.length) % srcs.length;
+    imgEl.src = srcs[idx];
+    countEl.textContent = (idx + 1) + ' / ' + srcs.length;
+  };
+  const open = (i) => { show(i); lb.classList.add('is-open'); lb.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; };
+  const close = () => { lb.classList.remove('is-open'); lb.setAttribute('aria-hidden','true'); document.body.style.overflow=''; imgEl.removeAttribute('src'); };
+  tiles.forEach((t, i) => t.addEventListener('click', () => open(i)));
+  const moreBtn = document.getElementById('galleryMore');
+  if (moreBtn) moreBtn.addEventListener('click', () => {
+    document.querySelectorAll('.gallery .g-hidden').forEach(el => el.classList.remove('g-hidden'));
+    moreBtn.closest('.gallery__more').style.display = 'none';
+  });
+  document.getElementById('lbPrev').addEventListener('click', (e) => { e.stopPropagation(); show(idx - 1); });
+  document.getElementById('lbNext').addEventListener('click', (e) => { e.stopPropagation(); show(idx + 1); });
+  lb.querySelectorAll('[data-lb-close]').forEach(el => el.addEventListener('click', close));
+  document.addEventListener('keydown', (e) => {
+    if (!lb.classList.contains('is-open')) return;
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowLeft') show(idx - 1);
+    else if (e.key === 'ArrowRight') show(idx + 1);
+  });
+})();
+</script>
+
+</body>
+</html>

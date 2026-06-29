@@ -1,0 +1,104 @@
+/* Dark-theme overrides for react-big-calendar within the admin events page. */
+@import "react-big-calendar/lib/css/react-big-calendar.css";
+
+.cc-rbc-wrap .rbc-calendar {
+  background: #1a1a1a;
+  color: #e5e5e5;
+  font-family: inherit;
+}
+
+.cc-rbc-wrap .rbc-toolbar {
+  color: #e5e5e5;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cc-rbc-wrap .rbc-toolbar button {
+  background: #2a2a2a;
+  border: 1px solid #333;
+  color: #d1d5db;
+}
+
+.cc-rbc-wrap .rbc-toolbar button:hover,
+.cc-rbc-wrap .rbc-toolbar button:focus {
+  background: #333;
+  color: #fff;
+}
+
+.cc-rbc-wrap .rbc-toolbar button.rbc-active,
+.cc-rbc-wrap .rbc-toolbar button.rbc-active:hover {
+  background: #E07A5F;
+  border-color: #E07A5F;
+  color: #fff;
+  box-shadow: none;
+}
+
+.cc-rbc-wrap .rbc-toolbar-label {
+  color: #fff;
+  font-weight: 600;
+}
+
+.cc-rbc-wrap .rbc-time-view,
+.cc-rbc-wrap .rbc-time-header,
+.cc-rbc-wrap .rbc-time-header-content,
+.cc-rbc-wrap .rbc-time-content,
+.cc-rbc-wrap .rbc-day-bg,
+.cc-rbc-wrap .rbc-day-slot,
+.cc-rbc-wrap .rbc-month-view,
+.cc-rbc-wrap .rbc-header {
+  border-color: #2f2f2f !important;
+}
+
+.cc-rbc-wrap .rbc-time-header-gutter,
+.cc-rbc-wrap .rbc-time-gutter,
+.cc-rbc-wrap .rbc-label {
+  background: #1a1a1a;
+  color: #9ca3af;
+}
+
+.cc-rbc-wrap .rbc-header {
+  background: #1f1f1f;
+  color: #d1d5db;
+  padding: 8px 4px;
+  font-weight: 500;
+}
+
+.cc-rbc-wrap .rbc-today {
+  background: rgba(224, 122, 95, 0.08);
+}
+
+.cc-rbc-wrap .rbc-current-time-indicator {
+  background-color: #E07A5F;
+}
+
+.cc-rbc-wrap .rbc-time-slot {
+  border-color: #262626;
+}
+
+.cc-rbc-wrap .rbc-timeslot-group {
+  border-color: #2f2f2f;
+}
+
+.cc-rbc-wrap .rbc-event {
+  background: #E07A5F;
+  border: 1px solid #c96a52;
+  color: #fff;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+.cc-rbc-wrap .rbc-event.rbc-selected {
+  background: #c96a52;
+}
+
+.cc-rbc-wrap .rbc-event-label {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.cc-rbc-wrap .rbc-show-more {
+  color: #E07A5F;
+  background: transparent;
+}

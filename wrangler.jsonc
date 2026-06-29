@@ -1,0 +1,615 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "ccau",
+	"main": ".open-next/worker.js",
+	"compatibility_date": "2026-03-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	// Production account = Claude Community (where R2 bucket and D1 database live).
+	"account_id": "b90fc48710b01ed523ae94ca67d6788e",
+	"observability": {
+		"enabled": true
+	},
+	// Custom domains. These only deploy successfully once `claudecommunity.com.au`
+	// is an Active zone on this Cloudflare account (i.e. nameservers swapped from
+	// NS1 to Cloudflare). Until then, deploy with `wrangler deploy --routes ""`
+	// to skip them, or remove this block.
+	"routes": [
+		{
+			"pattern": "claudecommunity.com.au",
+			"custom_domain": true
+		},
+		{
+			"pattern": "www.claudecommunity.com.au",
+			"custom_domain": true
+		}
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"vars": {
+		"CLOUDFLARE_WORKER": "true",
+		"DEPLOY_TARGET": "cloudflare",
+		"NEXT_PUBLIC_APP_URL": "https://claudecommunity.com.au",
+		"NEXT_PUBLIC_SITE_URL": "https://claudecommunity.com.au",
+		"NEXT_PUBLIC_REGION": "au",
+		"CLAUDIENCE_API_URL": "https://claudience.com"
+		// Maintenance kill-switch. Set to "true" to take the site offline.
+		// Fastest toggle without a full redeploy:
+		//   wrangler secret put MAINTENANCE_MODE --env production    (enter "true")
+		//   wrangler secret delete MAINTENANCE_MODE --env production (to bring back)
+	},
+	// Read-side cache bindings (see open-next.config.ts + docs/cloudflare-cpu-optimization.md):
+	//   NEXT_INC_CACHE_R2_BUCKET — R2 store for cached page/data payloads.
+	//   NEXT_TAG_CACHE_D1        — D1 holding tag→revalidation timestamps for
+	//                              on-demand `revalidateTag`/`revalidatePath`.
+	//   WORKER_SELF_REFERENCE    — lets the worker re-invoke itself to revalidate.
+	// PROVISIONING (run once, then paste the returned ids below):
+	//   wrangler r2 bucket create ccau-next-cache
+	//   wrangler d1 create ccau-next-tag-cache   → paste database_id into the base + production blocks
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "claudecommunity-db",
+			"database_id": "70a3d14f-8138-4f70-9e0e-f838e80f0dec",
+			// "remote": true
+		},
+		{
+			"binding": "NEXT_TAG_CACHE_D1",
+			"database_name": "ccau-next-tag-cache",
+			"database_id": "REPLACE_WITH_TAG_CACHE_D1_ID"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "STORAGE",
+			"bucket_name": "claudecommunity-uploads"
+		},
+		{
+			"binding": "NEXT_INC_CACHE_R2_BUCKET",
+			"bucket_name": "ccau-next-cache"
+		}
+	],
+	"services": [
+		{
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "ccau"
+		}
+	],
+	// Durable Object queue for ISR background revalidation (see open-next.config.ts).
+	// DOQueueHandler is auto-exported by OpenNext's generated worker.js; it's
+	// SQLite-backed, so it needs the new_sqlite_classes migration below.
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "NEXT_CACHE_DO_QUEUE",
+				"class_name": "DOQueueHandler"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["DOQueueHandler"]
+		}
+	],
+	"browser": {
+		"binding": "BROWSER"
+	},
+	// Cross-service notifications: published to the shared `app-notifications`
+	// queue, consumed by the cloudflare-build-notifications worker which routes
+	// each message to the right Slack channel by type. See src/lib/notify.ts.
+	"queues": {
+		"producers": [
+			{
+				"binding": "NOTIFICATIONS",
+				"queue": "app-notifications"
+			}
+		]
+	},
+	// Durable workflows:
+	//  - slide-export: batch slide export (browser-rendered PNGs + zip → R2).
+	//    See src/workflows/slide-export.ts and src/app/api/admin/slide-export/route.ts.
+	//  - campaign-send: durable email-campaign send (batches of 100 to Resend,
+	//    with 429 backoff + idempotency keys). See src/workflows/campaign-send.ts
+	//    and src/app/api/admin/email/campaigns/[id]/send/route.ts.
+	"workflows": [
+		{
+			"name": "slide-export",
+			"binding": "SLIDE_EXPORT",
+			"class_name": "SlideExportWorkflow"
+		},
+		{
+			"name": "publish-post",
+			"binding": "PUBLISH_POST",
+			"class_name": "PublishPostWorkflow"
+		},
+		{
+			"name": "campaign-send",
+			"binding": "CAMPAIGN_SEND",
+			"class_name": "CampaignSendWorkflow"
+		}
+	],
+	// Internal cron triggers. Every 15 minutes the Worker fires `scheduled()`
+	// (see scripts/inject-workflow-exports.mjs → src/worker-scheduled.ts)
+	// which drains due scheduled posts and resets rows stuck in 'publishing'.
+	// Replaces the external pinger that used to hit /api/cron/publish-scheduled-posts.
+	"triggers": {
+		"crons": ["*/15 * * * *"]
+	},
+	"env": {
+		"production": {
+			"name": "ccau",
+			"account_id": "b90fc48710b01ed523ae94ca67d6788e",
+			"routes": [
+				{
+					"pattern": "claudecommunity.com.au",
+					"custom_domain": true
+				}
+			],
+			"vars": {
+				"CLOUDFLARE_WORKER": "true",
+				"DEPLOY_TARGET": "cloudflare",
+				"NEXT_PUBLIC_APP_URL": "https://claudecommunity.com.au",
+				"NEXT_PUBLIC_SITE_URL": "https://claudecommunity.com.au",
+				"NEXT_PUBLIC_REGION": "au",
+				"CLAUDIENCE_API_URL": "https://claudience.com",
+				// Route transactional + campaign email through Send16 (Claude
+				// Community workspace, claudecommunity.com.au). Gated by the
+				// SEND16_API_KEY secret — unset it (or this var) to revert to Resend.
+				"EMAIL_PROVIDER": "send16"
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "claudecommunity-db",
+					"database_id": "81fa7c82-351d-4ce7-9ece-624bed52dea0"
+				},
+				{
+					"binding": "NEXT_TAG_CACHE_D1",
+					"database_name": "ccau-next-tag-cache",
+					"database_id": "ca311725-9558-4365-8908-d068de35e9f9"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "STORAGE",
+					"bucket_name": "claudecommunity-uploads"
+				},
+				{
+					"binding": "NEXT_INC_CACHE_R2_BUCKET",
+					"bucket_name": "ccau-next-cache"
+				}
+			],
+			"services": [
+				{
+					"binding": "WORKER_SELF_REFERENCE",
+					"service": "ccau"
+				}
+			],
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "NEXT_CACHE_DO_QUEUE",
+						"class_name": "DOQueueHandler"
+					}
+				]
+			},
+			"migrations": [
+				{
+					"tag": "v1",
+					"new_sqlite_classes": ["DOQueueHandler"]
+				}
+			],
+			"browser": {
+				"binding": "BROWSER"
+			},
+			"queues": {
+				"producers": [
+					{
+						"binding": "NOTIFICATIONS",
+						"queue": "app-notifications"
+					}
+				]
+			},
+			"workflows": [
+				{
+					"name": "slide-export",
+					"binding": "SLIDE_EXPORT",
+					"class_name": "SlideExportWorkflow"
+				},
+				{
+					"name": "publish-post",
+					"binding": "PUBLISH_POST",
+					"class_name": "PublishPostWorkflow"
+				},
+				{
+					"name": "campaign-send",
+					"binding": "CAMPAIGN_SEND",
+					"class_name": "CampaignSendWorkflow"
+				}
+			],
+			"triggers": {
+				"crons": ["*/15 * * * *"]
+			}
+		},
+		"staging": {
+			"name": "ccau-staging",
+			"account_id": "b90fc48710b01ed523ae94ca67d6788e",
+			"routes": [
+				{
+					"pattern": "staging.claudecommunity.com.au",
+					"custom_domain": true
+				}
+			],
+			"vars": {
+				"CLOUDFLARE_WORKER": "true",
+				"DEPLOY_TARGET": "cloudflare",
+				"NEXT_PUBLIC_APP_URL": "https://staging.claudecommunity.com.au",
+				"NEXT_PUBLIC_SITE_URL": "https://staging.claudecommunity.com.au",
+				"NEXT_PUBLIC_REGION": "au",
+				"CLAUDIENCE_API_URL": "https://claudience.com",
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "claudecommunity-db",
+					"database_id": "70a3d14f-8138-4f70-9e0e-f838e80f0dec"
+				},
+				{
+					"binding": "NEXT_TAG_CACHE_D1",
+					"database_name": "ccau-next-tag-cache-staging",
+					"database_id": "1f24234b-252b-4045-8539-d7c379463540"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "STORAGE",
+					"bucket_name": "claudecommunity-uploads-staging"
+				},
+				{
+					"binding": "NEXT_INC_CACHE_R2_BUCKET",
+					"bucket_name": "ccau-next-cache-staging"
+				}
+			],
+			"services": [
+				{
+					"binding": "WORKER_SELF_REFERENCE",
+					"service": "ccau-staging"
+				}
+			],
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "NEXT_CACHE_DO_QUEUE",
+						"class_name": "DOQueueHandler"
+					}
+				]
+			},
+			"migrations": [
+				{
+					"tag": "v1",
+					"new_sqlite_classes": ["DOQueueHandler"]
+				}
+			],
+			"browser": {
+				"binding": "BROWSER"
+			},
+			"queues": {
+				"producers": [
+					{
+						"binding": "NOTIFICATIONS",
+						"queue": "app-notifications"
+					}
+				]
+			},
+			"workflows": [
+				{
+					"name": "slide-export-staging",
+					"binding": "SLIDE_EXPORT",
+					"class_name": "SlideExportWorkflow"
+				},
+				{
+					"name": "publish-post-staging",
+					"binding": "PUBLISH_POST",
+					"class_name": "PublishPostWorkflow"
+				},
+				{
+					"name": "campaign-send-staging",
+					"binding": "CAMPAIGN_SEND",
+					"class_name": "CampaignSendWorkflow"
+				}
+			],
+			"triggers": {
+				"crons": ["*/15 * * * *"]
+			}
+		},
+		// ─────────────────────────────────────────────────────────────────────
+		// PLATFORM STAGING — a NEW, clean multi-tenant SaaS deploy on
+		// staging.claudecommunities.com. No AU baggage: its own worker, D1, R2.
+		// The apex resolves to the HOME_TENANT ("platform"); real communities are
+		// created online via the admin Tenants configurator and reached at
+		// staging.claudecommunities.com/<slug> (path-prefix tenancy).
+		//
+		// BEFORE FIRST DEPLOY, create the resources and paste the ids below:
+		//   wrangler d1 create claudecommunity-platform-db-staging
+		//   wrangler d1 create ccplatform-next-tag-cache-staging
+		//   wrangler r2 bucket create claudecommunity-platform-uploads-staging
+		//   wrangler r2 bucket create ccplatform-next-cache-staging
+		// Then add staging.claudecommunities.com as a custom domain (needs
+		// claudecommunities.com to be an Active zone on this account).
+		"staging-platform": {
+			"name": "ccplatform-staging",
+			"account_id": "b90fc48710b01ed523ae94ca67d6788e",
+			"routes": [
+				{
+					"pattern": "staging.claudecommunities.com",
+					"custom_domain": true
+				}
+			],
+			"vars": {
+				"CLOUDFLARE_WORKER": "true",
+				"DEPLOY_TARGET": "cloudflare",
+				"NEXT_PUBLIC_APP_URL": "https://staging.claudecommunities.com",
+				"NEXT_PUBLIC_SITE_URL": "https://staging.claudecommunities.com",
+				"NEXT_PUBLIC_REGION": "au",
+				"CLAUDIENCE_API_URL": "https://claudience.com",
+				// The deploy's home tenant — what the apex + /admin resolve to.
+				"HOME_TENANT": "platform",
+				// Hosts that ARE the platform (apex/local/preview). The default
+				// already matches via `.claudecommunities.com`; set explicitly here.
+				"PLATFORM_HOSTS": "claudecommunities.com,localhost,127.0.0.1,workers.dev",
+				// Subdomain tenancy base = the staging HOST itself, NOT the apex
+				// `claudecommunities.com` — otherwise `staging.claudecommunities.com`
+				// would be misread as a tenant named "staging" instead of the apex.
+				// Path-prefix tenancy (/<slug>) is always on; `*.staging…` subdomain
+				// tenancy only activates once a wildcard cert is added.
+				"TENANT_SUBDOMAIN_BASES": "staging.claudecommunities.com"
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "ccww-staging",
+					"database_id": "3e17bdb4-c3ed-4fd0-9b7f-1962fe5fd287"
+				},
+				{
+					"binding": "NEXT_TAG_CACHE_D1",
+					"database_name": "ccww-next-cache",
+					"database_id": "04d64304-4925-40ba-b7ad-199b122ec169"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "STORAGE",
+					"bucket_name": "ccww-platform-uploads-staging"
+				},
+				{
+					"binding": "NEXT_INC_CACHE_R2_BUCKET",
+					"bucket_name": "ccww-next-cache-staging"
+				}
+			],
+			"services": [
+				{
+					"binding": "WORKER_SELF_REFERENCE",
+					"service": "ccplatform-staging"
+				}
+			],
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "NEXT_CACHE_DO_QUEUE",
+						"class_name": "DOQueueHandler"
+					}
+				]
+			},
+			"migrations": [
+				{
+					"tag": "v1",
+					"new_sqlite_classes": ["DOQueueHandler"]
+				}
+			],
+			"browser": {
+				"binding": "BROWSER"
+			},
+			"queues": {
+				"producers": [
+					{
+						"binding": "NOTIFICATIONS",
+						"queue": "app-notifications"
+					}
+				]
+			},
+			"workflows": [
+				{
+					"name": "slide-export-platform-staging",
+					"binding": "SLIDE_EXPORT",
+					"class_name": "SlideExportWorkflow"
+				},
+				{
+					"name": "publish-post-platform-staging",
+					"binding": "PUBLISH_POST",
+					"class_name": "PublishPostWorkflow"
+				},
+				{
+					"name": "campaign-send-platform-staging",
+					"binding": "CAMPAIGN_SEND",
+					"class_name": "CampaignSendWorkflow"
+				}
+			],
+			"triggers": {
+				"crons": ["*/15 * * * *"]
+			}
+		},
+		// NZ environments. NZ runs on a SEPARATE Cloudflare account from AU.
+		// The placeholders below (account_id, D1 database ids) MUST be filled in
+		// once the NZ Cloudflare account + D1 databases actually exist.
+		"production-nz": {
+			"name": "ccnz",
+			"account_id": "5bcb0f152c606664326ea0ad50ef882c",
+			"routes": [
+				{
+					"pattern": "claudecommunity.co.nz",
+					"custom_domain": true
+				}
+			],
+			"vars": {
+				"CLOUDFLARE_WORKER": "true",
+				"DEPLOY_TARGET": "cloudflare",
+				"NEXT_PUBLIC_APP_URL": "https://claudecommunity.co.nz",
+				"NEXT_PUBLIC_SITE_URL": "https://claudecommunity.co.nz",
+				"NEXT_PUBLIC_REGION": "nz",
+				"CLAUDIENCE_API_URL": "https://claudience.com",
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "claudecommunity-nz-db",
+					"database_id": "c4ccc56f-d9cb-4e29-9e12-fc0a7fe953cd"
+				},
+				{
+					"binding": "NEXT_TAG_CACHE_D1",
+					"database_name": "ccnz-next-tag-cache",
+					"database_id": "52698c8c-fd5b-4777-a9c3-a14873e9a2c8"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "STORAGE",
+					"bucket_name": "claudecommunity-nz-uploads"
+				},
+				{
+					"binding": "NEXT_INC_CACHE_R2_BUCKET",
+					"bucket_name": "ccnz-next-cache"
+				}
+			],
+			"services": [
+				{
+					"binding": "WORKER_SELF_REFERENCE",
+					"service": "ccnz"
+				}
+			],
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "NEXT_CACHE_DO_QUEUE",
+						"class_name": "DOQueueHandler"
+					}
+				]
+			},
+			"migrations": [
+				{
+					"tag": "v1",
+					"new_sqlite_classes": ["DOQueueHandler"]
+				}
+			],
+			"browser": {
+				"binding": "BROWSER"
+			},
+			"workflows": [
+				{
+					"name": "slide-export",
+					"binding": "SLIDE_EXPORT",
+					"class_name": "SlideExportWorkflow"
+				},
+				{
+					"name": "publish-post",
+					"binding": "PUBLISH_POST",
+					"class_name": "PublishPostWorkflow"
+				},
+				{
+					"name": "campaign-send",
+					"binding": "CAMPAIGN_SEND",
+					"class_name": "CampaignSendWorkflow"
+				}
+			],
+			"triggers": {
+				"crons": ["*/15 * * * *"]
+			}
+		},
+		"staging-nz": {
+			"name": "ccnz-staging",
+			"account_id": "5bcb0f152c606664326ea0ad50ef882c",
+			"routes": [
+				{
+					"pattern": "staging.claudecommunity.co.nz",
+					"custom_domain": true
+				}
+			],
+			"vars": {
+				"CLOUDFLARE_WORKER": "true",
+				"DEPLOY_TARGET": "cloudflare",
+				"NEXT_PUBLIC_APP_URL": "https://staging.claudecommunity.co.nz",
+				"NEXT_PUBLIC_SITE_URL": "https://staging.claudecommunity.co.nz",
+				"NEXT_PUBLIC_REGION": "nz",
+				"CLAUDIENCE_API_URL": "https://claudience.com",
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "claudecommunity-nz-db-staging",
+					"database_id": "c7a0a601-e7eb-4bea-91d1-08649c44c590"
+				},
+				{
+					"binding": "NEXT_TAG_CACHE_D1",
+					"database_name": "ccnz-next-tag-cache-staging",
+					"database_id": "0abe8b2f-71fa-49e6-a96f-b6c8ce36e8da"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "STORAGE",
+					"bucket_name": "claudecommunity-nz-uploads-staging"
+				},
+				{
+					"binding": "NEXT_INC_CACHE_R2_BUCKET",
+					"bucket_name": "ccnz-next-cache-staging"
+				}
+			],
+			"services": [
+				{
+					"binding": "WORKER_SELF_REFERENCE",
+					"service": "ccnz-staging"
+				}
+			],
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "NEXT_CACHE_DO_QUEUE",
+						"class_name": "DOQueueHandler"
+					}
+				]
+			},
+			"migrations": [
+				{
+					"tag": "v1",
+					"new_sqlite_classes": ["DOQueueHandler"]
+				}
+			],
+			"browser": {
+				"binding": "BROWSER"
+			},
+			"workflows": [
+				{
+					"name": "slide-export-staging",
+					"binding": "SLIDE_EXPORT",
+					"class_name": "SlideExportWorkflow"
+				},
+				{
+					"name": "publish-post-staging",
+					"binding": "PUBLISH_POST",
+					"class_name": "PublishPostWorkflow"
+				},
+				{
+					"name": "campaign-send-staging",
+					"binding": "CAMPAIGN_SEND",
+					"class_name": "CampaignSendWorkflow"
+				}
+			],
+			"triggers": {
+				"crons": ["*/15 * * * *"]
+			}
+		}
+	}
+}

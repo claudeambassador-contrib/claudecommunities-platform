@@ -1,0 +1,1482 @@
+generator client {
+  provider = "prisma-client-js"
+  runtime  = "cloudflare"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id                     String                 @id @default(cuid())
+  clerkId                String                 @unique
+  name                   String?
+  email                  String?                @unique
+  emailVerified          DateTime?
+  image                  String?
+  coverImage             String?
+  bio                    String?
+  tagline                String?
+  location               String?
+  website                String?
+  twitter                String?
+  linkedin               String?
+  github                 String?
+  role                   String                 @default("member")
+  lastSeen               DateTime               @default(now())
+  isOnline               Boolean                @default(false)
+  isOnboarded            Boolean                @default(false)
+  isBanned               Boolean                @default(false)
+  banReason              String?
+  bannedAt               DateTime?
+  points                 Int                    @default(0)
+  level                  Int                    @default(1)
+  city                   String?
+  importSource           String?
+  experienceLevel        String?
+  interests              String?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  activities             Activity[]
+  analyticsEvents        AnalyticsEvent[]
+  bookmarks              Bookmark[]
+  comments               Comment[]
+  connectionsReceived    Connection[]           @relation("ConnectionReceiver")
+  connectionsSent        Connection[]           @relation("ConnectionRequester")
+  courseEnrollments      CourseEnrollment[]
+  digestLogs             DigestLog[]
+  emailPreferences       EmailPreference?
+  eventRsvps             EventRSVP[]
+  eventLumaInterests     EventLumaInterest[]
+  lessonProgress         LessonProgress[]
+  likes                  Like[]
+  mentions               Mention[]
+  notifications          Notification[]
+  pageViews              PageView[]
+  pollVotes              PollVote[]
+  posts                  Post[]
+  subscriptions          Subscription[]
+  userBadges             UserBadge[]
+  emailSends             EmailSend[]
+  tagAssignments         UserTagAssignment[]
+  contactListMemberships ContactListMember[]
+  automationEnrollments  AutomationEnrollment[]
+  talkSubmissions        TalkSubmission[]
+  talkComments           TalkComment[]
+  socialAccounts         SocialAccount[]
+  socialPosts            SocialPost[]
+  tenantMemberships      UserTenant[]
+}
+
+/// Role definitions. The user's assigned role is stored both in Clerk
+/// `publicMetadata.role` (source of truth for cross-system access) and
+/// mirrored to `User.role` for fast lookups inside this app.
+model Role {
+  name        String
+  tenantId    String @default("")
+  description String?
+  /// JSON-encoded array of Permission strings (see src/lib/permissions.ts).
+  /// SQLite has no native JSON column type; we serialize/deserialize at the
+  /// service layer.
+  permissions String   @default("[]")
+  /// System roles (super_admin, admin, member) can't be deleted and have
+  /// limited edit semantics in the admin UI.
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@id([tenantId, name])
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  tenantId    String @default("")
+  name        String
+  description String?
+  icon        String?
+  color       String?
+  createdAt   DateTime    @default(now())
+  userBadges  UserBadge[]
+
+  @@unique([tenantId, name])
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, badgeId])
+}
+
+/// Home Page CMS — a tenant-editable page. v1 ships only `key = "home"`; the
+/// `key` column is the forward seam for additional pages per tenant. `sections`
+/// is a JSON string (ordered array of typed blocks) — D1/SQLite has no native
+/// JSON column, matching the `TenantSetting.config` precedent.
+model Page {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("")
+  key       String // v1: always "home"
+  title     String? // optional admin-facing label; not the SEO <title>
+  sections  String // JSON string: ordered array of typed blocks
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, key])
+}
+
+/// Per-tenant city catalog — the runtime replacement for the build-baked
+/// `ALL_CITIES` in `src/lib/cities.ts`. Each community curates its own cities
+/// (for city landing pages, footer columns, timezone resolution). `keywords` is
+/// a JSON string (SEO keyword array); D1/SQLite has no native JSON column,
+/// matching the `Page.sections` / `TenantSetting.config` precedent. `position`
+/// drives admin-defined ordering.
+model City {
+  id          String   @id @default(cuid())
+  tenantId    String   @default("")
+  slug        String
+  name        String
+  state       String
+  stateFull   String
+  description String
+  isCapital   Boolean  @default(false)
+  keywords    String // JSON array string
+  timezone    String
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+}
+
+/// Per-tenant industry ("vertical") landing pages served at `/for/<slug>` — the
+/// runtime, editable replacement/override for the build-baked `VERTICALS` in
+/// `src/lib/verticals.ts`. `data` is a JSON string holding the full `Vertical`
+/// shape minus `slug` (the column); D1/SQLite has no native JSON column, matching
+/// the `City.keywords` / `Page.sections` precedent. The read layer
+/// (`src/lib/industries.ts`) MERGES these over the static built-ins by slug, so a
+/// tenant with no rows still gets the region-correct built-ins. `position` drives
+/// admin-defined ordering of net-new (non-built-in) pages.
+model IndustryPage {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("")
+  slug      String
+  data      String // JSON: the Vertical shape minus `slug`
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+}
+
+model SpaceGroup {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  name      String
+  icon      String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  spaces    Space[]
+
+  @@index([tenantId])
+}
+
+model Space {
+  id             String          @id @default(cuid())
+  tenantId       String @default("")
+  name           String
+  slug           String
+  description    String?
+  icon           String?
+  color          String?
+  isPrivate      Boolean         @default(false)
+  order          Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  requiredTierId String?
+  groupId        String?
+  posts          Post[]
+  group          SpaceGroup?     @relation(fields: [groupId], references: [id])
+  requiredTier   MembershipTier? @relation("TierSpaces", fields: [requiredTierId], references: [id])
+
+  @@unique([tenantId, slug])
+}
+
+model Post {
+  id          String       @id @default(cuid())
+  tenantId    String @default("")
+  title       String?
+  content     String
+  isPinned    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  authorId    String
+  spaceId     String
+  mediaType   String?
+  mediaUrl    String?
+  attachments Attachment[]
+  bookmarks   Bookmark[]
+  comments    Comment[]
+  likes       Like[]
+  mentions    Mention[]
+  poll        Poll?
+  space       Space        @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reactions   Reaction[]
+
+  @@index([tenantId])
+}
+
+model Comment {
+  id        String            @id @default(cuid())
+  tenantId  String @default("")
+  content   String
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  authorId  String
+  postId    String
+  parentId  String?
+  parent    Comment?          @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]         @relation("CommentReplies")
+  post      Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reactions CommentReaction[]
+
+  @@index([tenantId])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  emoji     String
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, postId, emoji])
+}
+
+model CommentReaction {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  emoji     String
+  userId    String
+  commentId String
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, commentId, emoji])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  createdAt DateTime @default(now())
+  userId    String
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, postId])
+}
+
+model Event {
+  id                          String              @id @default(cuid())
+  tenantId                    String @default("")
+  title                       String
+  slug                        String?
+  description                 String?
+  location                    String?
+  city                        String?
+  timezone                    String? // IANA timezone (e.g. "Australia/Sydney")
+  eventType                   String              @default("meetup")
+  startTime                   DateTime
+  endTime                     DateTime?
+  maxAttendees                Int?
+  isOnline                    Boolean             @default(false)
+  meetingUrl                  String?
+  imageUrl                    String?
+  lumaUrl                     String? // External Luma event link
+  lumaEventId                 String? // Luma event ID for syncing
+  rsvpEnabled                 Boolean             @default(false) // Enable internal RSVP when no Luma link is set
+  isActive                    Boolean             @default(true) // false = draft, hidden from public listings/pages
+  headerText                  String? // Intro paragraph for the generated description
+  footerText                  String? // Footer (e.g. "What is X?" + photography disclaimer) for the generated description
+  feedbackUrl                 String? // Per-event survey URL used by the post-event email blast
+  claudienceSessionCode       String? // Claudience session code (6-char)
+  claudienceSessionPassword   String? // Claudience session passcode in cleartext, admin-only
+  claudienceSurveyId          String?
+  claudienceSurveyUrl         String?
+  claudienceSessionUrl        String?
+  claudienceNotificationEmail String? // Email to receive feedback survey results
+  createdAt                   DateTime            @default(now())
+  updatedAt                   DateTime            @updatedAt
+  rsvps                       EventRSVP[]
+  lumaInterests               EventLumaInterest[]
+  resources                   EventResource[]
+  agendaItems                 EventAgendaItem[]
+  speakers                    Speaker[]
+
+  @@unique([tenantId, slug])
+}
+
+model EventAgendaItem {
+  id           String          @id @default(cuid())
+  tenantId     String @default("")
+  eventId      String
+  event        Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  type         String // "speaker" | "welcome" | "break" | "custom"
+  order        Int // 0-based, dense; rewritten on reorder
+  startTime    DateTime?
+  endTime      DateTime?
+  title        String?
+  description  String? // markdown
+  speakerId    String?
+  speaker      Speaker?        @relation(fields: [speakerId], references: [id], onDelete: SetNull)
+  submissionId String?
+  submission   TalkSubmission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([tenantId, eventId, order])
+  @@index([tenantId, speakerId])
+}
+
+// Per-event curated speaker. Source of truth for the slide generator and the
+// agenda's speaker slots. Talk title / description live here so a speaker
+// carries their talk content across agenda + slide views.
+model Speaker {
+  id                   String            @id @default(cuid())
+  tenantId             String @default("")
+  eventId              String
+  event                Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  order                Int               @default(0)
+  name                 String
+  title                String?
+  company              String?
+  bio                  String? // markdown
+  talkTitle            String?
+  talkDescription      String? // markdown — long form used in agenda / event pages
+  talkDescriptionShort String? // short form (~1 line) shown on speaker slides
+  headshotUrl          String?
+  companyLogoUrl       String?
+  twitterHandle        String?
+  linkedinUrl          String?
+  websiteUrl           String?
+  submissionId         String?
+  submission           TalkSubmission?   @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  agendaItems          EventAgendaItem[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@index([tenantId, eventId, order])
+}
+
+model EventResource {
+  id          String   @id @default(cuid())
+  tenantId    String @default("")
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  fileUrl     String
+  fileName    String
+  mimeType    String
+  fileSize    Int
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  uploadedBy  String?
+
+  @@index([tenantId, eventId])
+}
+
+model EventRSVP {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  status    String   @default("going")
+  createdAt DateTime @default(now())
+  userId    String
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, eventId])
+}
+
+// Tracks users who asked to be notified when an event's Luma link is added.
+// Once the admin sets the Luma URL we send each waiting user a one-shot
+// in-app notification + email; `notifiedAt` makes that idempotent.
+model EventLumaInterest {
+  id         String    @id @default(cuid())
+  tenantId   String @default("")
+  userId     String
+  eventId    String
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  event      Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, eventId])
+  @@index([tenantId, eventId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  createdAt DateTime @default(now())
+  userId    String
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, postId])
+}
+
+model Poll {
+  id        String       @id @default(cuid())
+  tenantId  String @default("")
+  question  String
+  endsAt    DateTime?
+  createdAt DateTime     @default(now())
+  postId    String       @unique
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  options   PollOption[]
+}
+
+model PollOption {
+  id       String     @id @default(cuid())
+  tenantId String @default("")
+  text     String
+  order    Int        @default(0)
+  pollId   String
+  poll     Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes    PollVote[]
+
+  @@index([tenantId])
+}
+
+model PollVote {
+  id        String     @id @default(cuid())
+  tenantId  String @default("")
+  createdAt DateTime   @default(now())
+  userId    String
+  optionId  String
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, optionId])
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  name      String
+  url       String
+  type      String
+  size      Int
+  createdAt DateTime @default(now())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model Mention {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  createdAt DateTime @default(now())
+  userId    String
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, postId])
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  type      String
+  data      String?
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  type      String
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  emailSent Boolean  @default(false)
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model EmailPreference {
+  id             String   @id @default(cuid())
+  tenantId       String @default("")
+  mentions       Boolean  @default(true)
+  replies        Boolean  @default(true)
+  likes          Boolean  @default(false)
+  messages       Boolean  @default(true)
+  weeklyDigest   Boolean  @default(true)
+  eventReminders Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Course {
+  id             String             @id @default(cuid())
+  tenantId       String @default("")
+  title          String
+  slug           String
+  description    String?
+  thumbnail      String?
+  duration       String?
+  difficulty     String             @default("beginner")
+  isPublished    Boolean            @default(false)
+  isFree         Boolean            @default(true)
+  order          Int                @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  requiredTierId String?
+  requiredTier   MembershipTier?    @relation(fields: [requiredTierId], references: [id])
+  enrollments    CourseEnrollment[]
+  lessons        Lesson[]
+
+  @@unique([tenantId, slug])
+}
+
+model Lesson {
+  id        String           @id @default(cuid())
+  tenantId  String @default("")
+  title     String
+  slug      String
+  content   String
+  videoUrl  String?
+  duration  String?
+  order     Int              @default(0)
+  isPreview Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  courseId  String
+  course    Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress  LessonProgress[]
+
+  @@unique([tenantId, courseId, slug])
+}
+
+model CourseEnrollment {
+  id          String    @id @default(cuid())
+  tenantId    String @default("")
+  progress    Int       @default(0)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, courseId])
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  tenantId    String @default("")
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  userId      String
+  lessonId    String
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, lessonId])
+}
+
+model MembershipTier {
+  id            String         @id @default(cuid())
+  tenantId      String @default("")
+  name          String
+  slug          String
+  description   String?
+  price         Float          @default(0)
+  yearlyPrice   Float?
+  features      String?
+  color         String?
+  order         Int            @default(0)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  courses       Course[]
+  spaces        Space[]        @relation("TierSpaces")
+  subscriptions Subscription[]
+
+  @@unique([tenantId, name])
+  @@unique([tenantId, slug])
+}
+
+model Subscription {
+  id                   String         @id @default(cuid())
+  tenantId             String @default("")
+  status               String         @default("active")
+  interval             String         @default("monthly")
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelledAt          DateTime?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  userId               String
+  tierId               String
+  tier                 MembershipTier @relation(fields: [tierId], references: [id])
+  user                 User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, tierId])
+}
+
+model PageView {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  path      String
+  referrer  String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  event     String
+  data      String?
+  createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+}
+
+model DigestLog {
+  id          String   @id @default(cuid())
+  tenantId    String @default("")
+  sentAt      DateTime @default(now())
+  postCount   Int
+  eventCount  Int
+  memberCount Int
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model Connection {
+  id          String   @id @default(cuid())
+  tenantId    String @default("")
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  requesterId String
+  receiverId  String
+  receiver    User     @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  requester   User     @relation("ConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, requesterId, receiverId])
+}
+
+model LeaderboardLevel {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  level     Int
+  name      String
+  icon      String?
+  minPoints Int
+  color     String?
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, level])
+}
+
+model EmailCampaign {
+  id               String               @id @default(cuid())
+  tenantId         String @default("")
+  name             String
+  subject          String
+  html             String
+  blocks           String?
+  templateType     String               @default("custom")
+  status           String               @default("draft")
+  segmentQuery     String?
+  listId           String?
+  previewText      String?
+  scheduledAt      DateTime?
+  sentAt           DateTime?
+  recipientCount   Int                  @default(0)
+  sentCount        Int                  @default(0)
+  failedCount      Int                  @default(0)
+  openCount        Int                  @default(0)
+  clickCount       Int                  @default(0)
+  bounceCount      Int                  @default(0)
+  unsubscribeCount Int                  @default(0)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  sends            EmailSend[]
+  list             ContactList?         @relation(fields: [listId], references: [id])
+  trackingEvents   EmailTrackingEvent[]
+  trackedLinks     EmailTrackedLink[]
+  abTest           EmailABTest?
+
+  @@index([tenantId])
+}
+
+model EmailSend {
+  id               String               @id @default(cuid())
+  tenantId         String @default("")
+  campaignId       String
+  userId           String
+  status           String               @default("pending")
+  sentAt           DateTime?
+  errorMsg         String?
+  resendMessageId  String?
+  openedAt         DateTime?
+  openCount        Int                  @default(0)
+  clickedAt        DateTime?
+  clickCount       Int                  @default(0)
+  deliveredAt      DateTime?
+  bouncedAt        DateTime?
+  bounceType       String?
+  unsubscribeToken String?
+  variantId        String?
+  createdAt        DateTime             @default(now())
+  campaign         EmailCampaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variant          EmailABVariant?      @relation(fields: [variantId], references: [id])
+  trackingEvents   EmailTrackingEvent[]
+
+  @@unique([tenantId, campaignId, userId])
+  @@unique([tenantId, unsubscribeToken])
+}
+
+model EmailSegment {
+  id          String   @id @default(cuid())
+  tenantId    String @default("")
+  name        String
+  description String?
+  filters     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// ─── Email Platform: Templates ──────────────────────────────────────
+
+model EmailTemplate {
+  id           String   @id @default(cuid())
+  tenantId     String @default("")
+  name         String
+  description  String?
+  category     String   @default("custom")
+  blocks       String
+  html         String
+  thumbnailUrl String?
+  isPublic     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model EmailSavedBlock {
+  id          String   @id @default(cuid())
+  tenantId    String @default("")
+  name        String
+  description String?
+  category    String   @default("general")
+  blockType   String
+  blockData   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// ─── Email Platform: Contact Lists ──────────────────────────────────
+
+model ContactList {
+  id          String              @id @default(cuid())
+  tenantId    String @default("")
+  name        String
+  description String?
+  isDefault   Boolean             @default(false)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  members     ContactListMember[]
+  campaigns   EmailCampaign[]
+
+  @@index([tenantId])
+}
+
+model ContactListMember {
+  id       String      @id @default(cuid())
+  tenantId String @default("")
+  listId   String
+  userId   String
+  status   String      @default("subscribed")
+  joinedAt DateTime    @default(now())
+  list     ContactList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, listId, userId])
+}
+
+// ─── Email Platform: Tracking ───────────────────────────────────────
+
+model EmailTrackingEvent {
+  id         String        @id @default(cuid())
+  tenantId   String @default("")
+  campaignId String
+  sendId     String?
+  userId     String?
+  eventType  String
+  url        String?
+  userAgent  String?
+  ipAddress  String?
+  metadata   String?
+  createdAt  DateTime      @default(now())
+  campaign   EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  send       EmailSend?    @relation(fields: [sendId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, campaignId])
+  @@index([tenantId, sendId])
+  @@index([tenantId, eventType])
+  @@index([tenantId, createdAt])
+}
+
+model EmailTrackedLink {
+  id           String        @id @default(cuid())
+  tenantId     String @default("")
+  campaignId   String
+  originalUrl  String
+  trackingCode String        @default(cuid())
+  clickCount   Int           @default(0)
+  createdAt    DateTime      @default(now())
+  campaign     EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, campaignId, originalUrl])
+  @@unique([tenantId, trackingCode])
+  @@index([tenantId, trackingCode])
+}
+
+model EmailSuppressionList {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  reason     String
+  source     String?
+  bounceType String?
+  createdAt  DateTime @default(now())
+}
+
+// ─── Email Platform: A/B Testing ────────────────────────────────────
+
+model EmailABTest {
+  id              String           @id @default(cuid())
+  tenantId        String @default("")
+  campaignId      String           @unique
+  testType        String           @default("subject")
+  winnerMetric    String           @default("opens")
+  splitPercentage Int              @default(50)
+  winnerVariantId String?
+  autoSelectAt    DateTime?
+  status          String           @default("draft")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  campaign        EmailCampaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  variants        EmailABVariant[]
+}
+
+model EmailABVariant {
+  id         String      @id @default(cuid())
+  tenantId   String @default("")
+  testId     String
+  name       String
+  subject    String?
+  html       String?
+  sentCount  Int         @default(0)
+  openCount  Int         @default(0)
+  clickCount Int         @default(0)
+  isWinner   Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  test       EmailABTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+  sends      EmailSend[]
+
+  @@index([tenantId])
+}
+
+// ─── Email Platform: Automations ────────────────────────────────────
+
+model EmailAutomation {
+  id          String                 @id @default(cuid())
+  tenantId    String @default("")
+  name        String
+  description String?
+  triggerType String
+  triggerData String?
+  status      String                 @default("draft")
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  steps       AutomationStep[]
+  enrollments AutomationEnrollment[]
+
+  @@index([tenantId])
+}
+
+model AutomationStep {
+  id           String          @id @default(cuid())
+  tenantId     String @default("")
+  automationId String
+  stepOrder    Int
+  stepType     String
+  config       String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  automation   EmailAutomation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, automationId, stepOrder])
+  @@index([tenantId, automationId])
+}
+
+model AutomationEnrollment {
+  id           String          @id @default(cuid())
+  tenantId     String @default("")
+  automationId String
+  userId       String
+  currentStep  Int             @default(0)
+  status       String          @default("active")
+  nextActionAt DateTime?
+  enrolledAt   DateTime        @default(now())
+  completedAt  DateTime?
+  automation   EmailAutomation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, automationId, userId])
+  @@index([tenantId, status, nextActionAt])
+}
+
+model UserTag {
+  id        String              @id @default(cuid())
+  tenantId  String @default("")
+  name      String
+  category  String?
+  createdAt DateTime            @default(now())
+  users     UserTagAssignment[]
+
+  @@unique([tenantId, name])
+}
+
+model UserTagAssignment {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  userId    String
+  tagId     String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tag       UserTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, tagId])
+}
+
+model SpaceView {
+  id       String   @id @default(cuid())
+  tenantId String @default("")
+  userId   String
+  spaceId  String
+  viewedAt DateTime @default(now())
+
+  @@unique([tenantId, userId, spaceId])
+  @@index([tenantId, userId])
+  @@index([tenantId, spaceId])
+}
+
+model ScheduledCourse {
+  id              String    @id @default(cuid())
+  tenantId        String @default("")
+  title           String
+  slug            String
+  description     String?
+  location        String?
+  city            String?
+  timezone        String?
+  startTime       DateTime
+  endTime         DateTime?
+  isOnline        Boolean   @default(false)
+  meetingUrl      String?
+  imageUrl        String?
+  registrationUrl String?
+  courseType      String    @default("workshop")
+  isPublished     Boolean   @default(false)
+  price           String?
+  instructor      String?
+  maxAttendees    Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([tenantId, slug])
+}
+
+// User-submitted talk idea. May be promoted by an admin to a per-event
+// `Speaker`. A single user can submit many talks (returning speakers).
+// Fields fall into three groups:
+//  - Submitter identity: userId (the signed-in user who owns/edits it),
+//    name/email (kept editable for stage-name / contact-email overrides).
+//  - Talk content: title (was `topic`), description (long-form),
+//    bio (speaker bio for this talk), city (preferred meetup location),
+//    slidesUrl + slidesFileName/MimeType/Size (optional deck, can be
+//    uploaded before or after the event).
+//  - Workflow: status, contentLocked, slidesLocked. The two locks are
+//    independent — admins typically lock content after a talk is
+//    confirmed/delivered while leaving slides editable so the speaker
+//    can post-publish their deck.
+model TalkSubmission {
+  id             String            @id @default(cuid())
+  tenantId       String @default("")
+  userId         String?
+  user           User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name           String
+  email          String
+  title          String
+  description    String?
+  bio            String?
+  city           String?
+  slidesUrl      String?
+  slidesFileName String?
+  slidesMimeType String?
+  slidesSize     Int?
+  status         String            @default("pending")
+  contentLocked  Boolean           @default(false)
+  slidesLocked   Boolean           @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  agendaItems    EventAgendaItem[]
+  speakers       Speaker[]
+  comments       TalkComment[]
+
+  @@index([tenantId, userId])
+}
+
+// Bi-directional thread on a TalkSubmission. Both the submitting user
+// and admins post here. No nested replies yet — chronological list.
+model TalkComment {
+  id           String         @id @default(cuid())
+  tenantId     String @default("")
+  submissionId String
+  submission   TalkSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  authorId     String
+  author       User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content      String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([tenantId, submissionId, createdAt])
+}
+
+model ImpactLabInterest {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  role      String?
+  expertise String?
+  interest  String?
+  event     String   @default("melbourne-may-2026")
+  createdAt DateTime @default(now())
+}
+
+model ImpactLabSponsor {
+  id               String   @id @default(cuid())
+  contactName      String
+  contactRole      String?
+  organisation     String
+  email            String
+  phone            String?
+  website          String?
+  // JSON-encoded string array (was String[] on Postgres)
+  sponsorshipTypes String // e.g. ["event", "drinks", "catering", "venue", "swag", "data", "prizes", "other"]
+  budget           String?
+  message          String?
+  event            String   @default("melbourne-may-2026")
+  status           String   @default("new") // new, contacted, confirmed, declined
+  createdAt        DateTime @default(now())
+}
+
+// ─── Speaker Slide Generator ────────────────────────────────────────
+
+// Working state for a slide-generator scope: "global" (the admin tool)
+// or "event:<eventId>" (per-event tab in the Prepare modal).
+// `data` is a JSON blob: { template: SlideTemplate, speakers: SlideSpeaker[], seededIds: string[] }.
+model SlideGeneratorState {
+  scope     String // "global" or "event:<eventId>"
+  tenantId  String @default("")
+  data      String // JSON blob
+  updatedAt DateTime @updatedAt
+
+  @@id([tenantId, scope])
+}
+
+// Named, reusable visual style. Stores only template fields (no speakers).
+// Admins save the current look as a named preset, then apply to any event later.
+model SlideStylePreset {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  name      String
+  data      String // JSON blob of SlideTemplate (visual style only)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, name])
+}
+
+// Cache of server-rendered slide PNGs (Cloudflare Browser Rendering output)
+// stored in R2 under `slides/render/<contentHash>.png`. One row per
+// (eventId, slideId, speakerId) — the unique combo that identifies what's
+// being rendered. contentHash is a sha256 over the normalized template +
+// speaker fields that actually affect the visual output; when those change
+// the renderer writes a new R2 object and overwrites the row, deleting the
+// old key.
+model SlideRender {
+  id          String   @id @default(cuid())
+  tenantId    String @default("")
+  eventId     String
+  slideId     String
+  speakerId   String
+  contentHash String
+  r2Key       String
+  mimeType    String   @default("image/png")
+  sizeBytes   Int
+  renderedAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, eventId, slideId, speakerId])
+  @@index([tenantId, eventId])
+  @@index([tenantId, speakerId])
+}
+
+// One row per batch export job submitted to the SlideExportWorkflow. The id
+// is the Cloudflare Workflows instance id, so the status route can recover
+// the workflow handle. The workflow mutates `completedCount` after each
+// rendered pair so the UI sees live progress without polling the workflow
+// itself on every tick. `outputKind` is `png` for a single-pair export
+// (returned directly) or `zip` for any multi-pair export.
+model SlideExportJob {
+  id             String   @id // = workflow instance id
+  tenantId       String @default("")
+  eventId        String
+  userId         String
+  status         String   @default("queued") // queued | running | complete | errored
+  params         String // JSON: { scope, refWidth, force }
+  totalCount     Int      @default(0)
+  completedCount Int      @default(0)
+  outputKind     String? // "png" | "zip"
+  outputR2Key    String?
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId, eventId, createdAt])
+  @@index([tenantId, userId])
+}
+
+// ─── Impact Lab Hackathon Portal ────────────────────────────────────
+// Day-of participant portal: code login, check-in, teams, coffee cards,
+// schedule, resources and problem-statement voting. Self-contained — does
+// not use Clerk. All access is via the portal's own session cookies.
+
+model ImpactLabConfig {
+  id                        String   @id @default("config")
+  eventName                 String   @default("Claude Impact Lab")
+  eventTagline              String   @default("Build AI for your city — in a day.")
+  eventDate                 String   @default("23 May 2026")
+  accessCode                String   @default("IMPACTLAB")
+  adminPassword             String   @default("hackday-admin")
+  adminToken                String?
+  checkInOpen               Boolean  @default(true)
+  votingOpen                Boolean  @default(false)
+  winningStatementId        String?
+  peoplesChoiceOpen         Boolean  @default(false)
+  peoplesChoiceWinnerTeamId String?
+  coffeeNote                String   @default("Show this code at the coffee cart to claim your cup. One redemption per person.")
+  updatedAt                 DateTime @updatedAt
+}
+
+model ImpactLabTeam {
+  id                 String                 @id @default(cuid())
+  name               String                 @unique
+  color              String                 @default("#D4836A")
+  tableNumber        String?
+  conceptTitle       String?
+  conceptSummary     String?
+  conceptRepoUrl     String?
+  conceptSubmittedAt DateTime?
+  createdAt          DateTime               @default(now())
+  participants       ImpactLabParticipant[]
+  peoplesChoiceVotes ImpactLabTeamVote[]
+}
+
+model ImpactLabParticipant {
+  id                String               @id @default(cuid())
+  name              String
+  email             String               @unique
+  role              String               @default("participant") // participant | mentor | judge
+  teamId            String?
+  team              ImpactLabTeam?       @relation(fields: [teamId], references: [id])
+  coffeeCode        String               @unique
+  coffeeRedeemed    Boolean              @default(false)
+  coffeeRedeemedAt  DateTime?
+  checkedIn         Boolean              @default(false)
+  checkedInAt       DateTime?
+  sessionToken      String?              @unique
+  preRegistered     Boolean              @default(false)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  vote              ImpactLabVote?
+  peoplesChoiceVote ImpactLabTeamVote?
+  coffeeCodeEntry   ImpactLabCoffeeCode?
+
+  @@index([teamId])
+}
+
+// People's Choice award: one vote per participant for a team (typically
+// not their own). Separate from ImpactLabVote (which is for the morning's
+// problem-statement pick).
+model ImpactLabTeamVote {
+  id            String               @id @default(cuid())
+  participantId String               @unique
+  participant   ImpactLabParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  teamId        String
+  team          ImpactLabTeam        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdAt     DateTime             @default(now())
+
+  @@index([teamId])
+}
+
+// Fixed-size pool of coffee codes (e.g. 100) printed by the venue. Each
+// participant claims the next unassigned row at check-in; admins can
+// regenerate the unassigned tail and export the full list as CSV.
+model ImpactLabCoffeeCode {
+  id            String                @id @default(cuid())
+  code          String                @unique
+  order         Int                   @unique
+  participantId String?               @unique
+  participant   ImpactLabParticipant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
+  createdAt     DateTime              @default(now())
+}
+
+model ImpactLabProblemStatement {
+  id          String          @id @default(cuid())
+  title       String
+  summary     String
+  description String
+  order       Int             @default(0)
+  createdAt   DateTime        @default(now())
+  votes       ImpactLabVote[]
+}
+
+model ImpactLabVote {
+  id            String                    @id @default(cuid())
+  participantId String                    @unique
+  participant   ImpactLabParticipant      @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  statementId   String
+  statement     ImpactLabProblemStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  createdAt     DateTime                  @default(now())
+
+  @@index([statementId])
+}
+
+model ImpactLabScheduleItem {
+  id          String  @id @default(cuid())
+  startTime   String
+  title       String
+  description String?
+  track       String?
+  order       Int     @default(0)
+}
+
+model ImpactLabResource {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  url         String
+  category    String  @default("General")
+  order       Int     @default(0)
+}
+
+// ── Social posting (LinkedIn first, modular for more platforms) ───────────
+// SocialAccount stores one OAuth connection per platform target (e.g. one
+// LinkedIn company page). SocialPost is the unit of scheduled/sent content.
+// See src/lib/social/ for the provider abstraction.
+
+model SocialAccount {
+  id           String       @id @default(cuid())
+  tenantId     String @default("")
+  // Destination network. Stays "linkedin" regardless of how we reach it.
+  platform     String
+  // Integration used to reach the destination. "linkedin" = direct OAuth +
+  // LinkedIn REST API. "zernio" = posts via zernio.com using a Zernio API key.
+  // Adding a new connector means registering it in src/lib/social/providers
+  // — no schema change required.
+  connector    String       @default("linkedin")
+  accountType  String       @default("organization") // "organization" | "person"
+  // Platform-side ID. For direct LinkedIn: the org id (e.g. "5515715"). For
+  // Zernio: the Zernio account `_id` (we route by that, not by LinkedIn org).
+  externalId   String
+  displayName  String
+  avatarUrl    String?
+  // For OAuth connectors: the LinkedIn access token. For API-key connectors
+  // (Zernio): the Zernio API key. TODO: encrypt at rest.
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  scopes       String?
+  createdById  String
+  createdBy    User         @relation(fields: [createdById], references: [id])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  posts        SocialPost[]
+
+  @@unique([tenantId, connector, externalId])
+  @@index([tenantId, platform])
+  @@index([tenantId, connector])
+}
+
+model SocialPost {
+  id              String        @id @default(cuid())
+  tenantId        String @default("")
+  accountId       String
+  account         SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  platform        String // denormalised from account for filtering
+  content         String
+  mediaType       String        @default("none") // "none" | "image" | "multi_image" | "video" | "document"
+  mediaUrls       String        @default("[]") // JSON string[]; order matters for multi_image
+  status          String        @default("draft") // "draft" | "scheduled" | "publishing" | "published" | "failed" | "cancelled"
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  externalId      String? // platform-side URN, e.g. urn:li:share:684...
+  externalUrl     String? // public share URL after publish
+  errorMessage    String?
+  publishAttempts Int           @default(0)
+  createdById     String
+  createdBy       User          @relation(fields: [createdById], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([tenantId, status, scheduledAt])
+  @@index([tenantId, accountId, scheduledAt])
+  @@index([tenantId, platform, status])
+}
+
+// ─── Multi-tenant registry & membership ─────────────────────────────────────
+// The registry plane. GLOBAL models (Tenant, TenantSetting) are read pre-tenant
+// in middleware via the unscoped platform client — the only pre-tenant DB read.
+// UserTenant / PendingAdminGrant / AuditLog are TENANT-scoped (carry tenantId),
+// so the scoped client auto-injects the URL tenant. See tenant-models.ts.
+
+/// Tenant registry — one row per community. Resolved from URL/host: custom
+/// domain → row, else first path segment `claudecommunities.com/<slug>` → row.
+model Tenant {
+  id           String         @id @default(cuid())
+  slug         String         @unique
+  customDomain String?        @unique
+  name         String
+  status       String         @default("active") // active | suspended | pending
+  // Whether this community appears in the public platform directory at the apex.
+  // A community can be hidden (listed=false) without suspending it (still
+  // reachable on its slug / domain). Suspended tenants are never listed.
+  listed       Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  settings     TenantSetting?
+}
+
+/// Admin-editable per-tenant config — replaces the build-baked REGION_CONFIGS.
+/// `config` is a JSON blob of the former RegionConfig shape (country, lang,
+/// currency, emails, discord, cities, images, …). gaId is broken out so the
+/// analytics-egress isolation (§3 #32) can read it directly.
+model TenantSetting {
+  id           String   @id @default(cuid())
+  tenantId     String   @unique
+  config       String   @default("{}")
+  gaId         String?
+  fromEmail    String?
+  senderDomain String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  // `tenantId` is the tenant SLUG (the scoping label used across all models),
+  // not Tenant.id — so this relation references Tenant.slug (also @unique).
+  tenant       Tenant   @relation(fields: [tenantId], references: [slug], onDelete: Cascade)
+}
+
+/// Membership join. The COARSE per-tenant role (owner|admin|member) lives HERE,
+/// never on the global User.role — otherwise admin-in-A = admin-in-B (privesc,
+/// §3 #5). Tenant-scoped: getPrisma().userTenant.findFirst({where:{userId}})
+/// auto-injects tenantId, returning the row (with role) iff the user belongs to
+/// THIS tenant.
+model UserTenant {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  userId    String
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+/// Admin role granted to an invitee before they have an account. Matched by
+/// lowercase email on first sign-in (§4). Tenant-scoped.
+model PendingAdminGrant {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  email     String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+/// Tenant-stamped audit log (§3 #26).
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String @default("")
+  userId    String?
+  action    String
+  target    String?
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}

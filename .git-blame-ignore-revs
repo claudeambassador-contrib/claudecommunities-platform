@@ -1,0 +1,6 @@
+# Revisions to ignore when running `git blame`.
+# Enable locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# chore: biome format pass (one-time formatting normalization)
+ac56e3ff07a81f59268c060106488f573727958d

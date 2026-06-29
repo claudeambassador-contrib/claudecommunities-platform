@@ -1,0 +1,51 @@
+diff --git a/dist/cli/commands/populate-cache.js b/dist/cli/commands/populate-cache.js
+index 36e9e772df195b5afb800645a791ed228ef180e6..2246769c9367e2a072c5502a31dde0ef8493d226 100644
+--- a/dist/cli/commands/populate-cache.js
++++ b/dist/cli/commands/populate-cache.js
+@@ -56,18 +56,34 @@ export async function populateCache(buildOpts, config, wranglerConfig, populateC
+     }
+     if (!config.dangerous?.disableIncrementalCache && incrementalCache) {
+         const name = await resolveCacheName(incrementalCache);
+-        switch (name) {
+-            case R2_CACHE_NAME:
+-                await populateR2IncrementalCache(buildOpts, wranglerConfig, populateCacheOptions, envVars);
+-                break;
+-            case KV_CACHE_NAME:
+-                await populateKVIncrementalCache(buildOpts, wranglerConfig, populateCacheOptions, envVars);
+-                break;
+-            case STATIC_ASSETS_CACHE_NAME:
+-                populateStaticAssetsIncrementalCache(buildOpts);
+-                break;
+-            default:
+-                logger.info("Incremental cache does not need populating");
++        try {
++            switch (name) {
++                case R2_CACHE_NAME:
++                    await populateR2IncrementalCache(buildOpts, wranglerConfig, populateCacheOptions, envVars);
++                    break;
++                case KV_CACHE_NAME:
++                    await populateKVIncrementalCache(buildOpts, wranglerConfig, populateCacheOptions, envVars);
++                    break;
++                case STATIC_ASSETS_CACHE_NAME:
++                    populateStaticAssetsIncrementalCache(buildOpts);
++                    break;
++                default:
++                    logger.info("Incremental cache does not need populating");
++            }
++        }
++        catch (e) {
++            // PATCH (ccau): Cloudflare's R2 REST API intermittently returns
++            // "Premature close" on the bucket-existence check, aborting the whole
++            // deploy. Remote cache population is best-effort (the Worker reads R2
++            // via its binding at runtime regardless), so make a remote failure
++            // non-fatal and let the deploy proceed. Self-heals once Cloudflare's
++            // API recovers. See opennextjs/opennextjs-cloudflare#1285.
++            if (populateCacheOptions.target === "remote") {
++                logger.warn(`Remote incremental cache population failed, continuing. Cause: ${e instanceof Error ? e.message : String(e)}`);
++            }
++            else {
++                throw e;
++            }
+         }
+     }
+     if (!config.dangerous?.disableTagCache && !config.dangerous?.disableIncrementalCache && tagCache) {

@@ -1,0 +1,52 @@
+name: CI
+
+# Quality gate: lint + typecheck + full test suite. The vitest run includes the
+# tenant-isolation suite under test/iso (the Option A multi-tenancy contract —
+# chokepoint scoping, membership joins, cron/workflow re-entry, signed-URL tenant
+# binding). None of these steps touch Cloudflare or need secrets, so the gate
+# runs on every PR and on pushes to the long-lived branches.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - staging
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        # postinstall runs `prisma generate`, producing src/generated/* so tsc
+        # and vitest can resolve the Prisma client types. No DATABASE_URL needed
+        # for generate (it only reads the schema).
+        run: npm ci
+
+      - name: Lint
+        # Biome (src/**, scripts/**) + slim ESLint (Next rules, the route→service
+        # import lockdown, AND the tenant-isolation ratchets: unscoped-prisma /
+        # raw-@/lib/db import bans + the chokepoint-bypass no-restricted-syntax
+        # guard). A cross-tenant regression that reintroduces an unscoped client
+        # or a raw $queryRaw/$transaction fails here.
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        # Full vitest suite, including test/iso (the multi-tenancy isolation
+        # invariants). Self-contained — no env/secrets required.
+        run: npm test
