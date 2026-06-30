@@ -23,17 +23,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        # This project is Bun-only (committed lockfile is bun.lock; there is no
+        # package-lock.json). actions/setup-node with `cache: npm` + `npm ci`
+        # aborts at setup because no npm lockfile exists.
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
-          cache: 'npm'
+          bun-version: 1.3.14
 
       - name: Install dependencies
-        # postinstall runs `prisma generate`, producing src/generated/* so tsc
-        # and vitest can resolve the Prisma client types. No DATABASE_URL needed
-        # for generate (it only reads the schema).
-        run: npm ci
+        # postinstall runs `prisma generate`, producing the Prisma client so tsc
+        # and vitest can resolve its types. No DATABASE_URL needed for generate
+        # (it only reads the schema).
+        run: bun install --frozen-lockfile
+
+      - name: Build MCP UI bundle
+        # Generates src/lib/mcp/ui-bundle.generated.ts (imported by ui-tools.ts).
+        # It is gitignored, so it must be built before typecheck or tsc fails
+        # with "Cannot find module './ui-bundle.generated'".
+        run: bun run build:mcp-ui
 
       - name: Lint
         # Biome (src/**, scripts/**) + slim ESLint (Next rules, the route→service
@@ -41,12 +49,14 @@ jobs:
         # raw-@/lib/db import bans + the chokepoint-bypass no-restricted-syntax
         # guard). A cross-tenant regression that reintroduces an unscoped client
         # or a raw $queryRaw/$transaction fails here.
-        run: npm run lint
+        run: bun run lint
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: bun run typecheck
 
       - name: Test
         # Full vitest suite, including test/iso (the multi-tenancy isolation
-        # invariants). Self-contained — no env/secrets required.
-        run: npm test
+        # invariants). Self-contained — no env/secrets required. NOTE: `bun run
+        # test` (the package script = `vitest run`), NOT `bun test` (which would
+        # invoke Bun's own runner instead of vitest).
+        run: bun run test
