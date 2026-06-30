@@ -12,7 +12,6 @@
  * into the loose `where`; a `tenantId_name` compound selector would collide
  * with that injection). The per-tenant user count comes from `UserTenant.role`.
  */
-import { setUserRole } from "@/lib/clerk-roles";
 import {
   ALL_PERMISSIONS,
   PERMISSIONS,
@@ -212,9 +211,18 @@ export async function deleteRole(actor: ActorLike, name: string): Promise<{ dele
 }
 
 /**
- * Assign a role to a user within the current tenant — updates the membership's
- * `UserTenant.role` (per-tenant, never the global `User.role`) and mirrors to
- * Clerk. Refuses to demote the actor out of `users.assign_role` (self-lock).
+ * Assign a role to a user within the current tenant. Updates ONLY the
+ * membership's `UserTenant.role` (per-tenant) — it must NEVER write the global
+ * `User.role`, which is the platform-operator flag (`getMembershipPermissions`
+ * grants a global `super_admin` power in EVERY tenant + the platform console).
+ *
+ * SECURITY (SECURITY.md #11): this previously also mirrored the role to the
+ * global `User.role` via `setUserRole`, so a tenant admin with `users.assign_role`
+ * assigning their tenant's `super_admin` role minted a GLOBAL platform
+ * super_admin — cross-tenant privilege escalation. The global role is now set
+ * only at platform bootstrap, never from this tenant-scoped action.
+ *
+ * Refuses to demote the actor out of `users.assign_role` (self-lock).
  */
 export async function assignRoleToUser(
   actor: ActorLike,
@@ -236,13 +244,14 @@ export async function assignRoleToUser(
     }
   }
 
-  // The target must be a member of THIS tenant (scoped updateMany).
   const target = await db.user.findUnique({
     where: { id: targetUserId },
-    select: { id: true, clerkId: true },
+    select: { id: true },
   });
   if (!target) throw new ServiceError("not_found", "User not found");
 
+  // Per-tenant role ONLY (membership is enforced by this scoped updateMany).
+  // Deliberately does NOT touch the global `User.role` / Clerk metadata.
   const result = await db.userTenant.updateMany({
     where: { userId: targetUserId },
     data: { role: roleName },
@@ -250,10 +259,6 @@ export async function assignRoleToUser(
   if (result.count === 0) {
     throw new ServiceError("not_found", "User is not a member of this community");
   }
-
-  // Mirror to Clerk for fast cross-system checks. TODO(multi-tenant): this is a
-  // global Clerk metadata write — move to per-org metadata under Clerk orgs.
-  await setUserRole({ clerkId: target.clerkId, userId: target.id, roleName });
 
   return { id: target.id, role: roleName };
 }

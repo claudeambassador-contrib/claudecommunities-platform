@@ -33,6 +33,17 @@ Fixed on branch `security/critical-fixes` (2026-06-30):
 - ✅ #4 XSS in `LessonContent` — `parseContent()` now escapes all input up
   front before the markdown transforms run, and link URLs are
   scheme-allowlisted (blocks `javascript:`/`data:`).
+- ✅ #11 (NEW) Cross-tenant privilege escalation via role assignment —
+  `assignRoleToUser` (tenant-scoped, needs only `users.assign_role`) mirrored
+  the assigned role to the GLOBAL `User.role` via `setUserRole`. Because
+  `getMembershipPermissions` treats a global `super_admin` as a platform
+  operator with power in EVERY tenant, a tenant admin assigning their tenant's
+  `super_admin` role minted a global platform super_admin (full cross-tenant
+  access + platform console). Fixed: `assignRoleToUser` now writes only
+  `UserTenant.role`; the global-role writer `src/lib/clerk-roles.ts` was removed.
+  Surfaced by the previously-never-run CI; `test/iso/auth-membership.test.ts`
+  re-oriented to the real contract (global role = bootstrap-only operator grant;
+  tenant roles never leak across tenants).
 
 Verified **still open** in current code:
 

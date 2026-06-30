@@ -3,14 +3,13 @@
  *
  * The permission set is a hardcoded, type-safe enum (the `Permission` union).
  * Roles are stored in the `Role` table; each row carries a JSON-encoded array
- * of these strings. A user's assigned role name lives in two places:
+ * of these strings.
  *
- *   - Clerk `publicMetadata.role` — the cross-system source of truth
- *   - D1 `User.role`              — a mirror, used for fast checks here
- *
- * Edits to `publicMetadata.role` made directly in the Clerk dashboard will
- * not sync back to D1; always change roles through `setUserRole` in
- * src/lib/clerk-roles.ts.
+ * A user's authz role is PER-TENANT: it lives on `UserTenant.role` and is
+ * resolved by `getMembershipPermissions` below (changed via `assignRoleToUser`).
+ * The global `User.role` is a SEPARATE platform-operator flag (a global
+ * `super_admin` gets cross-tenant power via the platform console); it is set
+ * only at bootstrap, never by a tenant-scoped admin action.
  */
 import { getPrisma, type ScopedClient } from "@/lib/prisma";
 
