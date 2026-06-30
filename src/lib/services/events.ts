@@ -345,6 +345,31 @@ export async function getRsvpStats(eventId: string, viewer?: ActorLike | null) {
   };
 }
 
+/**
+ * Close the RSVP "going" capacity race after an upsert. Ranks every "going"
+ * RSVP by (createdAt, userId) and, if `userId` falls beyond `maxAttendees`,
+ * rolls their RSVP back and throws "at maximum capacity". The deterministic
+ * ordering converges concurrent over-capacity claimants to exactly the first
+ * `maxAttendees` by RSVP time — without an interactive transaction or raw SQL,
+ * which D1 + the tenant chokepoint disallow.
+ */
+async function enforceGoingCapacity(
+  db: Awaited<ReturnType<typeof getPrisma>>,
+  eventId: string,
+  userId: string,
+  maxAttendees: number,
+): Promise<void> {
+  const going = await db.eventRSVP.findMany({
+    where: { eventId, status: "going" },
+    orderBy: [{ createdAt: "asc" }, { userId: "asc" }],
+    select: { userId: true },
+  });
+  if (going.findIndex((r) => r.userId === userId) >= maxAttendees) {
+    await db.eventRSVP.deleteMany({ where: { eventId, userId } });
+    throw new ServiceError("bad_request", "Event is at maximum capacity");
+  }
+}
+
 export async function rsvpToEvent(
   actor: ActorLike & { email?: string | null; name?: string | null },
   eventId: string,
@@ -378,6 +403,8 @@ export async function rsvpToEvent(
     throw new ServiceError("bad_request", "Internal RSVP is not enabled for this event");
   }
 
+  // Fast path: reject an obviously-full event before writing. Not atomic on its
+  // own (see the post-upsert reconciliation below).
   if (status === "going" && event.maxAttendees) {
     const currentGoing = await db.eventRSVP.count({
       where: { eventId, status: "going", userId: { not: actor.id } },
@@ -397,6 +424,11 @@ export async function rsvpToEvent(
       update: { status },
       create: { userId: actor.id, eventId, status },
     });
+
+    // Capacity race closure (the count-then-write check above is not atomic).
+    if (status === "going" && event.maxAttendees) {
+      await enforceGoingCapacity(db, eventId, actor.id, event.maxAttendees);
+    }
 
     if (status === "going" && actor.email) {
       const config = await getTenantConfig();

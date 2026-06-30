@@ -60,10 +60,22 @@ HIGH items — re-verified 2026-06-30, both already fixed in current code:
   `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, and `Permissions-Policy` to
   every route, plus `poweredByHeader: false`.
 
-**No CRITICAL or HIGH findings remain open.**
+MEDIUM items (2026-06-30):
 
-Still open (MEDIUM, not re-verified this pass): #9 (link-preview SSRF),
-#10 (RSVP capacity race).
+- ✅ #9 Link-preview SSRF — `src/app/api/link-preview/route.ts` `assertSafeUrl`
+  rejects non-http(s) URLs and non-standard ports, blocks literal private IPs
+  (IPv4 + IPv6: loopback, link-local incl. `169.254.169.254` metadata, RFC1918,
+  CGNAT, multicast/reserved), resolves DNS and checks every A/AAAA result, and
+  re-validates each redirect hop (defeats redirect SSRF + DNS rebinding) — with
+  a 5s timeout, 50KB read cap, and rate limit. Already implemented; verified.
+- ✅ #10 RSVP capacity race — `rsvpToEvent` (`src/lib/services/events.ts`) now
+  closes the count-then-write TOCTOU: after the upsert it ranks all "going"
+  RSVPs by `(createdAt, userId)` and rolls the actor back if they fall beyond
+  `maxAttendees`. The deterministic ordering means concurrent over-capacity
+  claimants each remove themselves, converging to exactly the first
+  `maxAttendees` — no interactive transaction / raw SQL needed on D1.
+
+**All audit findings (#1–#11) are now resolved.**
 
 ---
 
