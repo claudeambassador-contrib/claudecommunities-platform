@@ -6,10 +6,11 @@ Full security review of the codebase. Three parallel audits covered: API route s
 
 ## Status (last reviewed 2026-05-26, post Neon→D1 migration)
 
-Several items were remediated in earlier commits; the rest are still open.
-The audit body below is preserved as the original finding — file paths may
-have shifted (e.g. upload handling has moved into `src/lib/storage.ts` and
-`src/lib/services/uploads.ts`), but the underlying issues are the same.
+Items were remediated in earlier commits and on the `security/critical-fixes`
+branch; only the two MEDIUM findings (#9, #10) remain open. The audit body below
+is preserved as the original finding — file paths may have shifted (e.g. upload
+handling has moved into `src/lib/storage.ts` and `src/lib/services/uploads.ts`),
+but the underlying issues are the same.
 
 Verified **fixed** in current code:
 
@@ -45,14 +46,24 @@ Fixed on branch `security/critical-fixes` (2026-06-30):
   re-oriented to the real contract (global role = bootstrap-only operator grant;
   tenant roles never leak across tenants).
 
-Verified **still open** in current code:
+HIGH items — re-verified 2026-06-30, both already fixed in current code:
 
-- ❌ #7 Security headers — `next.config.ts` has no `headers()` function and
-  no CSP middleware. The commit `e8357b1` references "CSP report-only" but
-  that wiring is not visible in the current tree — re-verify.
+- ✅ #6 Upload `resourceType` — the upload route (`src/app/api/upload/route.ts`,
+  POST + PUT) no longer accepts a client-supplied `resourceType`; it is derived
+  server-side from MIME (`resourceTypeFor` in `src/lib/storage.ts`). `checkType`
+  enforces a MIME allowlist (`DEFAULT_ALLOWED_MIME_TYPES`) and rejects
+  `image/svg+xml`, so the "set `resourceType: 'raw'` to bypass type
+  restrictions" vector is closed. MIME-spoofing to a benign allowlisted type is
+  further neutralised by the `X-Content-Type-Options: nosniff` header (#7).
+- ✅ #7 Security headers — `next.config.ts` `headers()` applies CSP, HSTS
+  (`max-age=31536000; includeSubDomains`), `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, and `Permissions-Policy` to
+  every route, plus `poweredByHeader: false`.
 
-Not re-verified for this status update: #6 (upload `resourceType`), #9
-(link-preview SSRF), #10 (RSVP race).
+**No CRITICAL or HIGH findings remain open.**
+
+Still open (MEDIUM, not re-verified this pass): #9 (link-preview SSRF),
+#10 (RSVP capacity race).
 
 ---
 
