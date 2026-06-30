@@ -21,7 +21,14 @@ describe("tenant seed round-trips to real branding (not placeholder defaults)", 
 
       it("reconstructs the region config exactly (minus the dropped `region` key)", () => {
         const { region: _dropped, ...expected } = rc;
-        expect(resolved).toEqual(expected);
+        // Footer links are platform-wide defaults, not region branding, so they
+        // are absent from RegionConfig and resolve from TENANT_CONFIG_DEFAULTS
+        // on read-back (the seed carries no region-specific footers).
+        expect(resolved).toEqual({
+          ...expected,
+          footerIndustries: TENANT_CONFIG_DEFAULTS.footerIndustries,
+          footerResources: TENANT_CONFIG_DEFAULTS.footerResources,
+        });
       });
 
       it("does NOT fall back to placeholder defaults", () => {

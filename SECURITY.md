@@ -6,10 +6,11 @@ Full security review of the codebase. Three parallel audits covered: API route s
 
 ## Status (last reviewed 2026-05-26, post Neon→D1 migration)
 
-Several items were remediated in earlier commits; the rest are still open.
-The audit body below is preserved as the original finding — file paths may
-have shifted (e.g. upload handling has moved into `src/lib/storage.ts` and
-`src/lib/services/uploads.ts`), but the underlying issues are the same.
+Items were remediated in earlier commits and on the `security/critical-fixes`
+branch; only the two MEDIUM findings (#9, #10) remain open. The audit body below
+is preserved as the original finding — file paths may have shifted (e.g. upload
+handling has moved into `src/lib/storage.ts` and `src/lib/services/uploads.ts`),
+but the underlying issues are the same.
 
 Verified **fixed** in current code:
 
@@ -21,18 +22,60 @@ Verified **fixed** in current code:
   events / users-search were addressed by `e8357b1` ("Finish security
   audit: zod input, rate limit, CSP report-only").
 
-Verified **still open** in current code:
+Fixed on branch `security/critical-fixes` (2026-06-30):
 
-- ❌ #2 Banned users — `src/lib/auth.ts` `getCurrentUser()` returns the user
-  without checking `isBanned`. Every caller needs to handle this itself.
-- ❌ #3 HTML injection in email templates — no `escapeHtml` helper in
-  `src/lib/resend.ts`.
-- ❌ #7 Security headers — `next.config.ts` has no `headers()` function and
-  no CSP middleware. The commit `e8357b1` references "CSP report-only" but
-  that wiring is not visible in the current tree — re-verify.
+- ✅ #2 Banned users — `src/lib/auth.ts` `resolveSessionUser()` now returns
+  `null` when `user.isBanned`, so both `getCurrentUser()` and
+  `ensureUserInDb()` lock banned accounts out of every authenticated path.
+- ✅ #3 HTML injection in email templates — added an `escapeHtml()` helper in
+  `src/lib/resend.ts`, applied to all interpolated user values (`userName`,
+  `title`, `message`, `personalMessage`). Campaign `content` is left intact
+  (it is intentionally admin-authored HTML).
+- ✅ #4 XSS in `LessonContent` — `parseContent()` now escapes all input up
+  front before the markdown transforms run, and link URLs are
+  scheme-allowlisted (blocks `javascript:`/`data:`).
+- ✅ #11 (NEW) Cross-tenant privilege escalation via role assignment —
+  `assignRoleToUser` (tenant-scoped, needs only `users.assign_role`) mirrored
+  the assigned role to the GLOBAL `User.role` via `setUserRole`. Because
+  `getMembershipPermissions` treats a global `super_admin` as a platform
+  operator with power in EVERY tenant, a tenant admin assigning their tenant's
+  `super_admin` role minted a global platform super_admin (full cross-tenant
+  access + platform console). Fixed: `assignRoleToUser` now writes only
+  `UserTenant.role`; the global-role writer `src/lib/clerk-roles.ts` was removed.
+  Surfaced by the previously-never-run CI; `test/iso/auth-membership.test.ts`
+  re-oriented to the real contract (global role = bootstrap-only operator grant;
+  tenant roles never leak across tenants).
 
-Not re-verified for this status update: #4 (LessonContent escaping), #6
-(upload `resourceType`), #9 (link-preview SSRF), #10 (RSVP race).
+HIGH items — re-verified 2026-06-30, both already fixed in current code:
+
+- ✅ #6 Upload `resourceType` — the upload route (`src/app/api/upload/route.ts`,
+  POST + PUT) no longer accepts a client-supplied `resourceType`; it is derived
+  server-side from MIME (`resourceTypeFor` in `src/lib/storage.ts`). `checkType`
+  enforces a MIME allowlist (`DEFAULT_ALLOWED_MIME_TYPES`) and rejects
+  `image/svg+xml`, so the "set `resourceType: 'raw'` to bypass type
+  restrictions" vector is closed. MIME-spoofing to a benign allowlisted type is
+  further neutralised by the `X-Content-Type-Options: nosniff` header (#7).
+- ✅ #7 Security headers — `next.config.ts` `headers()` applies CSP, HSTS
+  (`max-age=31536000; includeSubDomains`), `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, and `Permissions-Policy` to
+  every route, plus `poweredByHeader: false`.
+
+MEDIUM items (2026-06-30):
+
+- ✅ #9 Link-preview SSRF — `src/app/api/link-preview/route.ts` `assertSafeUrl`
+  rejects non-http(s) URLs and non-standard ports, blocks literal private IPs
+  (IPv4 + IPv6: loopback, link-local incl. `169.254.169.254` metadata, RFC1918,
+  CGNAT, multicast/reserved), resolves DNS and checks every A/AAAA result, and
+  re-validates each redirect hop (defeats redirect SSRF + DNS rebinding) — with
+  a 5s timeout, 50KB read cap, and rate limit. Already implemented; verified.
+- ✅ #10 RSVP capacity race — `rsvpToEvent` (`src/lib/services/events.ts`) now
+  closes the count-then-write TOCTOU: after the upsert it ranks all "going"
+  RSVPs by `(createdAt, userId)` and rolls the actor back if they fall beyond
+  `maxAttendees`. The deterministic ordering means concurrent over-capacity
+  claimants each remove themselves, converging to exactly the first
+  `maxAttendees` — no interactive transaction / raw SQL needed on D1.
+
+**All audit findings (#1–#11) are now resolved.**
 
 ---
 

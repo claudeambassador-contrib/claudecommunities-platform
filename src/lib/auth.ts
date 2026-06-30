@@ -153,6 +153,16 @@ async function resolveSessionUser() {
       notifySignup(user, "");
     }
   }
+
+  // Banned users are treated as not-signed-in everywhere. Both getCurrentUser
+  // (RSC) and ensureUserInDb (API routes) funnel through here, so this single
+  // guard locks a banned account out of every authenticated path — posting,
+  // commenting, RSVPs, uploads, etc. A brand-new signup above can't be banned,
+  // so the placement after the signup block is safe.
+  if (user?.isBanned) {
+    return null;
+  }
+
   return user;
 }
 

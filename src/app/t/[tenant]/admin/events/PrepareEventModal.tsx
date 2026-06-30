@@ -38,6 +38,7 @@ import { SpeakerSlideGenerator } from "@/components/slide-generator";
 import { useTenantConfig } from "@/components/TenantConfigProvider";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
+import { escapeHtml } from "@/lib/escape-html";
 import { type AgendaItem, type DescriptionFormat, renderDescription } from "./agendaToDescription";
 import ClaudienceSection from "./ClaudienceSection";
 import EventDetailsTab, { type EventDetails } from "./EventDetailsTab";
@@ -186,15 +187,6 @@ function isoToSlideDate(iso: string | null | undefined, tz: string | null): stri
 }
 
 /** Minimal markdown → HTML for preview only; escapes input first. */
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 function renderMarkdownPreview(text: string): string {
   let html = escapeHtml(text);
   html = html.replace(

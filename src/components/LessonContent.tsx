@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
+import { escapeHtml } from "@/lib/escape-html";
 
 const SessionTimeline = dynamic(() => import("@/components/interactive/SessionTimeline"), {
   ssr: false,
@@ -314,7 +315,13 @@ export default function LessonContent({
   }, [content]);
 
   const parseContent = (text: string) => {
-    let html = text;
+    // Escape the raw input up front so ALL user/admin content is neutralised
+    // before any markdown transform runs. The markdown delimiters we match on
+    // (#, *, _, `, [, ], (, ), -, digits) are not affected by escaping, so the
+    // regexes below still fire; they only ever wrap already-escaped text in
+    // safe tags. (Blockquote is the one exception — `>` becomes `&gt;` — so its
+    // regex is matched in escaped form below.)
+    let html = escapeHtml(text);
 
     // Headers
     html = html.replace(
@@ -330,9 +337,9 @@ export default function LessonContent({
       '<h1 class="text-2xl font-bold text-white mt-8 mb-4">$1</h1>',
     );
 
-    // Code blocks
+    // Code blocks (content already escaped by the up-front escapeHtml above)
     html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, _lang, code) => {
-      return `<pre class="bg-[#1C1917] rounded-lg p-4 overflow-x-auto my-4"><code class="text-sm text-[#E7E5E4] font-mono">${escapeHtml(code.trim())}</code></pre>`;
+      return `<pre class="bg-[#1C1917] rounded-lg p-4 overflow-x-auto my-4"><code class="text-sm text-[#E7E5E4] font-mono">${code.trim()}</code></pre>`;
     });
 
     // Inline code
@@ -353,11 +360,13 @@ export default function LessonContent({
       '<span class="text-[#D4836A] font-medium">@$1</span>',
     );
 
-    // Links
-    html = html.replace(
-      /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[#D4836A] hover:underline">$1</a>',
-    );
+    // Links. Label + URL are already HTML-escaped; additionally allowlist the
+    // URL scheme so an escaped-but-still-dangerous `javascript:`/`data:` href
+    // can't execute. Non-allowed targets fall back to plain (escaped) text.
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+      if (!/^(https?:\/\/|mailto:|\/)/i.test(url)) return label;
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-[#D4836A] hover:underline">${label}</a>`;
+    });
 
     // Bare URLs
     html = html.replace(
@@ -365,9 +374,9 @@ export default function LessonContent({
       '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-[#D4836A] hover:underline break-all">$1</a>',
     );
 
-    // Blockquotes
+    // Blockquotes (the leading `>` is `&gt;` after the up-front escape)
     html = html.replace(
-      /^> (.+)$/gm,
+      /^&gt; (.+)$/gm,
       '<blockquote class="border-l-2 border-[#D4836A] pl-4 text-[#A8A29E] italic my-4">$1</blockquote>',
     );
 
@@ -391,15 +400,6 @@ export default function LessonContent({
     html = html.replace(/<p[^>]*>\s*<\/p>/g, "");
 
     return html;
-  };
-
-  const escapeHtml = (text: string) => {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
   };
 
   const renderInteractive = (name: string) => {
@@ -498,7 +498,7 @@ export default function LessonContent({
           <div
             key={segment.key}
             className="prose prose-invert max-w-none"
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: server-authored lesson content rendered through the in-app parseContent markdown parser, which escapes code blocks via escapeHtml
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: lesson content rendered through the in-app parseContent markdown parser, which escapes ALL input up front (escapeHtml) before wrapping it in safe tags and allowlists link URL schemes
             dangerouslySetInnerHTML={{ __html: parseContent(segment.content) }}
           />
         );
