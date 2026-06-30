@@ -21,18 +21,27 @@ Verified **fixed** in current code:
   events / users-search were addressed by `e8357b1` ("Finish security
   audit: zod input, rate limit, CSP report-only").
 
+Fixed on branch `security/critical-fixes` (2026-06-30):
+
+- ✅ #2 Banned users — `src/lib/auth.ts` `resolveSessionUser()` now returns
+  `null` when `user.isBanned`, so both `getCurrentUser()` and
+  `ensureUserInDb()` lock banned accounts out of every authenticated path.
+- ✅ #3 HTML injection in email templates — added an `escapeHtml()` helper in
+  `src/lib/resend.ts`, applied to all interpolated user values (`userName`,
+  `title`, `message`, `personalMessage`). Campaign `content` is left intact
+  (it is intentionally admin-authored HTML).
+- ✅ #4 XSS in `LessonContent` — `parseContent()` now escapes all input up
+  front before the markdown transforms run, and link URLs are
+  scheme-allowlisted (blocks `javascript:`/`data:`).
+
 Verified **still open** in current code:
 
-- ❌ #2 Banned users — `src/lib/auth.ts` `getCurrentUser()` returns the user
-  without checking `isBanned`. Every caller needs to handle this itself.
-- ❌ #3 HTML injection in email templates — no `escapeHtml` helper in
-  `src/lib/resend.ts`.
 - ❌ #7 Security headers — `next.config.ts` has no `headers()` function and
   no CSP middleware. The commit `e8357b1` references "CSP report-only" but
   that wiring is not visible in the current tree — re-verify.
 
-Not re-verified for this status update: #4 (LessonContent escaping), #6
-(upload `resourceType`), #9 (link-preview SSRF), #10 (RSVP race).
+Not re-verified for this status update: #6 (upload `resourceType`), #9
+(link-preview SSRF), #10 (RSVP race).
 
 ---
 

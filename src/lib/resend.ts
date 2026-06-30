@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { escapeHtml } from "@/lib/escape-html";
 import { isSend16Enabled, sendViaSend16 } from "@/lib/send16";
 import { getTenantConfig, type TenantConfig } from "@/lib/tenant-config";
 
@@ -92,7 +93,7 @@ export function getNotificationEmailHtml(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
+  <title>${escapeHtml(title)}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1C1917; color: #E7E5E4; margin: 0; padding: 20px;">
   <div style="max-width: 500px; margin: 0 auto; background: #2D2926; border-radius: 16px; overflow: hidden;">
@@ -101,9 +102,9 @@ export function getNotificationEmailHtml(
       <h1 style="color: white; margin: 0; font-size: 20px;">${config.communityName}</h1>
     </div>
     <div style="padding: 24px;">
-      <p style="margin: 0 0 8px; color: #A8A29E; font-size: 14px;">Hey ${userName},</p>
-      <h2 style="margin: 0 0 12px; color: white; font-size: 18px;">${title}</h2>
-      <p style="margin: 0; color: #E7E5E4; font-size: 15px; line-height: 1.6;">${message}</p>
+      <p style="margin: 0 0 8px; color: #A8A29E; font-size: 14px;">Hey ${escapeHtml(userName)},</p>
+      <h2 style="margin: 0 0 12px; color: white; font-size: 18px;">${escapeHtml(title)}</h2>
+      <p style="margin: 0; color: #E7E5E4; font-size: 15px; line-height: 1.6;">${escapeHtml(message)}</p>
       ${buttonHtml}
     </div>
     <div style="padding: 16px 24px; text-align: center; font-size: 12px; color: #78716C; border-top: 1px solid rgba(255,255,255,0.06);">
@@ -135,7 +136,7 @@ export function getWelcomeEmailHtml(userName: string, config: TenantConfig): str
     </div>
     <div style="padding: 32px;">
       <p style="margin: 0 0 16px; color: #E7E5E4; font-size: 16px; line-height: 1.6;">
-        Hey ${userName}! 👋
+        Hey ${escapeHtml(userName)}! 👋
       </p>
       <p style="margin: 0 0 16px; color: #E7E5E4; font-size: 16px; line-height: 1.6;">
         We're excited to have you join <strong>${config.communityName}</strong> - a space for those who love to use Claude Code or for those just getting started.
@@ -186,7 +187,7 @@ export function getEventReminderEmailHtml(
       <h1 style="color: white; margin: 0; font-size: 20px;">${eventTitle}</h1>
     </div>
     <div style="padding: 24px;">
-      <p style="margin: 0 0 16px; color: #A8A29E; font-size: 14px;">Hey ${userName},</p>
+      <p style="margin: 0 0 16px; color: #A8A29E; font-size: 14px;">Hey ${escapeHtml(userName)},</p>
       <p style="margin: 0 0 20px; color: #E7E5E4; font-size: 15px; line-height: 1.6;">
         Just a friendly reminder about an upcoming event you're interested in!
       </p>
@@ -230,7 +231,7 @@ export function getLumaLinkReadyEmailHtml(
       <h1 style="color: white; margin: 0; font-size: 20px;">${eventTitle}</h1>
     </div>
     <div style="padding: 24px;">
-      <p style="margin: 0 0 16px; color: #A8A29E; font-size: 14px;">Hey ${userName},</p>
+      <p style="margin: 0 0 16px; color: #A8A29E; font-size: 14px;">Hey ${escapeHtml(userName)},</p>
       <p style="margin: 0 0 20px; color: #E7E5E4; font-size: 15px; line-height: 1.6;">
         Good news — the Luma registration link for <strong>${eventTitle}</strong> is now live. You asked us to let you know when it was ready.
       </p>
@@ -296,7 +297,7 @@ export function getCampaignEmailHtml(
     <div style="background: #2D2926; border-radius: 16px; overflow: hidden;">
       ${headerImage}
       <div style="padding: 24px;">
-        <p style="margin: 0 0 16px; color: #A8A29E; font-size: 14px;">Hey ${userName},</p>
+        <p style="margin: 0 0 16px; color: #A8A29E; font-size: 14px;">Hey ${escapeHtml(userName)},</p>
         <div style="color: #E7E5E4; font-size: 15px; line-height: 1.6;">
           ${content}
         </div>
@@ -421,7 +422,7 @@ export function getInviteEmailHtml(
 
   const messageSection = personalMessage
     ? `<div style="background: #1C1917; border-radius: 12px; padding: 16px; margin: 20px 0; border-left: 3px solid #D4836A;">
-        <p style="margin: 0; color: #E7E5E4; font-size: 15px; line-height: 1.6; font-style: italic;">"${personalMessage}"</p>
+        <p style="margin: 0; color: #E7E5E4; font-size: 15px; line-height: 1.6; font-style: italic;">"${escapeHtml(personalMessage)}"</p>
       </div>`
     : "";
 
@@ -442,7 +443,7 @@ export function getInviteEmailHtml(
     </div>
     <div style="padding: 32px;">
       <p style="margin: 0 0 16px; color: #E7E5E4; font-size: 16px; line-height: 1.6;">
-        Hey ${userName}! 👋
+        Hey ${escapeHtml(userName)}! 👋
       </p>
       <p style="margin: 0 0 16px; color: #E7E5E4; font-size: 16px; line-height: 1.6;">
         You've been invited to join <strong>${config.communityName}</strong> - the community for Claude Code enthusiasts, developers, and AI explorers.
