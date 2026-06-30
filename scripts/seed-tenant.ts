@@ -32,7 +32,7 @@
 import { SEED_CITIES } from "../src/lib/cities";
 import type { Block } from "../src/lib/cms/blocks";
 import { AU_WEBINAR_BLOCK, DEFAULT_HOME_SECTIONS } from "../src/lib/cms/defaults";
-import { REGION_CONFIGS, type Region, type RegionConfig } from "../src/lib/region";
+import { type KnownRegion, REGION_CONFIGS, type Region, type RegionConfig } from "../src/lib/region";
 import type { TenantConfig } from "../src/lib/tenant-config";
 
 /** A tenant seed: the registry row, the broken-out gaId column, and the config JSON. */
@@ -95,7 +95,7 @@ function sqlNullable(value: string | null): string {
  * becomes admin-editable, so a re-run must NOT clobber it. To re-seed, delete the
  * row first.
  */
-export function buildTenantSeedSql(region: Region): string {
+export function buildTenantSeedSql(region: KnownRegion): string {
   const rc = REGION_CONFIGS[region];
   if (!rc) throw new Error(`Unknown region "${region}" — expected one of: ${Object.keys(REGION_CONFIGS).join(", ")}`);
   const seed = regionToTenantSeed(rc);
@@ -120,7 +120,7 @@ export function buildTenantSeedSql(region: Region): string {
  * keeps the default disabled webinar. No `REGION === "au"` check leaks into the
  * renderer — visibility is purely the seeded `enabled` flag.
  */
-function homeBlocksForRegion(region: Region): Block[] {
+function homeBlocksForRegion(region: KnownRegion): Block[] {
   return DEFAULT_HOME_SECTIONS.map((block) =>
     block.type === "webinar" && region === "au" ? AU_WEBINAR_BLOCK : block,
   );
@@ -133,7 +133,7 @@ function homeBlocksForRegion(region: Region): Block[] {
  * (`home-<slug>`) so re-runs target the same row. AU's webinar bar ships enabled;
  * NZ's disabled (both via the same default block shape).
  */
-export function buildPageSeedSql(region: Region): string {
+export function buildPageSeedSql(region: KnownRegion): string {
   if (!REGION_CONFIGS[region]) {
     throw new Error(
       `Unknown region "${region}" — expected one of: ${Object.keys(REGION_CONFIGS).join(", ")}`,
@@ -158,7 +158,7 @@ export function buildPageSeedSql(region: Region): string {
  * `keywords` is stored as a JSON string; `isCapital` as a 0/1 integer (SQLite
  * has no Boolean type); `position` is the index within the region-filtered list.
  */
-export function buildCitySeedSql(region: Region): string {
+export function buildCitySeedSql(region: KnownRegion): string {
   if (!REGION_CONFIGS[region]) {
     throw new Error(
       `Unknown region "${region}" — expected one of: ${Object.keys(REGION_CONFIGS).join(", ")}`,
@@ -184,7 +184,7 @@ export function buildCitySeedSql(region: Region): string {
 
 // CLI entry: `tsx scripts/seed-tenant.ts [au|nz]` -> SQL on stdout.
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const region = (process.argv[2] ?? "au") as Region;
+  const region = (process.argv[2] ?? "au") as KnownRegion;
   process.stdout.write(buildTenantSeedSql(region));
   process.stdout.write(buildPageSeedSql(region));
   process.stdout.write(buildCitySeedSql(region));

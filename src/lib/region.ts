@@ -1,4 +1,18 @@
-export type Region = "au" | "nz";
+/**
+ * The two built-in single-tenant regions with hand-authored branding literals in
+ * {@link REGION_CONFIGS}. These keep their exact, tested behaviour forever.
+ */
+export type KnownRegion = "au" | "nz";
+
+/**
+ * A deploy's region. `"au"`/`"nz"` are the known, literal-backed regions; any
+ * other string is a self-host region whose branding comes from the DB
+ * (`getTenantConfig()`) at runtime, with {@link getRegionConfig} synthesizing a
+ * generic build-time config from `NEXT_PUBLIC_*` vars for the legacy metadata
+ * call sites. The `(string & {})` arm keeps `"au"`/`"nz"` as autocomplete hints
+ * while still accepting arbitrary self-host values.
+ */
+export type Region = KnownRegion | (string & {});
 
 export interface TimezoneOption {
   value: string;
@@ -69,9 +83,12 @@ export function majorCitiesPhrase(opts: { region?: Region; conjunction?: string 
 
 // Build-time inlined (NEXT_PUBLIC_*). Defaults to "au" when unset so the
 // existing AU deploy is unchanged.
-export const REGION: Region = (process.env.NEXT_PUBLIC_REGION as Region | undefined) ?? "au";
+export const REGION: Region = process.env.NEXT_PUBLIC_REGION ?? "au";
 
-export const REGION_CONFIGS: Record<Region, RegionConfig> = {
+// Only the two built-in regions carry hand-authored literals. A self-host region
+// (any other NEXT_PUBLIC_REGION value) is NOT a key here — getRegionConfig()
+// synthesizes a generic config for it from NEXT_PUBLIC_* (see below).
+export const REGION_CONFIGS: Record<KnownRegion, RegionConfig> = {
   au: {
     region: "au",
     countryName: "Australia",
@@ -142,8 +159,61 @@ export const REGION_CONFIGS: Record<Region, RegionConfig> = {
   },
 };
 
+/**
+ * Build a generic {@link RegionConfig} for a self-host region (any region not in
+ * {@link REGION_CONFIGS}) from `NEXT_PUBLIC_*` build vars, with safe defaults
+ * that mirror `TENANT_CONFIG_DEFAULTS` in `src/lib/tenant-config.ts`. This keeps
+ * the legacy build-time metadata call sites (manifest, robots, sitemap,
+ * security.txt, og locale) working — never `undefined`, never a throw — for a
+ * community that brands itself without editing this shared source. The DB
+ * (`getTenantConfig()`) remains the runtime source of truth; this only feeds the
+ * handful of build-baked metadata routes.
+ *
+ * Defaults are inlined (not imported) so this module stays free of the React /
+ * Prisma deps that `tenant-config.ts` pulls in — it runs in middleware/edge.
+ */
+function genericRegionConfig(region: Region): RegionConfig {
+  const env = process.env;
+  const communityName = env.NEXT_PUBLIC_COMMUNITY_NAME ?? "Claude Community";
+  const senderDomain = env.NEXT_PUBLIC_SENDER_DOMAIN ?? "claudecommunities.com";
+  const resolvedSiteUrl = env.NEXT_PUBLIC_SITE_URL ?? "https://claudecommunities.com";
+  return {
+    region,
+    countryName: env.NEXT_PUBLIC_COUNTRY ?? "",
+    lang: env.NEXT_PUBLIC_LANG ?? "en",
+    communityName,
+    currency: env.NEXT_PUBLIC_CURRENCY ?? "USD",
+    currencySymbol: env.NEXT_PUBLIC_CURRENCY_SYMBOL ?? "$",
+    defaultTimezone: env.NEXT_PUBLIC_DEFAULT_TIMEZONE ?? "UTC",
+    gaId: env.NEXT_PUBLIC_GA_ID ?? null,
+    fromEmail: env.NEXT_PUBLIC_FROM_EMAIL ?? `${communityName} <noreply@${senderDomain}>`,
+    senderEmail: `noreply@${senderDomain}`,
+    senderDomain,
+    timezoneOptions: [],
+    nationality: env.NEXT_PUBLIC_NATIONALITY ?? "",
+    majorCities: [],
+    shortName: env.NEXT_PUBLIC_SHORT_NAME ?? communityName,
+    discordCommunityInvite: env.NEXT_PUBLIC_DISCORD_INVITE ?? "",
+    linkedinUrl: null,
+    siteUrl: resolvedSiteUrl,
+    appUrl: env.NEXT_PUBLIC_APP_URL ?? resolvedSiteUrl,
+    mapImage: "/images/claude-community-map.svg",
+    ogImage: "/images/og-image.png",
+    galleryImages: [],
+    communitySuperlative: "",
+    merchEnabled: false,
+  };
+}
+
+/**
+ * Resolve a region's build-time config. `"au"`/`"nz"` return their exact,
+ * tested literals from {@link REGION_CONFIGS}; any other (self-host) region gets
+ * a generic config synthesized from `NEXT_PUBLIC_*` (see {@link
+ * genericRegionConfig}) so the legacy metadata routes never break.
+ */
 export function getRegionConfig(region: Region = REGION): RegionConfig {
-  return REGION_CONFIGS[region];
+  const known = (REGION_CONFIGS as Record<string, RegionConfig | undefined>)[region];
+  return known ?? genericRegionConfig(region);
 }
 
 /**
