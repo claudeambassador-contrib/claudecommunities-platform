@@ -30,22 +30,38 @@
  * NB: the flag is `--infra-file`, NOT `--env-file` — Node 20.6+ treats
  * `--env-file` as its own startup flag and aborts cryptically on a missing file.
  *
+ * A `--template <path>` flag selects which template to render; it DEFAULTS to
+ * `wrangler.template.jsonc` (the canonical 5-env config), so omitting it keeps
+ * the original behaviour byte-for-byte. Pass `wrangler.selfhost.template.jsonc`
+ * to render the single generic self-host deployment (see docs/self-hosting.md).
+ * Whichever template is chosen, the output is always `wrangler.jsonc`, and only
+ * the tokens that template actually references are required.
+ *
  * Usage:
  *   node scripts/gen-wrangler.mjs                       # .env.cfinfra or process.env
  *   node scripts/gen-wrangler.mjs --infra-file .env.cfinfra
+ *   node scripts/gen-wrangler.mjs --template wrangler.selfhost.template.jsonc
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-
-// Resolve template/output relative to this script's location (repo root =
-// the parent of scripts/), so it works regardless of the caller's cwd.
-const TEMPLATE_PATH = fileURLToPath(new URL("../wrangler.template.jsonc", import.meta.url));
-const OUTPUT_PATH = fileURLToPath(new URL("../wrangler.jsonc", import.meta.url));
+import { isAbsolute, resolve } from "node:path";
 
 function arg(name) {
   const i = process.argv.indexOf(`--${name}`);
   return i !== -1 ? process.argv[i + 1] : undefined;
 }
+
+// Resolve template/output relative to this script's location (repo root =
+// the parent of scripts/), so it works regardless of the caller's cwd.
+const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const DEFAULT_TEMPLATE = "wrangler.template.jsonc";
+const templateArg = arg("template") ?? DEFAULT_TEMPLATE;
+// A relative --template is resolved against the repo root (not the cwd) so the
+// package.json scripts work from anywhere; an absolute path is used as-is.
+const TEMPLATE_PATH = isAbsolute(templateArg)
+  ? templateArg
+  : resolve(REPO_ROOT, templateArg);
+const OUTPUT_PATH = resolve(REPO_ROOT, "wrangler.jsonc");
 
 /** Parse a `KEY=value` env file into process.env (file values win). */
 function loadEnvFile(path) {
@@ -71,7 +87,11 @@ function loadEnvFile(path) {
 
 // Default infra file (repo root), auto-loaded for local/manual runs. On
 // Cloudflare Workers Builds it is absent and values come from process.env.
-const DEFAULT_INFRA_PATH = fileURLToPath(new URL("../.env.cfinfra", import.meta.url));
+// The canonical template auto-loads `.env.cfinfra` (unchanged); the self-host
+// template auto-loads `.env.selfhost` so `bun run gen:wrangler:selfhost` just
+// works locally without an explicit --infra-file.
+const DEFAULT_INFRA_FILE = templateArg.includes("selfhost") ? ".env.selfhost" : ".env.cfinfra";
+const DEFAULT_INFRA_PATH = resolve(REPO_ROOT, DEFAULT_INFRA_FILE);
 
 const infraFile = arg("infra-file");
 if (infraFile) {
@@ -82,6 +102,10 @@ if (infraFile) {
 // else: rely on process.env (dashboard vars); the missing-token check below
 // fails loudly if neither source provided a value.
 
+if (!existsSync(TEMPLATE_PATH)) {
+  console.error(`[gen-wrangler] Template not found: ${TEMPLATE_PATH}`);
+  process.exit(1);
+}
 const template = readFileSync(TEMPLATE_PATH, "utf8");
 
 // Collect every distinct token referenced by the template so we can report ALL
@@ -89,11 +113,15 @@ const template = readFileSync(TEMPLATE_PATH, "utf8");
 const referenced = [...new Set([...template.matchAll(/\$\{(\w+)\}/g)].map((m) => m[1]))];
 const missing = referenced.filter((k) => process.env[k] == null || process.env[k] === "");
 if (missing.length > 0) {
+  // Point at whichever example file matches the chosen template.
+  const exampleFile = templateArg.includes("selfhost")
+    ? ".env.selfhost.example"
+    : ".env.cfinfra.example";
   console.error(
     `[gen-wrangler] Missing required value(s) for ${missing.length} token(s):\n` +
       missing.map((k) => `  - ${k}`).join("\n") +
       `\n\nSet these as Workers Builds variables (per connected environment) or in` +
-      ` your --env-file. See .env.cfinfra.example for the full list.`,
+      ` your --env-file. See ${exampleFile} for the full list.`,
   );
   process.exit(1);
 }
