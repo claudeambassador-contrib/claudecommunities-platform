@@ -173,30 +173,34 @@ export const REGION_CONFIGS: Record<KnownRegion, RegionConfig> = {
  * Prisma deps that `tenant-config.ts` pulls in — it runs in middleware/edge.
  */
 function genericRegionConfig(region: Region): RegionConfig {
-  const env = process.env;
-  const communityName = env.NEXT_PUBLIC_COMMUNITY_NAME ?? "Claude Community";
-  const senderDomain = env.NEXT_PUBLIC_SENDER_DOMAIN ?? "claudecommunities.com";
-  const resolvedSiteUrl = env.NEXT_PUBLIC_SITE_URL ?? "https://claudecommunities.com";
+  // Each NEXT_PUBLIC_* MUST be read as the literal `process.env.NEXT_PUBLIC_FOO`
+  // static member expression — Next.js only inlines those at build time. Aliasing
+  // (`const env = process.env; env.NEXT_PUBLIC_FOO`) is a dynamic access the
+  // DefinePlugin can't substitute, so the values would silently vanish from the
+  // build/client bundles this module is imported into.
+  const communityName = process.env.NEXT_PUBLIC_COMMUNITY_NAME ?? "Claude Community";
+  const senderDomain = process.env.NEXT_PUBLIC_SENDER_DOMAIN ?? "claudecommunities.com";
+  const resolvedSiteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://claudecommunities.com";
   return {
     region,
-    countryName: env.NEXT_PUBLIC_COUNTRY ?? "",
-    lang: env.NEXT_PUBLIC_LANG ?? "en",
+    countryName: process.env.NEXT_PUBLIC_COUNTRY ?? "",
+    lang: process.env.NEXT_PUBLIC_LANG ?? "en",
     communityName,
-    currency: env.NEXT_PUBLIC_CURRENCY ?? "USD",
-    currencySymbol: env.NEXT_PUBLIC_CURRENCY_SYMBOL ?? "$",
-    defaultTimezone: env.NEXT_PUBLIC_DEFAULT_TIMEZONE ?? "UTC",
-    gaId: env.NEXT_PUBLIC_GA_ID ?? null,
-    fromEmail: env.NEXT_PUBLIC_FROM_EMAIL ?? `${communityName} <noreply@${senderDomain}>`,
+    currency: process.env.NEXT_PUBLIC_CURRENCY ?? "USD",
+    currencySymbol: process.env.NEXT_PUBLIC_CURRENCY_SYMBOL ?? "$",
+    defaultTimezone: process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE ?? "UTC",
+    gaId: process.env.NEXT_PUBLIC_GA_ID ?? null,
+    fromEmail: process.env.NEXT_PUBLIC_FROM_EMAIL ?? `${communityName} <noreply@${senderDomain}>`,
     senderEmail: `noreply@${senderDomain}`,
     senderDomain,
     timezoneOptions: [],
-    nationality: env.NEXT_PUBLIC_NATIONALITY ?? "",
+    nationality: process.env.NEXT_PUBLIC_NATIONALITY ?? "",
     majorCities: [],
-    shortName: env.NEXT_PUBLIC_SHORT_NAME ?? communityName,
-    discordCommunityInvite: env.NEXT_PUBLIC_DISCORD_INVITE ?? "",
+    shortName: process.env.NEXT_PUBLIC_SHORT_NAME ?? communityName,
+    discordCommunityInvite: process.env.NEXT_PUBLIC_DISCORD_INVITE ?? "",
     linkedinUrl: null,
     siteUrl: resolvedSiteUrl,
-    appUrl: env.NEXT_PUBLIC_APP_URL ?? resolvedSiteUrl,
+    appUrl: process.env.NEXT_PUBLIC_APP_URL ?? resolvedSiteUrl,
     mapImage: "/images/claude-community-map.svg",
     ogImage: "/images/og-image.png",
     galleryImages: [],
