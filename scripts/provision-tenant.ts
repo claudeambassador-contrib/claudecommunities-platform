@@ -29,8 +29,9 @@
  */
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { ALL_PERMISSIONS, SYSTEM_ROLES } from "../src/lib/permissions";
+import type { TenantConfig } from "../src/lib/tenant-config";
 import { isValidTenantSlug } from "../src/lib/tenant-resolve";
 import { buildReferenceSeedSql } from "./seed-reference";
 
@@ -49,6 +50,16 @@ export interface ProvisionArgs {
   name: string;
   ownerEmail: string;
   customDomain?: string | null;
+  /**
+   * Optional self-host branding written verbatim to `TenantSetting.config` as
+   * JSON. A partial {@link TenantConfig}: `parseTenantConfig()` merges it over
+   * `TENANT_CONFIG_DEFAULTS` when `getTenantConfig()` reads it, so only the
+   * fields you override need be present. This is the additive, DB-backed branding
+   * path — a self-host community brands itself WITHOUT editing `region.ts`.
+   * Omitted → config stays `'{}'` (unchanged behaviour → getTenantConfig falls
+   * back to TENANT_CONFIG_DEFAULTS, brandable later via the admin Tenant UI).
+   */
+  branding?: Partial<TenantConfig> | null;
   /** Injected for deterministic tests; the CLI generates random ids. */
   ids?: { user: string; membership: string; clerkSuffix: string };
 }
@@ -73,6 +84,10 @@ export function buildProvisionSql(args: ProvisionArgs): string {
     clerkSuffix: randomBytes(6).toString("hex"),
   };
 
+  // Self-host branding → TenantSetting.config JSON. Default '{}' keeps the
+  // existing behaviour byte-for-byte (getTenantConfig → TENANT_CONFIG_DEFAULTS).
+  const configJson = args.branding ? JSON.stringify(args.branding) : "{}";
+
   const allPerms = JSON.stringify(ALL_PERMISSIONS);
   const roles = [
     { name: SYSTEM_ROLES.SUPER_ADMIN, permissions: allPerms },
@@ -86,7 +101,7 @@ export function buildProvisionSql(args: ProvisionArgs): string {
     `VALUES (${sqlStr(slug)}, ${sqlStr(slug)}, ${sqlNullable(customDomain)}, ${sqlStr(args.name)}, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);`,
     ``,
     `INSERT OR IGNORE INTO "TenantSetting" ("id","tenantId","config","createdAt","updatedAt")`,
-    `VALUES (${sqlStr(slug)}, ${sqlStr(slug)}, '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);`,
+    `VALUES (${sqlStr(slug)}, ${sqlStr(slug)}, ${sqlStr(configJson)}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);`,
     ``,
   ];
 
@@ -116,17 +131,39 @@ export function buildProvisionSql(args: ProvisionArgs): string {
   return lines.join("\n");
 }
 
+/**
+ * Optional self-host branding for the CLI, from EITHER `TENANT_BRANDING_JSON`
+ * (inline JSON) OR `TENANT_BRANDING_FILE` (path to a JSON file). Returns
+ * `undefined` when neither is set → caller emits the default `'{}'` config.
+ * Throws on malformed JSON so a typo fails loudly instead of silently seeding
+ * placeholder branding (mirrors the seed-tenant "generated, not hand-typed"
+ * rationale).
+ */
+function loadBrandingFromEnv(): Partial<TenantConfig> | undefined {
+  const inline = process.env.TENANT_BRANDING_JSON;
+  const file = process.env.TENANT_BRANDING_FILE;
+  const raw = inline ?? (file ? readFileSync(file, "utf-8") : undefined);
+  if (!raw) return undefined;
+  const parsed = JSON.parse(raw);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("TENANT_BRANDING_JSON/TENANT_BRANDING_FILE must be a JSON object of TenantConfig fields.");
+  }
+  return parsed as Partial<TenantConfig>;
+}
+
 // CLI: `tsx scripts/provision-tenant.ts <slug> <name> <ownerEmail> [customDomain]`
-// → writes SQL to a temp file and applies it to LOCAL D1 via wrangler.
+// → writes SQL to a temp file and applies it to LOCAL D1 via wrangler. Optional
+// self-host branding via TENANT_BRANDING_JSON / TENANT_BRANDING_FILE (see above).
 if (import.meta.url === `file://${process.argv[1]}`) {
   const [slug, name, ownerEmail, customDomain] = process.argv.slice(2);
   if (!slug || !name || !ownerEmail) {
     process.stderr.write(
-      "Usage: npm run local:tenant:provision -- <slug> <name> <ownerEmail> [customDomain]\n",
+      "Usage: npm run local:tenant:provision -- <slug> <name> <ownerEmail> [customDomain]\n" +
+        "Optional branding: set TENANT_BRANDING_JSON='{...}' or TENANT_BRANDING_FILE=path/to/branding.json\n",
     );
     process.exit(1);
   }
-  const sql = buildProvisionSql({ slug, name, ownerEmail, customDomain });
+  const sql = buildProvisionSql({ slug, name, ownerEmail, customDomain, branding: loadBrandingFromEnv() });
   const outFile = "scripts/.tenant-provision.sql";
   writeFileSync(outFile, sql);
   execFileSync("./node_modules/.bin/wrangler", ["d1", "execute", "DB", "--local", `--file=${outFile}`], {

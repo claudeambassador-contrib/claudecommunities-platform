@@ -12,9 +12,11 @@ values and deploy with **no `--env` flag** (the top level IS your deployment).
 > `staging-platform`, `production-nz`, `staging-nz` envs) is for the original
 > maintainers and is unaffected by anything here. Self-hosters never touch it.
 
-> **Branding note:** today `src/lib/region.ts` carries the built-in `au`/`nz`
-> brandings, selected by `NEXT_PUBLIC_REGION`. Fully env-driven, per-deploy
-> branding is **Stage 3c** (next). For now pick the closest built-in region.
+> **Branding note:** your community brands itself from the database (the admin
+> Tenant settings UI and/or seeded `TenantSetting.config`) — you do **not** edit
+> `src/lib/region.ts`. The built-in `au`/`nz` brandings there are only for the
+> original single-tenant deploys. See **[Branding your community](#9-branding-your-community)**
+> below for the full picture.
 
 ---
 
@@ -209,6 +211,76 @@ Your fork now runs entirely on your own Cloudflare account with your own config
 and secrets — no shared identifiers, no edits to the canonical AU/NZ template.
 Future merges to `main` (via Workers Builds) redeploy automatically.
 
-> Per-community branding (names, emails, Discord, images) is still selected by
-> `NEXT_PUBLIC_REGION` from `src/lib/region.ts`. Making it fully env-driven so a
-> brand-new community ships without editing source is **Stage 3c (next)**.
+---
+
+## 9. Branding your community
+
+Your community's branding — names, copy, currency, emails, Discord, images — is
+**database-backed**: it lives in `TenantSetting.config` and is read per request
+by `getTenantConfig()` (`src/lib/tenant-config.ts`). **You never edit
+`src/lib/region.ts`.** The built-in `au`/`nz` brandings there belong to the
+original single-tenant deploys; everything below is the DB path that the
+architecture points self-hosters at.
+
+There are three layers, in order of how you'll usually reach them:
+
+### A. The admin Tenant settings UI (primary, no redeploy)
+
+After your first deploy and first-admin bootstrap (step 7), sign in and edit your
+tenant's settings in the admin UI. This writes `TenantSetting.config` and takes
+effect immediately — no rebuild, no redeploy. This is the recommended path for
+ongoing branding changes.
+
+### B. Seed branding at provision time (optional, scripted)
+
+When you provision a tenant locally (or script it for a fresh deploy), you can
+seed `TenantSetting.config` up front so the site is branded on first paint.
+`scripts/provision-tenant.ts` accepts optional branding from **either** an inline
+JSON env var **or** a JSON file (a partial `TenantConfig`; any field you omit
+falls back to the safe `TENANT_CONFIG_DEFAULTS`):
+
+```bash
+# Inline:
+TENANT_BRANDING_JSON='{"communityName":"Claude Community Berlin","currency":"EUR","currencySymbol":"€","lang":"de","countryName":"Germany","nationality":"German","defaultTimezone":"Europe/Berlin","siteUrl":"https://community.example.org","appUrl":"https://community.example.org","discordCommunityInvite":"https://discord.gg/yourinvite"}' \
+  bun run local:tenant:provision -- berlin "Claude Community Berlin" you@example.org community.example.org
+
+# Or from a file:
+TENANT_BRANDING_FILE=./branding.berlin.json \
+  bun run local:tenant:provision -- berlin "Claude Community Berlin" you@example.org community.example.org
+```
+
+Omit both and the tenant is provisioned with an empty (`'{}'`) config — perfectly
+fine; you then brand it via the admin UI (path A). This is additive: the AU/NZ
+seed path (`scripts/seed-tenant.ts`) is unchanged.
+
+### C. Build-time metadata fallback via `NEXT_PUBLIC_*`
+
+A handful of **build-baked** metadata routes (PWA manifest, `robots`, `sitemap`,
+`/.well-known/security.txt`, OpenGraph locale) still read the legacy
+`getRegionConfig()` in `src/lib/region.ts`. For a self-host region (any
+`NEXT_PUBLIC_REGION` other than `au`/`nz`), `getRegionConfig()` now synthesizes a
+**generic** config from `NEXT_PUBLIC_*` build vars with safe defaults — so those
+routes never break and carry your branding even before the DB is seeded. Set any
+of these as **Workers Builds Variables** (or in `.env.local` for local builds);
+all are optional and fall back to neutral "Claude Community" defaults:
+
+| Variable | Used for | Default |
+|---|---|---|
+| `NEXT_PUBLIC_COMMUNITY_NAME` | Community / brand name in metadata | `Claude Community` |
+| `NEXT_PUBLIC_SHORT_NAME` | Short nav/footer label | = community name |
+| `NEXT_PUBLIC_COUNTRY` | Country name in copy | `""` |
+| `NEXT_PUBLIC_NATIONALITY` | Demonym used in copy | `""` |
+| `NEXT_PUBLIC_LANG` | BCP-47 lang (drives OG locale) | `en` |
+| `NEXT_PUBLIC_CURRENCY` | ISO currency code | `USD` |
+| `NEXT_PUBLIC_CURRENCY_SYMBOL` | Currency symbol | `$` |
+| `NEXT_PUBLIC_DEFAULT_TIMEZONE` | Default IANA timezone | `UTC` |
+| `NEXT_PUBLIC_SENDER_DOMAIN` | Sending / public domain | `claudecommunities.com` |
+| `NEXT_PUBLIC_FROM_EMAIL` | Full From header | `<name> <noreply@<domain>>` |
+| `NEXT_PUBLIC_DISCORD_INVITE` | Public Discord invite | `""` |
+| `NEXT_PUBLIC_SITE_URL` | Canonical site URL | `https://claudecommunities.com` |
+| `NEXT_PUBLIC_APP_URL` | App URL | = site URL |
+| `NEXT_PUBLIC_GA_ID` | GA4 measurement id | `null` (analytics off) |
+
+> The **DB (`getTenantConfig()`) is the runtime source of truth** for everything
+> rendered per request. `NEXT_PUBLIC_*` only feeds the few build-baked metadata
+> routes above — set them so your build-time metadata matches your DB branding.
