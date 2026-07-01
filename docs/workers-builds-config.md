@@ -35,14 +35,18 @@ In **Workers & Pages → (your worker) → Settings → Builds**:
 2. **Deploy command** (unchanged): `bunx opennextjs-cloudflare deploy` — or the
    retry wrapper `bun run production:deploy:cf` / `staging:deploy:cf`
    (`scripts/cf-deploy.mjs`).
-3. **Variables & Secrets — add every `${TOKEN}` this environment needs** (the
-   full list of 39 is in `.env.cfinfra.example`), set to that environment's
-   values. `gen-wrangler` fails the build listing any token left empty, so set
-   all that appear for your wrangler env. Examples for AU production:
-   `CF_ACCOUNT_ID_AU`, `CF_WORKER_NAME_PROD`, `CF_D1_ID_PROD`,
-   `CF_D1_TAGCACHE_ID_PROD`, `CF_R2_BUCKET_PROD`, `CF_R2_CACHE_BUCKET_PROD`,
-   `CF_ROUTE_PROD`, `CF_ROUTE_PROD_WWW`, `CF_PUBLIC_URL_PROD`. NZ uses the
-   `_NZ_*` variants on the NZ account.
+3. **Variables & Secrets — add ALL 39 `${TOKEN}`s** from `.env.cfinfra.example`,
+   set to their values. `gen-wrangler` renders the whole multi-env template in a
+   single pass, so it requires **every** token to be non-empty **regardless of
+   which `--env` this project deploys** — including the other regions'
+   (`_NZ_*`, `_PLATFORM_*`, …). They are non-secret identity values; the blocks
+   this project doesn't deploy are simply present in the generated file and
+   ignored by `--env`. Also set **`CF_D1_TAGCACHE_ID_BASE`** — it only appears in
+   the unused top-level block, so any non-empty value works (the maintainers use
+   the historical `REPLACE_WITH_TAG_CACHE_D1_ID` placeholder to keep that block
+   byte-identical).
+   > **Running only one deployment?** Prefer the **12-token self-host template**
+   > (`docs/self-hosting.md`) — it has no other-region tokens and one env.
 4. **Runtime secrets stay as before** (`RENDER_SIGNING_SECRET`, Clerk keys,
    `RESEND_*` / `SEND16_API_KEY`, `LINKEDIN_*`, `SOCIAL_OAUTH_STATE_SECRET`,
    optional `MAINTENANCE_MODE`) — unaffected by this change.
