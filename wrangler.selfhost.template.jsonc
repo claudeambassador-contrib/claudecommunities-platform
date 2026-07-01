@@ -1,0 +1,160 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	// ─────────────────────────────────────────────────────────────────────────
+	// SELF-HOST template — a SINGLE, generic deployment config for forking this
+	// repo onto YOUR OWN, fresh Cloudflare account. It has NO named `env` blocks:
+	// the top level IS the deployment, so you deploy with NO `--env` flag.
+	//
+	// Render it with:  node scripts/gen-wrangler.mjs --template wrangler.selfhost.template.jsonc
+	// (or `bun run gen:wrangler:selfhost`). The dollar-brace placeholders below come from your
+	// .env.selfhost (local) or Workers Builds dashboard Variables (hosted).
+	// See docs/self-hosting.md for the end-to-end runbook.
+	//
+	// The canonical wrangler.template.jsonc (the 5 AU/NZ envs) is unaffected by
+	// this file — this is purely additive and the binding NAMES / class names here
+	// are IDENTICAL to it, because the app code depends on them.
+	// ─────────────────────────────────────────────────────────────────────────
+	"name": "${CF_WORKER_NAME}",
+	"main": ".open-next/worker.js",
+	"compatibility_date": "2026-03-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	// Your Cloudflare account id. Under Workers Builds the deploy targets the
+	// connected account automatically, but keeping it explicit makes local
+	// `wrangler deploy` unambiguous when you belong to multiple accounts.
+	"account_id": "${CF_ACCOUNT_ID}",
+	"observability": {
+		"enabled": true
+	},
+	// Custom domain. Only deploys once ${CF_ROUTE}'s zone is an Active zone on
+	// THIS account (nameservers pointed at Cloudflare). Until then you can deploy
+	// with `wrangler deploy --routes ""` to skip it.
+	"routes": [
+		{
+			"pattern": "${CF_ROUTE}",
+			"custom_domain": true
+		}
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"vars": {
+		"CLOUDFLARE_WORKER": "true",
+		"DEPLOY_TARGET": "cloudflare",
+		// One public URL drives both — keep them equal.
+		"NEXT_PUBLIC_APP_URL": "${CF_PUBLIC_URL}",
+		"NEXT_PUBLIC_SITE_URL": "${CF_PUBLIC_URL}",
+		// Region key consumed by src/lib/region.ts. "au"/"nz" are the built-in
+		// brandings today; generic env-driven branding lands in Stage 3c.
+		"NEXT_PUBLIC_REGION": "${NEXT_PUBLIC_REGION}",
+		"CLAUDIENCE_API_URL": "https://claudience.com",
+		// Multi-tenancy routing knobs (see docs/multi-tenancy-setup.md):
+		//   HOME_TENANT            — slug the apex + /admin resolve to.
+		//   PLATFORM_HOSTS         — hosts treated as the platform (apex/local).
+		//   TENANT_SUBDOMAIN_BASES — base host(s) under which *.<base> is a tenant.
+		"HOME_TENANT": "${HOME_TENANT}",
+		"PLATFORM_HOSTS": "${PLATFORM_HOSTS}",
+		"TENANT_SUBDOMAIN_BASES": "${TENANT_SUBDOMAIN_BASES}"
+		// Maintenance kill-switch (no redeploy needed):
+		//   wrangler secret put MAINTENANCE_MODE        (enter "true")
+		//   wrangler secret delete MAINTENANCE_MODE     (to bring back)
+	},
+	// Read-side cache bindings (see open-next.config.ts):
+	//   DB                       — your primary application database.
+	//   NEXT_TAG_CACHE_D1        — D1 holding tag→revalidation timestamps.
+	//   STORAGE                  — R2 bucket for user uploads.
+	//   NEXT_INC_CACHE_R2_BUCKET — R2 store for cached page/data payloads.
+	//   WORKER_SELF_REFERENCE    — lets the worker re-invoke itself to revalidate.
+	// PROVISIONING (run once on your account, then paste the ids into .env.selfhost):
+	//   wrangler d1 create claudecommunity-db            → CF_D1_ID
+	//   wrangler d1 create claudecommunity-next-tag-cache → CF_D1_TAGCACHE_ID
+	//   wrangler r2 bucket create claudecommunity-uploads     → CF_R2_BUCKET
+	//   wrangler r2 bucket create claudecommunity-next-cache  → CF_R2_CACHE_BUCKET
+	// (database_name / bucket_name are labels — match what you actually created.)
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "claudecommunity-db",
+			"database_id": "${CF_D1_ID}"
+		},
+		{
+			"binding": "NEXT_TAG_CACHE_D1",
+			"database_name": "claudecommunity-next-tag-cache",
+			"database_id": "${CF_D1_TAGCACHE_ID}"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "STORAGE",
+			"bucket_name": "${CF_R2_BUCKET}"
+		},
+		{
+			"binding": "NEXT_INC_CACHE_R2_BUCKET",
+			"bucket_name": "${CF_R2_CACHE_BUCKET}"
+		}
+	],
+	"services": [
+		{
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "${CF_WORKER_NAME}"
+		}
+	],
+	// Durable Object queue for ISR background revalidation (see open-next.config.ts).
+	// DOQueueHandler is auto-exported by OpenNext's generated worker.js; it's
+	// SQLite-backed, so it needs the new_sqlite_classes migration below.
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "NEXT_CACHE_DO_QUEUE",
+				"class_name": "DOQueueHandler"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["DOQueueHandler"]
+		}
+	],
+	"browser": {
+		"binding": "BROWSER"
+	},
+	// Cross-service notifications producer. Create the queue once on your account
+	// before the first deploy:  wrangler queues create app-notifications
+	// (or drop this block if you don't run the notifications consumer worker).
+	"queues": {
+		"producers": [
+			{
+				"binding": "NOTIFICATIONS",
+				"queue": "app-notifications"
+			}
+		]
+	},
+	// Durable workflows (slide export, social publish, email campaigns). The
+	// `class_name`s MUST match the exported classes in src/workflows/* and
+	// scripts/inject-workflow-exports.mjs — do not rename them.
+	"workflows": [
+		{
+			"name": "slide-export",
+			"binding": "SLIDE_EXPORT",
+			"class_name": "SlideExportWorkflow"
+		},
+		{
+			"name": "publish-post",
+			"binding": "PUBLISH_POST",
+			"class_name": "PublishPostWorkflow"
+		},
+		{
+			"name": "campaign-send",
+			"binding": "CAMPAIGN_SEND",
+			"class_name": "CampaignSendWorkflow"
+		}
+	],
+	// Internal cron: every 15 minutes the Worker fires `scheduled()` to drain due
+	// scheduled social posts and reset rows stuck in 'publishing'.
+	"triggers": {
+		"crons": ["*/15 * * * *"]
+	}
+}
