@@ -1,13 +1,13 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "ccau",
+	"name": "${CF_WORKER_NAME_PROD}",
 	"main": ".open-next/worker.js",
 	"compatibility_date": "2026-03-01",
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
 	// Production account = Claude Community (where R2 bucket and D1 database live).
-	"account_id": "b90fc48710b01ed523ae94ca67d6788e",
+	"account_id": "${CF_ACCOUNT_ID_AU}",
 	"observability": {
 		"enabled": true
 	},
@@ -17,11 +17,11 @@
 	// to skip them, or remove this block.
 	"routes": [
 		{
-			"pattern": "claudecommunity.com.au",
+			"pattern": "${CF_ROUTE_PROD}",
 			"custom_domain": true
 		},
 		{
-			"pattern": "www.claudecommunity.com.au",
+			"pattern": "${CF_ROUTE_PROD_WWW}",
 			"custom_domain": true
 		}
 	],
@@ -32,8 +32,8 @@
 	"vars": {
 		"CLOUDFLARE_WORKER": "true",
 		"DEPLOY_TARGET": "cloudflare",
-		"NEXT_PUBLIC_APP_URL": "https://claudecommunity.com.au",
-		"NEXT_PUBLIC_SITE_URL": "https://claudecommunity.com.au",
+		"NEXT_PUBLIC_APP_URL": "${CF_PUBLIC_URL_PROD}",
+		"NEXT_PUBLIC_SITE_URL": "${CF_PUBLIC_URL_PROD}",
 		"NEXT_PUBLIC_REGION": "au",
 		"CLAUDIENCE_API_URL": "https://claudience.com"
 		// Maintenance kill-switch. Set to "true" to take the site offline.
@@ -53,29 +53,29 @@
 		{
 			"binding": "DB",
 			"database_name": "claudecommunity-db",
-			"database_id": "70a3d14f-8138-4f70-9e0e-f838e80f0dec",
+			"database_id": "${CF_D1_ID_STAGING}",
 			// "remote": true
 		},
 		{
 			"binding": "NEXT_TAG_CACHE_D1",
 			"database_name": "ccau-next-tag-cache",
-			"database_id": "REPLACE_WITH_TAG_CACHE_D1_ID"
+			"database_id": "${CF_D1_TAGCACHE_ID_BASE}"
 		}
 	],
 	"r2_buckets": [
 		{
 			"binding": "STORAGE",
-			"bucket_name": "claudecommunity-uploads"
+			"bucket_name": "${CF_R2_BUCKET_PROD}"
 		},
 		{
 			"binding": "NEXT_INC_CACHE_R2_BUCKET",
-			"bucket_name": "ccau-next-cache"
+			"bucket_name": "${CF_R2_CACHE_BUCKET_PROD}"
 		}
 	],
 	"services": [
 		{
 			"binding": "WORKER_SELF_REFERENCE",
-			"service": "ccau"
+			"service": "${CF_WORKER_NAME_PROD}"
 		}
 	],
 	// Durable Object queue for ISR background revalidation (see open-next.config.ts).
@@ -141,19 +141,19 @@
 	},
 	"env": {
 		"production": {
-			"name": "ccau",
-			"account_id": "b90fc48710b01ed523ae94ca67d6788e",
+			"name": "${CF_WORKER_NAME_PROD}",
+			"account_id": "${CF_ACCOUNT_ID_AU}",
 			"routes": [
 				{
-					"pattern": "claudecommunity.com.au",
+					"pattern": "${CF_ROUTE_PROD}",
 					"custom_domain": true
 				}
 			],
 			"vars": {
 				"CLOUDFLARE_WORKER": "true",
 				"DEPLOY_TARGET": "cloudflare",
-				"NEXT_PUBLIC_APP_URL": "https://claudecommunity.com.au",
-				"NEXT_PUBLIC_SITE_URL": "https://claudecommunity.com.au",
+				"NEXT_PUBLIC_APP_URL": "${CF_PUBLIC_URL_PROD}",
+				"NEXT_PUBLIC_SITE_URL": "${CF_PUBLIC_URL_PROD}",
 				"NEXT_PUBLIC_REGION": "au",
 				"CLAUDIENCE_API_URL": "https://claudience.com",
 				// Route transactional + campaign email through Send16 (Claude
@@ -165,28 +165,28 @@
 				{
 					"binding": "DB",
 					"database_name": "claudecommunity-db",
-					"database_id": "81fa7c82-351d-4ce7-9ece-624bed52dea0"
+					"database_id": "${CF_D1_ID_PROD}"
 				},
 				{
 					"binding": "NEXT_TAG_CACHE_D1",
 					"database_name": "ccau-next-tag-cache",
-					"database_id": "ca311725-9558-4365-8908-d068de35e9f9"
+					"database_id": "${CF_D1_TAGCACHE_ID_PROD}"
 				}
 			],
 			"r2_buckets": [
 				{
 					"binding": "STORAGE",
-					"bucket_name": "claudecommunity-uploads"
+					"bucket_name": "${CF_R2_BUCKET_PROD}"
 				},
 				{
 					"binding": "NEXT_INC_CACHE_R2_BUCKET",
-					"bucket_name": "ccau-next-cache"
+					"bucket_name": "${CF_R2_CACHE_BUCKET_PROD}"
 				}
 			],
 			"services": [
 				{
 					"binding": "WORKER_SELF_REFERENCE",
-					"service": "ccau"
+					"service": "${CF_WORKER_NAME_PROD}"
 				}
 			],
 			"durable_objects": {
@@ -236,19 +236,19 @@
 			}
 		},
 		"staging": {
-			"name": "ccau-staging",
-			"account_id": "b90fc48710b01ed523ae94ca67d6788e",
+			"name": "${CF_WORKER_NAME_STAGING}",
+			"account_id": "${CF_ACCOUNT_ID_AU}",
 			"routes": [
 				{
-					"pattern": "staging.claudecommunity.com.au",
+					"pattern": "${CF_ROUTE_STAGING}",
 					"custom_domain": true
 				}
 			],
 			"vars": {
 				"CLOUDFLARE_WORKER": "true",
 				"DEPLOY_TARGET": "cloudflare",
-				"NEXT_PUBLIC_APP_URL": "https://staging.claudecommunity.com.au",
-				"NEXT_PUBLIC_SITE_URL": "https://staging.claudecommunity.com.au",
+				"NEXT_PUBLIC_APP_URL": "${CF_PUBLIC_URL_STAGING}",
+				"NEXT_PUBLIC_SITE_URL": "${CF_PUBLIC_URL_STAGING}",
 				"NEXT_PUBLIC_REGION": "au",
 				"CLAUDIENCE_API_URL": "https://claudience.com",
 			},
@@ -256,28 +256,28 @@
 				{
 					"binding": "DB",
 					"database_name": "claudecommunity-db",
-					"database_id": "70a3d14f-8138-4f70-9e0e-f838e80f0dec"
+					"database_id": "${CF_D1_ID_STAGING}"
 				},
 				{
 					"binding": "NEXT_TAG_CACHE_D1",
 					"database_name": "ccau-next-tag-cache-staging",
-					"database_id": "1f24234b-252b-4045-8539-d7c379463540"
+					"database_id": "${CF_D1_TAGCACHE_ID_STAGING}"
 				}
 			],
 			"r2_buckets": [
 				{
 					"binding": "STORAGE",
-					"bucket_name": "claudecommunity-uploads-staging"
+					"bucket_name": "${CF_R2_BUCKET_STAGING}"
 				},
 				{
 					"binding": "NEXT_INC_CACHE_R2_BUCKET",
-					"bucket_name": "ccau-next-cache-staging"
+					"bucket_name": "${CF_R2_CACHE_BUCKET_STAGING}"
 				}
 			],
 			"services": [
 				{
 					"binding": "WORKER_SELF_REFERENCE",
-					"service": "ccau-staging"
+					"service": "${CF_WORKER_NAME_STAGING}"
 				}
 			],
 			"durable_objects": {
@@ -341,19 +341,19 @@
 		// Then add staging.claudecommunities.com as a custom domain (needs
 		// claudecommunities.com to be an Active zone on this account).
 		"staging-platform": {
-			"name": "ccplatform-staging",
-			"account_id": "b90fc48710b01ed523ae94ca67d6788e",
+			"name": "${CF_WORKER_NAME_PLATFORM_STAGING}",
+			"account_id": "${CF_ACCOUNT_ID_AU}",
 			"routes": [
 				{
-					"pattern": "staging.claudecommunities.com",
+					"pattern": "${CF_ROUTE_PLATFORM_STAGING}",
 					"custom_domain": true
 				}
 			],
 			"vars": {
 				"CLOUDFLARE_WORKER": "true",
 				"DEPLOY_TARGET": "cloudflare",
-				"NEXT_PUBLIC_APP_URL": "https://staging.claudecommunities.com",
-				"NEXT_PUBLIC_SITE_URL": "https://staging.claudecommunities.com",
+				"NEXT_PUBLIC_APP_URL": "${CF_PUBLIC_URL_PLATFORM_STAGING}",
+				"NEXT_PUBLIC_SITE_URL": "${CF_PUBLIC_URL_PLATFORM_STAGING}",
 				"NEXT_PUBLIC_REGION": "au",
 				"CLAUDIENCE_API_URL": "https://claudience.com",
 				// The deploy's home tenant — what the apex + /admin resolve to.
@@ -372,28 +372,28 @@
 				{
 					"binding": "DB",
 					"database_name": "ccww-staging",
-					"database_id": "3e17bdb4-c3ed-4fd0-9b7f-1962fe5fd287"
+					"database_id": "${CF_D1_ID_PLATFORM_STAGING}"
 				},
 				{
 					"binding": "NEXT_TAG_CACHE_D1",
 					"database_name": "ccww-next-cache",
-					"database_id": "04d64304-4925-40ba-b7ad-199b122ec169"
+					"database_id": "${CF_D1_TAGCACHE_ID_PLATFORM_STAGING}"
 				}
 			],
 			"r2_buckets": [
 				{
 					"binding": "STORAGE",
-					"bucket_name": "ccww-platform-uploads-staging"
+					"bucket_name": "${CF_R2_BUCKET_PLATFORM_STAGING}"
 				},
 				{
 					"binding": "NEXT_INC_CACHE_R2_BUCKET",
-					"bucket_name": "ccww-next-cache-staging"
+					"bucket_name": "${CF_R2_CACHE_BUCKET_PLATFORM_STAGING}"
 				}
 			],
 			"services": [
 				{
 					"binding": "WORKER_SELF_REFERENCE",
-					"service": "ccplatform-staging"
+					"service": "${CF_WORKER_NAME_PLATFORM_STAGING}"
 				}
 			],
 			"durable_objects": {
@@ -446,19 +446,19 @@
 		// The placeholders below (account_id, D1 database ids) MUST be filled in
 		// once the NZ Cloudflare account + D1 databases actually exist.
 		"production-nz": {
-			"name": "ccnz",
-			"account_id": "5bcb0f152c606664326ea0ad50ef882c",
+			"name": "${CF_WORKER_NAME_NZ_PROD}",
+			"account_id": "${CF_ACCOUNT_ID_NZ}",
 			"routes": [
 				{
-					"pattern": "claudecommunity.co.nz",
+					"pattern": "${CF_ROUTE_NZ_PROD}",
 					"custom_domain": true
 				}
 			],
 			"vars": {
 				"CLOUDFLARE_WORKER": "true",
 				"DEPLOY_TARGET": "cloudflare",
-				"NEXT_PUBLIC_APP_URL": "https://claudecommunity.co.nz",
-				"NEXT_PUBLIC_SITE_URL": "https://claudecommunity.co.nz",
+				"NEXT_PUBLIC_APP_URL": "${CF_PUBLIC_URL_NZ_PROD}",
+				"NEXT_PUBLIC_SITE_URL": "${CF_PUBLIC_URL_NZ_PROD}",
 				"NEXT_PUBLIC_REGION": "nz",
 				"CLAUDIENCE_API_URL": "https://claudience.com",
 			},
@@ -466,28 +466,28 @@
 				{
 					"binding": "DB",
 					"database_name": "claudecommunity-nz-db",
-					"database_id": "c4ccc56f-d9cb-4e29-9e12-fc0a7fe953cd"
+					"database_id": "${CF_D1_ID_NZ_PROD}"
 				},
 				{
 					"binding": "NEXT_TAG_CACHE_D1",
 					"database_name": "ccnz-next-tag-cache",
-					"database_id": "52698c8c-fd5b-4777-a9c3-a14873e9a2c8"
+					"database_id": "${CF_D1_TAGCACHE_ID_NZ_PROD}"
 				}
 			],
 			"r2_buckets": [
 				{
 					"binding": "STORAGE",
-					"bucket_name": "claudecommunity-nz-uploads"
+					"bucket_name": "${CF_R2_BUCKET_NZ_PROD}"
 				},
 				{
 					"binding": "NEXT_INC_CACHE_R2_BUCKET",
-					"bucket_name": "ccnz-next-cache"
+					"bucket_name": "${CF_R2_CACHE_BUCKET_NZ_PROD}"
 				}
 			],
 			"services": [
 				{
 					"binding": "WORKER_SELF_REFERENCE",
-					"service": "ccnz"
+					"service": "${CF_WORKER_NAME_NZ_PROD}"
 				}
 			],
 			"durable_objects": {
@@ -529,19 +529,19 @@
 			}
 		},
 		"staging-nz": {
-			"name": "ccnz-staging",
-			"account_id": "5bcb0f152c606664326ea0ad50ef882c",
+			"name": "${CF_WORKER_NAME_NZ_STAGING}",
+			"account_id": "${CF_ACCOUNT_ID_NZ}",
 			"routes": [
 				{
-					"pattern": "staging.claudecommunity.co.nz",
+					"pattern": "${CF_ROUTE_NZ_STAGING}",
 					"custom_domain": true
 				}
 			],
 			"vars": {
 				"CLOUDFLARE_WORKER": "true",
 				"DEPLOY_TARGET": "cloudflare",
-				"NEXT_PUBLIC_APP_URL": "https://staging.claudecommunity.co.nz",
-				"NEXT_PUBLIC_SITE_URL": "https://staging.claudecommunity.co.nz",
+				"NEXT_PUBLIC_APP_URL": "${CF_PUBLIC_URL_NZ_STAGING}",
+				"NEXT_PUBLIC_SITE_URL": "${CF_PUBLIC_URL_NZ_STAGING}",
 				"NEXT_PUBLIC_REGION": "nz",
 				"CLAUDIENCE_API_URL": "https://claudience.com",
 			},
@@ -549,28 +549,28 @@
 				{
 					"binding": "DB",
 					"database_name": "claudecommunity-nz-db-staging",
-					"database_id": "c7a0a601-e7eb-4bea-91d1-08649c44c590"
+					"database_id": "${CF_D1_ID_NZ_STAGING}"
 				},
 				{
 					"binding": "NEXT_TAG_CACHE_D1",
 					"database_name": "ccnz-next-tag-cache-staging",
-					"database_id": "0abe8b2f-71fa-49e6-a96f-b6c8ce36e8da"
+					"database_id": "${CF_D1_TAGCACHE_ID_NZ_STAGING}"
 				}
 			],
 			"r2_buckets": [
 				{
 					"binding": "STORAGE",
-					"bucket_name": "claudecommunity-nz-uploads-staging"
+					"bucket_name": "${CF_R2_BUCKET_NZ_STAGING}"
 				},
 				{
 					"binding": "NEXT_INC_CACHE_R2_BUCKET",
-					"bucket_name": "ccnz-next-cache-staging"
+					"bucket_name": "${CF_R2_CACHE_BUCKET_NZ_STAGING}"
 				}
 			],
 			"services": [
 				{
 					"binding": "WORKER_SELF_REFERENCE",
-					"service": "ccnz-staging"
+					"service": "${CF_WORKER_NAME_NZ_STAGING}"
 				}
 			],
 			"durable_objects": {

@@ -55,7 +55,7 @@ catches the 500.)
   path (`'.' is not recognized`). Use `bunx prisma generate` (works cross-platform) or build from
   WSL/mac. Worth making portable in the script.
 - wrangler prompts for account selection (token has 3 accounts) and hangs non-interactively — pin
-  `CLOUDFLARE_ACCOUNT_ID=b90fc48710b01ed523ae94ca67d6788e`.
+  `CLOUDFLARE_ACCOUNT_ID=<your-account-id>` (the AU value is `CF_ACCOUNT_ID_AU` in `.env.cfinfra`).
 
 ## Optional follow-on — ongoing member auto-sync
 No continuous DB→Send16 sync today (the ~1,900 members were a one-time Clerk pull). Recommended: add
