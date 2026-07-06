@@ -1,4 +1,4 @@
-import { getRegionConfig } from "@/lib/region";
+import { getRegionConfig, type KnownRegion } from "@/lib/region";
 
 export interface ResourceSpeaker {
   name: string;
@@ -30,6 +30,10 @@ export interface VideoResource {
   /** Approx duration label, e.g. "12 min" */
   duration?: string;
   tags: string[];
+  /** Deploys this resource appears on. Omit = every region; e.g. ["au"] = AU-only.
+   * Region-specific demo content (AU speakers/events) is tagged so it doesn't
+   * leak onto other communities' sites. */
+  regions?: KnownRegion[];
   speakers: ResourceSpeaker[];
 }
 
@@ -48,9 +52,10 @@ export const RYE_SMITH: ResourceSpeaker = {
   bio: "Rye started building websites when he was 11 and has kept the passion for tech all the way through. Rye's a fellow Anthropic Claude Ambassador and runs Spruik Co, an SEO and web development agency specialising in getting businesses and products found online. He's worked with startups and entrepreneurs as an advisor, launched over 50 production quality apps for clients since 2015 and has been an early adopter of Claude, using it daily to ship faster and help clients turn ideas into real, revenue-generating products.",
 };
 
-export const VIDEO_RESOURCES: VideoResource[] = [
+const ALL_VIDEO_RESOURCES: VideoResource[] = [
   {
     slug: "claude-code-google-stitch-workflow",
+    regions: ["au"],
     title: "The Designer's Cheat Code: Claude Code + Google Stitch Workflow",
     shortTitle: "Claude Code + Google Stitch Workflow",
     description:
@@ -69,6 +74,13 @@ export const VIDEO_RESOURCES: VideoResource[] = [
     speakers: [RYE_SMITH],
   },
 ];
+
+/** Resources visible on THIS deploy: unregioned entries show everywhere; region-
+ * tagged entries only on a matching deploy (filtered at build via NEXT_PUBLIC_REGION).
+ * Filtering here means both the list page and getResourceBySlug are scoped. */
+export const VIDEO_RESOURCES: VideoResource[] = ALL_VIDEO_RESOURCES.filter(
+  (r) => !r.regions || r.regions.includes(getRegionConfig().region as KnownRegion),
+);
 
 export function getResourceBySlug(slug: string): VideoResource | undefined {
   return VIDEO_RESOURCES.find((r) => r.slug === slug);

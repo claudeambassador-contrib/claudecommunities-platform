@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { TenantLink } from "@/components/TenantBaseProvider";
+import { getRegionConfig } from "@/lib/region";
 import { getTenantConfig, siteUrl } from "@/lib/tenant-config";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -42,6 +43,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ProfessionalsPage() {
   const { nationality } = await getTenantConfig();
+  // The community stats below are unsourced/inflated placeholder figures. Only
+  // show them for the established AU community; a fresh community (nz / self-host)
+  // shouldn't claim numbers it doesn't have.
+  const { region } = getRegionConfig();
 
   return (
     <>
@@ -72,24 +77,26 @@ export default async function ProfessionalsPage() {
         </div>
       </section>
 
-      {/* Stats — unsourced/inflated figures. */}
-      <section className="py-16 px-6">
-        <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { number: "10x", label: "Faster iteration cycles reported" },
-            { number: "500+", label: `Developers in ${nationality} community` },
-            { number: "85%", label: "Say it changed their workflow" },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-[#2D2926] rounded-2xl p-6 text-center border border-white/[0.06]"
-            >
-              <span className="block text-4xl font-bold text-[#D4836A] mb-2">{stat.number}</span>
-              <span className="text-[#A8A29E] text-[0.9375rem]">{stat.label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Stats — unsourced/inflated figures; AU-only (see note above). */}
+      {region === "au" && (
+        <section className="py-16 px-6">
+          <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { number: "10x", label: "Faster iteration cycles reported" },
+              { number: "500+", label: `Developers in ${nationality} community` },
+              { number: "85%", label: "Say it changed their workflow" },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="bg-[#2D2926] rounded-2xl p-6 text-center border border-white/[0.06]"
+              >
+                <span className="block text-4xl font-bold text-[#D4836A] mb-2">{stat.number}</span>
+                <span className="text-[#A8A29E] text-[0.9375rem]">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Content */}
       <section className="py-16 px-6">
