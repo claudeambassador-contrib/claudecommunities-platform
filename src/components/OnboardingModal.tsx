@@ -31,7 +31,7 @@ export default function OnboardingModal({
     {
       id: "welcome",
       title: "Welcome to the Community!",
-      description: `Join thousands of Claude Code enthusiasts across ${countryName}. Let us show you around.`,
+      description: `Connect with the Claude Code community across ${countryName}. Let us show you around.`,
       icon: Sparkles,
     },
     {

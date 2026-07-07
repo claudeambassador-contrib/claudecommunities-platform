@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { TenantLink } from "@/components/TenantBaseProvider";
+import { getRegionConfig } from "@/lib/region";
 import { getTenantConfig, siteUrl } from "@/lib/tenant-config";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -42,6 +43,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function VibeCodersPage() {
+  // "100s apps built by non-developers" is an unsourced placeholder figure; only
+  // show the stats strip for the established AU community.
+  const { region } = getRegionConfig();
   return (
     <>
       {/* Hero Section */}
@@ -71,24 +75,26 @@ export default function VibeCodersPage() {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="py-16 px-6">
-        <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { number: "0", label: "Lines of code needed to start" },
-            { number: "100s", label: "Apps built by non-developers" },
-            { number: "24/7", label: "AI assistant available to help" },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-[#2D2926] rounded-2xl p-6 text-center border border-white/[0.06]"
-            >
-              <span className="block text-4xl font-bold text-[#D4836A] mb-2">{stat.number}</span>
-              <span className="text-[#A8A29E] text-[0.9375rem]">{stat.label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Stats — includes an unsourced figure; AU-only (see note above). */}
+      {region === "au" && (
+        <section className="py-16 px-6">
+          <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { number: "0", label: "Lines of code needed to start" },
+              { number: "100s", label: "Apps built by non-developers" },
+              { number: "24/7", label: "AI assistant available to help" },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="bg-[#2D2926] rounded-2xl p-6 text-center border border-white/[0.06]"
+              >
+                <span className="block text-4xl font-bold text-[#D4836A] mb-2">{stat.number}</span>
+                <span className="text-[#A8A29E] text-[0.9375rem]">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Content */}
       <section className="py-16 px-6">

@@ -97,7 +97,7 @@ export default function DiscordPromoCard({ href, logoSrc }: DiscordPromoCardProp
             </span>
           </div>
           <h3 className="text-xl md:text-2xl font-semibold text-white mb-2">
-            Join the conversation between webinars
+            Join the conversation between meetups
           </h3>
           <p className="text-white/70 text-[0.9375rem] leading-relaxed">
             {`Hang out with other Claude Code builders across ${countryName}, share what you're working on, and get help when you're stuck.`}
