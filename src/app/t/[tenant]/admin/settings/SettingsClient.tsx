@@ -500,8 +500,8 @@ function FooterLinksField({
     <Field label={label} hint={hint}>
       <div className="space-y-2">
         {links.map((link, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: footer-link rows have no stable id and are edited in place, so the array index is part of the key
-          <div key={`${link.label}-${i}`} className="flex items-center gap-3">
+          // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id; the key MUST be the bare index — mixing in the (editable) label changes the key on every keystroke, remounting the input and dropping focus after one character
+          <div key={i} className="flex items-center gap-3">
             <input
               className={INPUT}
               placeholder="Label"
@@ -556,8 +556,8 @@ function StatsField({
     <Field label={label} hint={hint}>
       <div className="space-y-2">
         {stats.map((stat, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: stat rows have no stable id and are edited in place, so the array index is part of the key
-          <div key={`${stat.label}-${i}`} className="flex items-center gap-3">
+          // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id; the key MUST be the bare index — mixing in the (editable) label changes the key on every keystroke, remounting the input and dropping focus after one character
+          <div key={i} className="flex items-center gap-3">
             <input
               className={`${INPUT} max-w-[8rem]`}
               placeholder="Value"
