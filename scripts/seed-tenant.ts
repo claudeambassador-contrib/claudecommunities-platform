@@ -115,15 +115,18 @@ export function buildTenantSeedSql(region: KnownRegion): string {
 
 /**
  * The home-page block array for a region. Starts from the generic
- * `DEFAULT_HOME_SECTIONS` (webinar disabled) and, for AU only, swaps in the
- * enabled `AU_WEBINAR_BLOCK` so AU reproduces today's enabled webinar bar. NZ
- * keeps the default disabled webinar. No `REGION === "au"` check leaks into the
- * renderer — visibility is purely the seeded `enabled` flag.
+ * `DEFAULT_HOME_SECTIONS` (no webinar block) and, for AU only, inserts the enabled
+ * `AU_WEBINAR_BLOCK` right after the hero so AU reproduces today's webinar bar.
+ * Other regions get no webinar block at all — nothing to inherit. No
+ * `REGION === "au"` check leaks into the renderer; visibility is the seeded row.
  */
 function homeBlocksForRegion(region: KnownRegion): Block[] {
-  return DEFAULT_HOME_SECTIONS.map((block) =>
-    block.type === "webinar" && region === "au" ? AU_WEBINAR_BLOCK : block,
-  );
+  const blocks = [...DEFAULT_HOME_SECTIONS];
+  if (region === "au") {
+    const heroIdx = blocks.findIndex((b) => b.type === "hero");
+    blocks.splice(heroIdx + 1, 0, AU_WEBINAR_BLOCK);
+  }
+  return blocks;
 }
 
 /**

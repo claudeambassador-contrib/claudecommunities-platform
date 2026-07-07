@@ -148,20 +148,11 @@ export const AU_WEBINAR_BLOCK: WebinarBlock = {
 };
 
 /**
- * Copy a block with `enabled` overridden. Written as a function (not a
- * `{ ...block, enabled }` literal) so the bundler can't constant-fold the spread
- * into an object literal that lists `enabled` twice — which makes esbuild emit a
- * "Duplicate key" warning at build/deploy time.
- */
-function withEnabled<T extends Block>(block: T, enabled: boolean): T {
-  return { ...block, enabled };
-}
-
-/**
  * The generic code fallback used whenever no `Page` row exists. Reproduces
  * today's section order with all override copy null (config-derived at render).
- * The webinar block is present but DISABLED here — AU's enabled webinar lives in
- * AU's seed row, not in this generic baseline (no `REGION === "au"` check).
+ * No webinar block — that was AU-specific demo content; AU's enabled webinar bar
+ * is inserted only for the `au` seed (see scripts/seed-tenant.ts), so new
+ * communities don't inherit it.
  */
 export const DEFAULT_HOME_SECTIONS: Block[] = [
   {
@@ -173,7 +164,6 @@ export const DEFAULT_HOME_SECTIONS: Block[] = [
     body: null,
     primaryCtaLabel: null,
   },
-  withEnabled(AU_WEBINAR_BLOCK, false),
   { id: "benefits", type: "benefits", enabled: true, heading: null, cards: DEFAULT_BENEFIT_CARDS },
   {
     id: "audienceSplit",
