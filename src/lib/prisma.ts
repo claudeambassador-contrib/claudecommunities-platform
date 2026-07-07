@@ -1,10 +1,15 @@
 // D1-only Prisma client + the multi-tenant access layer.
 //
-// We use `@prisma/client/edge` semantics because that entry loads the WASM
+// We import from `@prisma/client/edge` because that entry loads the WASM
 // query compiler via a real `import('...wasm')` statement that Workers' bundler
-// turns into a WASM binding. The default `@prisma/client` entry decodes WASM
-// from a base64 string and calls `new WebAssembly.Module(...)`, which Workers
-// blocks ("Wasm code generation disallowed by embedder").
+// turns into a WASM binding. The default `@prisma/client` entry routes through
+// `#main-entry-point`, whose `default` condition is `index.js` — which decodes
+// WASM from a base64 string and calls `new WebAssembly.Module(...)`, blocked by
+// Workers ("Wasm code generation disallowed by embedder"). It only avoids that
+// when the bundler applies the `workerd`/`worker` export condition; the OpenNext
+// esbuild pass does not, so we pin the edge entry explicitly (it maps to the
+// WASM-import client under every condition). We always pass a PrismaD1 driver
+// adapter, which the edge client requires.
 //
 // On Workers each request has its own I/O context — a global singleton causes
 // "Cannot perform I/O on behalf of a different request". So we build a fresh
@@ -26,7 +31,7 @@
 //                            migration; feature code moves to getPrisma().
 
 import { PrismaD1 } from "@prisma/adapter-d1";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client/edge";
 import { getTenantId, runWithTenant } from "@/lib/tenant-context";
 import { tenantScope } from "@/lib/tenant-scope";
 
