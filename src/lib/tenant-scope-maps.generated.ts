@@ -152,6 +152,7 @@ export const RELATIONS: Record<string, Record<string, string>> = {
     "enrollments": "CourseEnrollment",
     "lessons": "Lesson"
   },
+  "Resource": {},
   "Lesson": {
     "course": "Course",
     "progress": "LessonProgress"

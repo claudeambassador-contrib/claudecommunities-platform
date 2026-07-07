@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import DiscordPromoCard from "@/components/DiscordPromoCard";
 import { TenantLink } from "@/components/TenantBaseProvider";
 import { RemoteImage } from "@/components/ui/RemoteImage";
-import { getResourceBySlug, youtubeThumbnail } from "@/lib/resources";
+import { youtubeThumbnail } from "@/lib/resources";
+import { getResourceBySlug } from "@/lib/services/resources";
 import { discordCommunityInvite, getTenantConfig, ogLocale, siteUrl } from "@/lib/tenant-config";
 
 export const revalidate = 300;
@@ -15,7 +16,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const resource = getResourceBySlug(slug);
+  const resource = await getResourceBySlug(slug);
   if (!resource) return {};
 
   const { communityName, countryName } = await getTenantConfig();
@@ -50,7 +51,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ResourcePage({ params }: PageProps) {
   const { slug } = await params;
-  const resource = getResourceBySlug(slug);
+  const resource = await getResourceBySlug(slug);
   if (!resource) notFound();
 
   const { communityName, countryName, nationality } = await getTenantConfig();

@@ -33,6 +33,7 @@ import { SEED_CITIES } from "../src/lib/cities";
 import type { Block } from "../src/lib/cms/blocks";
 import { AU_WEBINAR_BLOCK, DEFAULT_HOME_SECTIONS } from "../src/lib/cms/defaults";
 import { type KnownRegion, REGION_CONFIGS, type Region, type RegionConfig } from "../src/lib/region";
+import { AU_SEED_RESOURCES, type VideoResource } from "../src/lib/resources";
 import type { TenantConfig } from "../src/lib/tenant-config";
 
 /** A tenant seed: the registry row, the broken-out gaId column, and the config JSON. */
@@ -182,10 +183,45 @@ export function buildCitySeedSql(region: KnownRegion): string {
   return lines.join("\n");
 }
 
+/** Seed resources for a region: AU ships its curated videos; new regions none. */
+function seedResourcesForRegion(region: KnownRegion): VideoResource[] {
+  return region === "au" ? AU_SEED_RESOURCES : [];
+}
+
+/**
+ * Idempotent (`INSERT OR IGNORE`) SQL seeding the `Resource` rows for a region.
+ * Each row breaks out slug/publishedAt/order for querying and stores the rest of
+ * the VideoResource as the JSON `data` blob the service parses. Insert-once: once
+ * seeded, resources are admin-editable, so a re-run must NOT clobber edits. The id
+ * is deterministic (`resource-<region>-<slug>`) so re-runs target the same row.
+ */
+export function buildResourceSeedSql(region: KnownRegion): string {
+  const resources = seedResourcesForRegion(region);
+  if (resources.length === 0) {
+    return `-- No seed resources for "${region}".\n`;
+  }
+  const lines = [
+    `-- Resource seed for "${region}" (generated from AU_SEED_RESOURCES by scripts/seed-tenant.ts).`,
+    `-- Idempotent: INSERT OR IGNORE never clobbers an admin-edited resource row.`,
+  ];
+  resources.forEach((resource, index) => {
+    const { slug, publishedAt, ...doc } = resource;
+    const id = `resource-${region}-${slug}`;
+    const data = JSON.stringify(doc);
+    lines.push(
+      `INSERT OR IGNORE INTO "Resource" ("id", "tenantId", "slug", "publishedAt", "order", "isPublished", "data", "createdAt", "updatedAt")`,
+      `VALUES (${sqlStr(id)}, ${sqlStr(region)}, ${sqlStr(slug)}, ${sqlStr(publishedAt)}, ${index}, 1, ${sqlStr(data)}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);`,
+    );
+  });
+  lines.push("");
+  return lines.join("\n");
+}
+
 // CLI entry: `tsx scripts/seed-tenant.ts [au|nz]` -> SQL on stdout.
 if (import.meta.url === `file://${process.argv[1]}`) {
   const region = (process.argv[2] ?? "au") as KnownRegion;
   process.stdout.write(buildTenantSeedSql(region));
   process.stdout.write(buildPageSeedSql(region));
   process.stdout.write(buildCitySeedSql(region));
+  process.stdout.write(buildResourceSeedSql(region));
 }

@@ -1,8 +1,8 @@
 import { getCities } from "@/lib/cities-data";
 import { getIndustrySlugs } from "@/lib/industries";
 import { siteUrl } from "@/lib/region";
-import { VIDEO_RESOURCES } from "@/lib/resources";
 import { listEventSitemapEntries } from "@/lib/services/events";
+import { getResources } from "@/lib/services/resources";
 
 // Event entries are read from D1 at request time; without this the route
 // would be prerendered at build, where no DB binding exists.
@@ -83,6 +83,17 @@ export async function GET() {
     console.error("sitemap: failed to load event entries", err);
   }
 
+  // Per-tenant resource detail pages (DB-backed). Same fail-soft contract as events.
+  let resourceEntries: SitemapEntry[] = [];
+  try {
+    const resources = await getResources();
+    resourceEntries = resources.map((r) =>
+      buildEntry(`${baseUrl}/resources/${r.slug}`, "monthly", 0.75, toW3CDate(r.publishedAt)),
+    );
+  } catch (err) {
+    console.error("sitemap: failed to load resource entries", err);
+  }
+
   const cities = await getCities();
   const industrySlugs = await getIndustrySlugs();
 
@@ -92,10 +103,8 @@ export async function GET() {
     ...eventEntries,
     buildEntry(`${baseUrl}/courses`, "daily", 0.85),
     buildEntry(`${baseUrl}/resources`, "weekly", 0.85),
-    // Per-entity lastmod: derive from the resource's own publishedAt.
-    ...VIDEO_RESOURCES.map((r) =>
-      buildEntry(`${baseUrl}/resources/${r.slug}`, "monthly", 0.75, toW3CDate(r.publishedAt)),
-    ),
+    // Per-entity lastmod derives from each resource's own publishedAt (built above).
+    ...resourceEntries,
     buildEntry(`${baseUrl}/for`, "weekly", 0.8),
     ...industrySlugs.map((slug) => buildEntry(`${baseUrl}/for/${slug}`, "weekly", 0.85)),
     buildEntry(`${baseUrl}/cowork`, "weekly", 0.8),

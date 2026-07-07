@@ -2,7 +2,8 @@ import { ArrowRight, PlayCircle, Video } from "lucide-react";
 import type { Metadata } from "next";
 import { TenantLink } from "@/components/TenantBaseProvider";
 import { RemoteImage } from "@/components/ui/RemoteImage";
-import { VIDEO_RESOURCES, youtubeThumbnail } from "@/lib/resources";
+import { youtubeThumbnail } from "@/lib/resources";
+import { getResources } from "@/lib/services/resources";
 import { getTenantConfig, ogLocale, siteUrl } from "@/lib/tenant-config";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -45,6 +46,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ResourcesPage() {
   const { nationality } = await getTenantConfig();
+  const resources = await getResources();
 
   return (
     <main className="bg-[#1C1917] min-h-screen pt-28 pb-24 px-6">
@@ -67,14 +69,14 @@ export default async function ResourcesPage() {
         </div>
 
         {/* Videos grid */}
-        {VIDEO_RESOURCES.length > 0 ? (
+        {resources.length > 0 ? (
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-[#78716C] mb-6 flex items-center gap-2">
               <Video className="w-4 h-4" />
               Videos
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
-              {VIDEO_RESOURCES.map((r) => (
+              {resources.map((r) => (
                 <TenantLink
                   key={r.slug}
                   href={`/resources/${r.slug}`}

@@ -563,6 +563,28 @@ model Course {
   @@unique([tenantId, slug])
 }
 
+/// A per-tenant marketing "resource" (a video/walkthrough shown on /resources).
+/// Replaces the former hardcoded VIDEO_RESOURCES array so each community curates
+/// its own. The rich shape (title, speakers, takeaways, tags, …) is stored as a
+/// JSON `data` blob matching the VideoResource type in src/lib/resources.ts —
+/// the read/render code keeps that exact shape, so only the SOURCE changes.
+model Resource {
+  id          String   @id @default(cuid())
+  tenantId    String   @default("")
+  slug        String
+  /// ISO date (e.g. "2026-05-02") — drives ordering and sitemap <lastmod>.
+  publishedAt String   @default("")
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  /// JSON: the VideoResource document (everything except the columns above).
+  data        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
 model Lesson {
   id        String           @id @default(cuid())
   tenantId  String @default("")
