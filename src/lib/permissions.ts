@@ -37,6 +37,9 @@ export const PERMISSIONS = {
   "courses.view": "View courses (admin)",
   "courses.edit": "Create / edit courses",
   "courses.delete": "Delete courses",
+  "resources.view": "View resources (admin)",
+  "resources.edit": "Create / edit resources",
+  "resources.delete": "Delete resources",
 
   // Events
   "events.view": "View events (admin)",
@@ -114,6 +117,10 @@ export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] =
   { label: "Posts", permissions: ["posts.view", "posts.edit", "posts.delete"] },
   { label: "Badges", permissions: ["badges.view", "badges.edit", "badges.delete"] },
   { label: "Courses", permissions: ["courses.view", "courses.edit", "courses.delete"] },
+  {
+    label: "Resources",
+    permissions: ["resources.view", "resources.edit", "resources.delete"],
+  },
   { label: "Events", permissions: ["events.view", "events.edit", "events.delete"] },
   {
     label: "Email",

@@ -25,6 +25,7 @@ import {
   Upload,
   UserPlus,
   Users,
+  Video,
   Workflow,
   Wrench,
 } from "lucide-react";
@@ -139,6 +140,14 @@ export const adminNavItems: AdminNavItem[] = [
     href: "/admin/courses",
     icon: GraduationCap,
     permission: "courses.view",
+    section: "Content",
+  },
+  {
+    label: "Resources",
+    description: "Curate the videos shown on /resources",
+    href: "/admin/resources",
+    icon: Video,
+    permission: "resources.view",
     section: "Content",
   },
   {
