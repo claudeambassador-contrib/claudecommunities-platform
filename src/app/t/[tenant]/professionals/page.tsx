@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { TenantLink } from "@/components/TenantBaseProvider";
-import { getRegionConfig } from "@/lib/region";
 import { getTenantConfig, siteUrl } from "@/lib/tenant-config";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -42,11 +41,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ProfessionalsPage() {
-  const { nationality } = await getTenantConfig();
-  // The community stats below are unsourced/inflated placeholder figures. Only
-  // show them for the established AU community; a fresh community (nz / self-host)
-  // shouldn't claim numbers it doesn't have.
-  const { region } = getRegionConfig();
+  // Stat tiles are per-tenant (TenantConfig.professionalStats); empty → the block
+  // is hidden, so a fresh community shows no unsourced figures.
+  const { professionalStats } = await getTenantConfig();
 
   return (
     <>
@@ -77,20 +74,16 @@ export default async function ProfessionalsPage() {
         </div>
       </section>
 
-      {/* Stats — unsourced/inflated figures; AU-only (see note above). */}
-      {region === "au" && (
+      {/* Stat tiles — per-tenant; hidden when none configured. */}
+      {professionalStats.length > 0 && (
         <section className="py-16 px-6">
           <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { number: "10x", label: "Faster iteration cycles reported" },
-              { number: "500+", label: `Developers in ${nationality} community` },
-              { number: "85%", label: "Say it changed their workflow" },
-            ].map((stat) => (
+            {professionalStats.map((stat) => (
               <div
                 key={stat.label}
                 className="bg-[#2D2926] rounded-2xl p-6 text-center border border-white/[0.06]"
               >
-                <span className="block text-4xl font-bold text-[#D4836A] mb-2">{stat.number}</span>
+                <span className="block text-4xl font-bold text-[#D4836A] mb-2">{stat.value}</span>
                 <span className="text-[#A8A29E] text-[0.9375rem]">{stat.label}</span>
               </div>
             ))}
