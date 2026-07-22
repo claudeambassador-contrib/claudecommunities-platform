@@ -24,6 +24,15 @@ export interface FooterLink {
   href: string;
 }
 
+/** A "stat" tile on the professionals / vibe-coders landing pages, e.g.
+ * `{ value: "500+", label: "Developers in the community" }`. Per-tenant and
+ * empty by default — a new community shows no unsourced figures until it sets
+ * real ones. */
+export interface LandingStat {
+  value: string;
+  label: string;
+}
+
 /** A tenant's resolved configuration (mirrors the former RegionConfig shape). */
 export interface TenantConfig {
   countryName: string;
@@ -50,6 +59,13 @@ export interface TenantConfig {
   galleryImages: { src: string; alt: string }[];
   communitySuperlative: string;
   merchEnabled: boolean;
+  /** Stat tiles on the `/professionals` landing page. Empty → the block is hidden. */
+  professionalStats: LandingStat[];
+  /** Stat tiles on the `/vibe-coders` landing page. Empty → the block is hidden. */
+  vibeCoderStats: LandingStat[];
+  /** Heading on the Discord promo card. Communities pick their own noun
+   * ("…between meetups" vs "…between webinars"). */
+  discordHeading: string;
   /** Footer "Industries" column links. Empty href falls back to nothing. */
   footerIndustries: FooterLink[];
   /** Footer "Resources" column links. An empty href falls back to the Discord invite. */
@@ -81,6 +97,9 @@ export const TENANT_CONFIG_DEFAULTS: TenantConfig = {
   galleryImages: [],
   communitySuperlative: "",
   merchEnabled: false,
+  professionalStats: [],
+  vibeCoderStats: [],
+  discordHeading: "Join the conversation between meetups",
   footerIndustries: [
     { label: "E-Commerce", href: "/for/ecommerce" },
     { label: "Marketing", href: "/for/marketing" },

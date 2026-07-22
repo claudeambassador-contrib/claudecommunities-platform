@@ -13,7 +13,7 @@ interface DiscordPromoCardProps {
 const DISCORD_BLURPLE = "#5865F2";
 
 export default function DiscordPromoCard({ href, logoSrc }: DiscordPromoCardProps) {
-  const { countryName } = useTenantConfig();
+  const { countryName, discordHeading } = useTenantConfig();
   return (
     <motion.a
       href={href}
@@ -96,9 +96,7 @@ export default function DiscordPromoCard({ href, logoSrc }: DiscordPromoCardProp
               We&apos;re on Discord
             </span>
           </div>
-          <h3 className="text-xl md:text-2xl font-semibold text-white mb-2">
-            Join the conversation between meetups
-          </h3>
+          <h3 className="text-xl md:text-2xl font-semibold text-white mb-2">{discordHeading}</h3>
           <p className="text-white/70 text-[0.9375rem] leading-relaxed">
             {`Hang out with other Claude Code builders across ${countryName}, share what you're working on, and get help when you're stuck.`}
           </p>

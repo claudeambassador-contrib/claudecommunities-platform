@@ -19,6 +19,14 @@ export interface TimezoneOption {
   label: string;
 }
 
+/** A landing-page stat tile. Structurally mirrors `LandingStat` in
+ * `tenant-config.ts` — duplicated (like {@link TimezoneOption}) to keep this
+ * edge/middleware module free of that file's React/Prisma deps. */
+export interface LandingStat {
+  value: string;
+  label: string;
+}
+
 export interface RegionConfig {
   region: Region;
   countryName: string;
@@ -66,6 +74,12 @@ export interface RegionConfig {
   communitySuperlative: string;
   /** Whether the merch store is live for this region (hides nav links + 404s /merch when false). */
   merchEnabled: boolean;
+  /** Stat tiles on `/professionals`. Empty for new regions (no unsourced figures). */
+  professionalStats: LandingStat[];
+  /** Stat tiles on `/vibe-coders`. Empty for new regions. */
+  vibeCoderStats: LandingStat[];
+  /** Discord promo-card heading (the event-format noun differs by community). */
+  discordHeading: string;
 }
 
 /** OpenGraph locale form ("en-NZ" -> "en_NZ") derived from the region lang. */
@@ -128,6 +142,17 @@ export const REGION_CONFIGS: Record<KnownRegion, RegionConfig> = {
     ],
     communitySuperlative: "largest ",
     merchEnabled: true,
+    professionalStats: [
+      { value: "10x", label: "Faster iteration cycles reported" },
+      { value: "500+", label: "Developers in the Australian community" },
+      { value: "85%", label: "Say it changed their workflow" },
+    ],
+    vibeCoderStats: [
+      { value: "0", label: "Lines of code needed to start" },
+      { value: "100s", label: "Apps built by non-developers" },
+      { value: "24/7", label: "AI assistant available to help" },
+    ],
+    discordHeading: "Join the conversation between webinars",
   },
   nz: {
     region: "nz",
@@ -156,6 +181,10 @@ export const REGION_CONFIGS: Record<KnownRegion, RegionConfig> = {
     galleryImages: [],
     communitySuperlative: "",
     merchEnabled: false,
+    // A brand-new community claims no stats until it has real ones.
+    professionalStats: [],
+    vibeCoderStats: [],
+    discordHeading: "Join the conversation between meetups",
   },
 };
 
@@ -206,6 +235,9 @@ function genericRegionConfig(region: Region): RegionConfig {
     galleryImages: [],
     communitySuperlative: "",
     merchEnabled: false,
+    professionalStats: [],
+    vibeCoderStats: [],
+    discordHeading: "Join the conversation between meetups",
   };
 }
 
