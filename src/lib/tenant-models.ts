@@ -61,6 +61,8 @@ export const TENANT_SCOPED_MODELS = new Set<string>([
   "EventLumaInterest",
   "TalkSubmission",
   "TalkComment",
+  // ── Marketing content ─────────────────────────────────────────────────
+  "Resource", // per-tenant /resources videos (one row per resource)
   // ── Courses ───────────────────────────────────────────────────────────
   "Course",
   "Lesson",
