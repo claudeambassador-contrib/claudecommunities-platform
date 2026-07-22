@@ -497,7 +497,7 @@ export async function listAllAdmin(actor: ActorLike) {
   ensurePermission(actor, "users.view");
   const db = await getPrisma();
   const tenantId = await getTenantId();
-  return db.user.findMany({
+  const users = await db.user.findMany({
     where: { tenantMemberships: { some: { tenantId } } },
     select: {
       id: true,
@@ -516,9 +516,21 @@ export async function listAllAdmin(actor: ActorLike) {
           badge: { select: { id: true, name: true, color: true } },
         },
       },
+      // Coarse per-tenant role for THIS community. `assignRoleToUser` writes
+      // `UserTenant.role` and deliberately never touches the global `User.role`,
+      // so the admin members list must surface the membership role — otherwise a
+      // user promoted in this tenant still shows their (stale) global role.
+      tenantMemberships: { where: { tenantId }, select: { role: true } },
     },
     orderBy: { createdAt: "desc" },
   });
+  // Override the global `role` with the per-tenant membership role (the `where`
+  // guarantees exactly one membership row for this tenant). Drop the relation
+  // from the returned shape so the DTO is unchanged for callers.
+  return users.map(({ tenantMemberships, ...u }) => ({
+    ...u,
+    role: tenantMemberships[0]?.role ?? u.role,
+  }));
 }
 
 export async function listNamesAdmin(actor: ActorLike) {
