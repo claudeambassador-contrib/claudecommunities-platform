@@ -3,7 +3,7 @@
 import { ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useState, useTransition } from "react";
-import type { FooterLink, TenantConfig } from "@/lib/tenant-config";
+import type { FooterLink, LandingStat, TenantConfig } from "@/lib/tenant-config";
 import { resizeImage, uploadFile } from "@/lib/upload-client";
 import { saveCommunitySettings } from "./actions";
 
@@ -157,6 +157,9 @@ export default function SettingsClient({
   const [merchEnabled, setMerchEnabled] = useState(config.merchEnabled);
   const [footerIndustries, setFooterIndustries] = useState(config.footerIndustries);
   const [footerResources, setFooterResources] = useState(config.footerResources);
+  const [professionalStats, setProfessionalStats] = useState(config.professionalStats);
+  const [vibeCoderStats, setVibeCoderStats] = useState(config.vibeCoderStats);
+  const [discordHeading, setDiscordHeading] = useState(config.discordHeading);
 
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
@@ -195,6 +198,9 @@ export default function SettingsClient({
       merchEnabled,
       footerIndustries,
       footerResources,
+      professionalStats,
+      vibeCoderStats,
+      discordHeading,
     };
     startTransition(async () => {
       const res = await saveCommunitySettings({
@@ -366,6 +372,31 @@ export default function SettingsClient({
         />
       </Section>
 
+      <Section title="Landing page">
+        <Field
+          label="Discord card heading"
+          hint='The event-format noun differs by community — e.g. "…between meetups" vs "…between webinars".'
+        >
+          <input
+            className={INPUT}
+            value={discordHeading}
+            onChange={(e) => setDiscordHeading(e.target.value)}
+          />
+        </Field>
+        <StatsField
+          label="Professionals page stats"
+          hint="Stat tiles on /professionals. Leave empty to hide the block — a new community shouldn't claim unsourced figures."
+          stats={professionalStats}
+          onChange={setProfessionalStats}
+        />
+        <StatsField
+          label="Vibe-coders page stats"
+          hint="Stat tiles on /vibe-coders. Leave empty to hide the block."
+          stats={vibeCoderStats}
+          onChange={setVibeCoderStats}
+        />
+      </Section>
+
       <Section title="Locale">
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="Language" hint='BCP-47, e.g. "en-NZ".'>
@@ -469,8 +500,8 @@ function FooterLinksField({
     <Field label={label} hint={hint}>
       <div className="space-y-2">
         {links.map((link, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: footer-link rows have no stable id and are edited in place, so the array index is part of the key
-          <div key={`${link.label}-${i}`} className="flex items-center gap-3">
+          // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id; the key MUST be the bare index — mixing in the (editable) label changes the key on every keystroke, remounting the input and dropping focus after one character
+          <div key={i} className="flex items-center gap-3">
             <input
               className={INPUT}
               placeholder="Label"
@@ -503,6 +534,62 @@ function FooterLinksField({
         >
           <Plus className="w-4 h-4" />
           Add link
+        </button>
+      </div>
+    </Field>
+  );
+}
+
+/** A repeatable list of {value, label} stat rows with add/remove. */
+function StatsField({
+  label,
+  hint,
+  stats,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  stats: LandingStat[];
+  onChange: (stats: LandingStat[]) => void;
+}) {
+  return (
+    <Field label={label} hint={hint}>
+      <div className="space-y-2">
+        {stats.map((stat, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id; the key MUST be the bare index — mixing in the (editable) label changes the key on every keystroke, remounting the input and dropping focus after one character
+          <div key={i} className="flex items-center gap-3">
+            <input
+              className={`${INPUT} max-w-[8rem]`}
+              placeholder="Value"
+              value={stat.value}
+              onChange={(e) =>
+                onChange(stats.map((x, xi) => (xi === i ? { ...x, value: e.target.value } : x)))
+              }
+            />
+            <input
+              className={INPUT}
+              placeholder="Label"
+              value={stat.label}
+              onChange={(e) =>
+                onChange(stats.map((x, xi) => (xi === i ? { ...x, label: e.target.value } : x)))
+              }
+            />
+            <button
+              type="button"
+              onClick={() => onChange(stats.filter((_, xi) => xi !== i))}
+              className="p-2 rounded-lg text-[#78716C] hover:text-red-400"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => onChange([...stats, { value: "", label: "" }])}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-sm text-white w-fit"
+        >
+          <Plus className="w-4 h-4" />
+          Add stat
         </button>
       </div>
     </Field>
