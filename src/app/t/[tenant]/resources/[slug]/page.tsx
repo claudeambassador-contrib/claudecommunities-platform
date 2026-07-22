@@ -82,8 +82,8 @@ export default async function ResourcePage({ params }: PageProps) {
     <>
       <script
         type="application/ld+json"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data built from internal resource fields and serialized with JSON.stringify; no user-controlled HTML.
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD serialized with JSON.stringify; "<" is escaped to < so admin-editable fields (title/summary) can't break out of the <script> block (stored-XSS).
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
 
       <main className="bg-[#1C1917] min-h-screen pt-28 pb-24 px-6">
