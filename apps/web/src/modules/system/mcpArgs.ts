@@ -6,6 +6,18 @@ export function str(args: McpArgs, key: string): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+/** Distinguishes omitted vs explicit null (live MCP allows scheduledAt: null). */
+export function strOrNull(args: McpArgs, key: string): string | null | undefined {
+  if (!(key in args)) {
+    return undefined;
+  }
+  const value = args[key];
+  if (value === null) {
+    return null;
+  }
+  return typeof value === "string" ? value : undefined;
+}
+
 export function bool(args: McpArgs, key: string): boolean | undefined {
   const value = args[key];
   return typeof value === "boolean" ? value : undefined;

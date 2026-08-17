@@ -325,6 +325,19 @@ describe("callMcpTool", () => {
     }
   });
 
+  it("rejects publishSocialPost without social.publish", async () => {
+    const store = openMemoryTenant();
+    const result = await callMcpTool(
+      "publishSocialPost",
+      { citySlug: CITY, postId: "post_1" },
+      dispatchCtx(store, memberActor()),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.status).toBe(403);
+    }
+  });
+
   it("returns not_found for an unknown tool name", async () => {
     const result = await callMcpTool("not_a_real_tool", {}, dispatchCtx(openMemoryTenant()));
     expect(result.ok).toBe(false);

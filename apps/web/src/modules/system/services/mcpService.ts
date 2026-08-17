@@ -51,7 +51,7 @@ import type {
   SocialPostListOptions,
   SocialPostUpdate,
 } from "@/modules/social/types";
-import { bool, num, requireStr, str, strs } from "@/modules/system/mcpArgs";
+import { bool, num, requireStr, str, strOrNull, strs } from "@/modules/system/mcpArgs";
 import { MCP_CATALOG } from "@/modules/system/mcpCatalog";
 import { healthService } from "@/modules/system/services/healthService";
 import type { McpArgs, McpDispatchContext, McpToolInfo } from "@/modules/system/types";
@@ -67,6 +67,7 @@ import {
   updateSpeaker,
 } from "@/modules/talks/services/talksService";
 import type { SpeakerInput, TalkSubmissionStatus } from "@/modules/talks/types";
+import { ensurePermission } from "@/shared/auth/actor";
 import { hasPermission } from "@/shared/auth/permissions";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
@@ -242,9 +243,11 @@ const HANDLERS: Record<string, Handler> = {
     if (!spaceId.ok) {
       return spaceId;
     }
+    const imageUrl = str(args, "imageUrl");
     return createCommunityPost(opened.store, ctx.actor, {
       content: content.value,
-      mediaUrl: str(args, "imageUrl"),
+      mediaType: imageUrl ? "image" : undefined,
+      mediaUrl: imageUrl,
       spaceId: spaceId.value,
       title: str(args, "title"),
     });
@@ -598,6 +601,10 @@ const HANDLERS: Record<string, Handler> = {
     if (!postId.ok) {
       return postId;
     }
+    const allowed = ensurePermission(ctx.actor, "social.publish");
+    if (!allowed.ok) {
+      return allowed;
+    }
     return publishExisting(opened.store, postId.value);
   },
 
@@ -779,7 +786,7 @@ const HANDLERS: Record<string, Handler> = {
     const patch: SocialPostUpdate = {
       content: str(args, "content"),
       mediaUrls: strs(args, "mediaUrls"),
-      scheduledAt: str(args, "scheduledAt"),
+      scheduledAt: strOrNull(args, "scheduledAt"),
     };
     const mediaType = str(args, "mediaType");
     if (
