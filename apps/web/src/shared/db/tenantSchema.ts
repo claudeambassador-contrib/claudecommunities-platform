@@ -7,6 +7,7 @@
 
 import * as activityTables from "@/modules/activity/schema.tenant";
 import * as badgeTables from "@/modules/badges/schema.tenant";
+import * as cityTables from "@/modules/cities/schema.tenant";
 import * as community from "@/modules/community/schema.tenant";
 import * as connectionTables from "@/modules/connections/schema.tenant";
 import * as courses from "@/modules/courses/schema.tenant";
@@ -62,6 +63,7 @@ export const userBadges = badgeTables.userBadges;
 export const notifications = pages.notifications;
 export const roles = roleTables.roles;
 export const activities = activityTables.activities;
+export const cities = cityTables.cities;
 export const connections = connectionTables.connections;
 export const polls = pollTables.polls;
 export const pollOptions = pollTables.pollOptions;
@@ -73,6 +75,7 @@ export function createTenantSchema() {
     activities: activityTables.activities,
     badges: badgeTables.badges,
     bookmarks: community.bookmarks,
+    cities: cityTables.cities,
     commentReactions: community.commentReactions,
     comments: community.comments,
     connections: connectionTables.connections,
