@@ -311,6 +311,88 @@ describe("social posts", () => {
     expect(reset.count).toBeGreaterThanOrEqual(1);
   });
 
+  it("claims a post once so a second publish does not fire", async () => {
+    const { account, store } = await seededAccount();
+    const created = await createPost(store, adminActor(), {
+      accountId: account.id,
+      content: "Once",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    const starts: number[] = [];
+    const first = await publishExisting(store, created.post.id, {
+      workflow: {
+        start: ({ attempt, postId }) => {
+          starts.push(attempt);
+          expect(postId).toBe(created.post.id);
+          return Promise.resolve({ workflowId: `wf_${attempt}` });
+        },
+      },
+    });
+    expect(first.ok).toBe(true);
+    const second = await publishExisting(store, created.post.id, {
+      workflow: {
+        start: ({ attempt }) => {
+          starts.push(attempt);
+          return Promise.resolve({ workflowId: `wf_${attempt}` });
+        },
+      },
+    });
+    expect(second.ok).toBe(true);
+    expect(starts).toEqual([1]);
+  });
+
+  it("hands a draft-to-scheduled update to a native connector", async () => {
+    const { account, store } = await seededAccount();
+    const created = await createPost(store, adminActor(), {
+      accountId: account.id,
+      content: "Composer",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    const scheduled = await updatePost(
+      store,
+      adminActor(),
+      created.post.id,
+      { scheduledAt: FUTURE, status: "scheduled" },
+      { connector: testConnector() },
+    );
+    expect(scheduled.ok).toBe(true);
+    if (!scheduled.ok) {
+      return;
+    }
+    expect(scheduled.post.status).toBe("scheduled");
+    expect(scheduled.post.externalId).toBe("ext_1");
+  });
+
+  it("reconnects the same account instead of duplicating it", async () => {
+    const store = openMemoryTenant();
+    await connectAccount(store, adminActor(), {
+      connector: "zernio",
+      displayName: "Old",
+      externalId: "org_li",
+      platform: "linkedin",
+    });
+    const again = await connectAccount(store, adminActor(), {
+      connector: "zernio",
+      displayName: "New",
+      externalId: "org_li",
+      platform: "linkedin",
+    });
+    expect(again.ok).toBe(true);
+    const listed = await listAccounts(store, adminActor());
+    expect(listed.ok).toBe(true);
+    if (!listed.ok) {
+      return;
+    }
+    expect(listed.accounts).toHaveLength(1);
+    expect(listed.accounts[0]?.displayName).toBe("New");
+  });
+
   it("rejects member create", async () => {
     const { account, store } = await seededAccount();
     const denied = await createPost(store, memberActor(), {

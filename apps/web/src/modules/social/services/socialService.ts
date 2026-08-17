@@ -68,11 +68,19 @@ async function updateDelegatedPost(
   const newContent = input.content ?? existing.content;
   const newScheduledAt =
     parseOptionalDate(input.scheduledAt) ?? parseExistingDate(existing.scheduledAt);
-  await deps.connector.updateRemote({
-    content: newContent,
-    externalId: existing.externalId,
-    scheduledFor: newScheduledAt ?? undefined,
-  });
+  try {
+    await deps.connector.updateRemote({
+      content: newContent,
+      externalId: existing.externalId,
+      scheduledFor: newScheduledAt ?? undefined,
+    });
+  } catch (error) {
+    return err(
+      "bad_gateway",
+      502,
+      error instanceof Error ? error.message : "Failed to update the remote post",
+    );
+  }
   return await socialRepo.updatePostById(store, id, {
     content: newContent,
     scheduledAt: newScheduledAt ?? null,
@@ -219,7 +227,7 @@ export async function createPost(
   if (action === "publish") {
     return await publishExisting(store, created.post.id, deps);
   }
-  if (status === "scheduled" && deps?.connector?.supportsNativeScheduling && deps.workflow) {
+  if (status === "scheduled" && deps?.connector?.supportsNativeScheduling) {
     return await publishExisting(store, created.post.id, deps);
   }
   return created;
@@ -267,13 +275,17 @@ export async function updatePost(
     return await updateDelegatedPost(store, id, existing.post, input, deps);
   }
 
-  return await socialRepo.updatePostById(store, id, {
+  const updated = await socialRepo.updatePostById(store, id, {
     content: input.content,
     mediaType: input.mediaType,
     mediaUrls: input.mediaUrls,
     scheduledAt: parseOptionalDate(input.scheduledAt),
     status: input.status,
   });
+  if (updated.ok && input.status === "scheduled" && deps?.connector?.supportsNativeScheduling) {
+    return await publishExisting(store, id, deps);
+  }
+  return updated;
 }
 
 export async function deletePost(
@@ -295,7 +307,15 @@ export async function deletePost(
     existing.post.externalId &&
     deps?.connector?.deleteRemote
   ) {
-    await deps.connector.deleteRemote({ externalId: existing.post.externalId });
+    try {
+      await deps.connector.deleteRemote({ externalId: existing.post.externalId });
+    } catch (error) {
+      return err(
+        "bad_gateway",
+        502,
+        error instanceof Error ? error.message : "Failed to delete the remote post",
+      );
+    }
   }
   return await socialRepo.deletePost(store, id);
 }
@@ -314,7 +334,7 @@ export async function publishExisting(
   }
   if (deps?.workflow) {
     try {
-      await deps.workflow.start({ postId: id });
+      await deps.workflow.start({ attempt: claimed.attempt, postId: id });
       return await socialRepo.getPostById(store, id);
     } catch (error) {
       return await socialRepo.updatePostById(store, id, {
@@ -367,10 +387,13 @@ export async function publishDueScheduled(
     // Sequential claim+publish so two due rows cannot interleave CAS.
     // biome-ignore lint/performance/noAwaitInLoops: cron drain is sequential
     const result = await publishExisting(store, post.id, deps);
-    if (result.ok) {
+    if (result.ok && result.post.status !== "failed") {
       dispatched.push(post.id);
     } else {
-      errors.push({ error: result.error.message, id: post.id });
+      const message = result.ok
+        ? (result.post.errorMessage ?? "Publish failed")
+        : (result.error.message ?? "Publish failed");
+      errors.push({ error: message, id: post.id });
     }
   }
   return ok({ dispatched, errors });

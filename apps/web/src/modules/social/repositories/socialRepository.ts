@@ -77,6 +77,31 @@ export async function insertAccount(
   input: SocialAccountWrite,
 ): Promise<Result<{ account: SocialAccountSummary }>> {
   const { socialAccounts } = store.tables;
+  const existing = await store.db
+    .select()
+    .from(socialAccounts)
+    .where(
+      and(
+        eq(socialAccounts.orgId, store.orgId),
+        eq(socialAccounts.connector, input.connector),
+        eq(socialAccounts.externalId, input.externalId),
+      ),
+    )
+    .limit(1);
+  const found = first(existing);
+  if (found) {
+    await store.db
+      .update(socialAccounts)
+      .set({
+        accountType: input.accountType,
+        avatarUrl: input.avatarUrl ?? null,
+        displayName: input.displayName,
+        expiresAt: input.expiresAt ?? null,
+        platform: input.platform,
+      })
+      .where(and(eq(socialAccounts.orgId, store.orgId), eq(socialAccounts.id, found.id)));
+    return getAccountById(store, found.id);
+  }
   const id = newId("sac");
   await store.db.insert(socialAccounts).values({
     accessTokenEncrypted: null,
@@ -280,21 +305,9 @@ export async function updatePostById(
 export async function claimForPublish(
   store: TenantStore,
   id: string,
-): Promise<Result<{ post: SocialPostSummary; claimed: boolean }>> {
+): Promise<Result<{ post: SocialPostSummary; claimed: boolean; attempt: number }>> {
   const { socialPosts } = store.tables;
-  const current = await getPostById(store, id);
-  if (!current.ok) {
-    return current;
-  }
-  if (
-    current.post.externalId ||
-    (current.post.status !== "draft" &&
-      current.post.status !== "scheduled" &&
-      current.post.status !== "failed")
-  ) {
-    return ok({ claimed: false, post: current.post });
-  }
-  await store.db
+  const claimedRows = await store.db
     .update(socialPosts)
     .set({
       errorMessage: null,
@@ -309,12 +322,26 @@ export async function claimForPublish(
         isNull(socialPosts.externalId),
         inArray(socialPosts.status, ["draft", "scheduled", "failed"]),
       ),
-    );
+    )
+    .returning({ id: socialPosts.id, publishAttempts: socialPosts.publishAttempts });
+  const claimedRow = first(claimedRows);
   const after = await getPostById(store, id);
   if (!after.ok) {
     return after;
   }
-  return ok({ claimed: after.post.status === "publishing", post: after.post });
+  if (!claimedRow) {
+    return ok({ attempt: 0, claimed: false, post: after.post });
+  }
+  return ok({ attempt: Number(claimedRow.publishAttempts), claimed: true, post: after.post });
+}
+
+export async function countByStatus(store: TenantStore, status: SocialPostStatus): Promise<number> {
+  const { socialPosts } = store.tables;
+  const rows = await store.db
+    .select({ n: sql<number>`count(*)` })
+    .from(socialPosts)
+    .where(and(eq(socialPosts.orgId, store.orgId), eq(socialPosts.status, status)));
+  return Number(first(rows)?.n ?? 0);
 }
 
 export async function deletePost(

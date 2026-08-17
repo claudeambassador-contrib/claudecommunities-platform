@@ -112,7 +112,7 @@ export interface SocialConnector {
 }
 
 export interface SocialPublishWorkflow {
-  start: (input: { postId: string }) => Promise<{ workflowId: string }>;
+  start: (input: { attempt: number; postId: string }) => Promise<{ workflowId: string }>;
 }
 
 export interface SocialDeps {

@@ -1,18 +1,24 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-export const socialAccounts = sqliteTable("social_accounts", {
-  accessTokenEncrypted: text("access_token_encrypted"),
-  accountType: text("account_type").notNull().default("organization"),
-  avatarUrl: text("avatar_url"),
-  connector: text("connector").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-  displayName: text("display_name"),
-  expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
-  externalId: text("external_id"),
-  id: text("id").primaryKey(),
-  orgId: text("org_id").notNull(),
-  platform: text("platform").notNull(),
-});
+export const socialAccounts = sqliteTable(
+  "social_accounts",
+  {
+    accessTokenEncrypted: text("access_token_encrypted"),
+    accountType: text("account_type").notNull().default("organization"),
+    avatarUrl: text("avatar_url"),
+    connector: text("connector").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    displayName: text("display_name"),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+    externalId: text("external_id"),
+    id: text("id").primaryKey(),
+    orgId: text("org_id").notNull(),
+    platform: text("platform").notNull(),
+  },
+  (t) => [
+    uniqueIndex("social_accounts_org_connector_external").on(t.orgId, t.connector, t.externalId),
+  ],
+);
 
 export const socialPosts = sqliteTable("social_posts", {
   accountId: text("account_id").references(() => socialAccounts.id, { onDelete: "set null" }),
