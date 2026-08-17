@@ -441,7 +441,9 @@ export async function deleteScheduled(
   const { scheduledCourses } = store.tables;
   await store.db
     .delete(scheduledCourses)
-    .where(and(eq(scheduledCourses.orgId, store.orgId), eq(scheduledCourses.id, id)));
+    .where(
+      and(eq(scheduledCourses.orgId, store.orgId), eq(scheduledCourses.id, existing.course.id)),
+    );
   return ok({ success: true });
 }
 

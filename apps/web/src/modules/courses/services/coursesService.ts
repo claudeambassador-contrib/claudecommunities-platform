@@ -305,15 +305,11 @@ export async function updateScheduledCourse(
     }
     end = parsed.date;
   }
-  const write = scheduledUpdateWrite(input, start, end);
-  if (input.title !== undefined || input.startTime !== undefined) {
-    write.slug = await uniqueScheduledSlug(
-      store,
-      buildDateSlug(input.title ?? existing.course.title, start),
-      existing.course.id,
-    );
-  }
-  return coursesRepo.updateScheduled(store, existing.course.id, write);
+  return coursesRepo.updateScheduled(
+    store,
+    existing.course.id,
+    scheduledUpdateWrite(input, start, end),
+  );
 }
 
 export async function removeScheduledCourse(

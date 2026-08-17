@@ -74,10 +74,12 @@ describe("scheduledCoursesService", () => {
 
     const updated = await updateScheduledCourse(store, adminActor(), created.course.id, {
       location: "Sydney",
+      title: "Renamed Bootcamp",
     });
     expect(updated.ok).toBe(true);
     if (updated.ok) {
       expect(updated.course.slug).toBe(created.course.slug);
+      expect(updated.course.title).toBe("Renamed Bootcamp");
       expect(updated.course.location).toBe("Sydney");
     }
 
