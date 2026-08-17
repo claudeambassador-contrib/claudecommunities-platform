@@ -156,11 +156,15 @@
     "wrangler": "^4.88.0"
   },
   "trustedDependencies": [
+    "@biomejs/biome",
     "@clerk/shared",
     "@prisma/engines",
     "better-sqlite3",
+    "esbuild",
     "prisma",
-    "protobufjs"
+    "protobufjs",
+    "sharp",
+    "workerd"
   ],
   "patchedDependencies": {
     "@opennextjs/cloudflare@1.19.11": "patches/@opennextjs%2Fcloudflare@1.19.11.patch"

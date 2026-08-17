@@ -54,5 +54,13 @@
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.6",
     "wrangler": "^4.88.0"
-  }
+  },
+  "trustedDependencies": [
+    "@biomejs/biome",
+    "@clerk/shared",
+    "better-sqlite3",
+    "esbuild",
+    "sharp",
+    "workerd"
+  ]
 }
