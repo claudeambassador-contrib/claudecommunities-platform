@@ -2,7 +2,10 @@
  * Single SQLite table set applied to every city D1.
  * Unlike Robinson's pgSchema(name), D1 isolation is physical (one DB per city).
  */
+/** biome-ignore-all lint/performance/noNamespaceImport: domain schema barrels */
+/** biome-ignore-all lint/style/useDestructuring: re-export table aliases */
 
+import * as badgeTables from "@/modules/badges/schema.tenant";
 import * as community from "@/modules/community/schema.tenant";
 import * as courses from "@/modules/courses/schema.tenant";
 import * as email from "@/modules/email/schema.tenant";
@@ -49,13 +52,14 @@ export const slideStylePresets = slides.slideStylePresets;
 export const slideExportJobs = slides.slideExportJobs;
 
 export const pagesTable = pages.pages;
-export const badges = pages.badges;
+export const badges = badgeTables.badges;
+export const userBadges = badgeTables.userBadges;
 export const notifications = pages.notifications;
 
 /** Stable object of tenant tables (no per-schema factory needed on D1). */
 export function createTenantSchema() {
   return {
-    badges: pages.badges,
+    badges: badgeTables.badges,
     bookmarks: community.bookmarks,
     commentReactions: community.commentReactions,
     comments: community.comments,
@@ -85,6 +89,7 @@ export function createTenantSchema() {
     spaceViews: community.spaceViews,
     speakers: talks.speakers,
     talkSubmissions: talks.talkSubmissions,
+    userBadges: badgeTables.userBadges,
   };
 }
 

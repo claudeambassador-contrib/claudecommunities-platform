@@ -17,15 +17,6 @@ export const pages = sqliteTable(
   (t) => [uniqueIndex("pages_org_slug").on(t.orgId, t.slug)],
 );
 
-export const badges = sqliteTable("badges", {
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-  description: text("description"),
-  id: text("id").primaryKey(),
-  imageUrl: text("image_url"),
-  name: text("name").notNull(),
-  orgId: text("org_id").notNull(),
-});
-
 export const notifications = sqliteTable("notifications", {
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   id: text("id").primaryKey(),
