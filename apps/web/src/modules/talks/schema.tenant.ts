@@ -1,25 +1,50 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const speakers = sqliteTable("speakers", {
-  id: text("id").primaryKey(),
-  orgId: text("org_id").notNull(),
-  name: text("name").notNull(),
   bio: text("bio"),
-  imageUrl: text("image_url"),
+  company: text("company"),
+  companyLogoUrl: text("company_logo_url"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  eventId: text("event_id"),
+  id: text("id").primaryKey(),
+  imageUrl: text("image_url"),
+  linkedinUrl: text("linkedin_url"),
+  name: text("name").notNull(),
+  orgId: text("org_id").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  submissionId: text("submission_id"),
+  talkDescription: text("talk_description"),
+  talkDescriptionShort: text("talk_description_short"),
+  talkTitle: text("talk_title"),
+  title: text("title"),
+  twitterHandle: text("twitter_handle"),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  websiteUrl: text("website_url"),
 });
 
 export const talkSubmissions = sqliteTable("talk_submissions", {
-  id: text("id").primaryKey(),
-  orgId: text("org_id").notNull(),
-  userId: text("user_id").notNull(),
-  title: text("title").notNull(),
-  abstract: text("abstract"),
-  status: text("status", {
-    enum: ["draft", "submitted", "accepted", "rejected", "withdrawn"],
-  })
-    .notNull()
-    .default("draft"),
+  bio: text("bio"),
+  city: text("city"),
+  contentLocked: integer("content_locked", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+  description: text("description"),
+  email: text("email").notNull().default(""),
+  id: text("id").primaryKey(),
+  name: text("name").notNull().default(""),
+  orgId: text("org_id").notNull(),
+  slidesFileName: text("slides_file_name"),
+  slidesLocked: integer("slides_locked", { mode: "boolean" }).notNull().default(false),
+  slidesMimeType: text("slides_mime_type"),
+  slidesSize: integer("slides_size"),
+  slidesUrl: text("slides_url"),
+  status: text("status", { enum: ["pending", "approved", "declined"] })
+    .notNull()
+    .default("pending"),
+  title: text("title").notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  userId: text("user_id"),
 });
+
+export type SpeakerRow = typeof speakers.$inferSelect;
+export type TalkSubmissionRow = typeof talkSubmissions.$inferSelect;
