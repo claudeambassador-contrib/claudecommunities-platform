@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createPost, createSpace } from "@/modules/community/services/communityService";
 import { createCourse } from "@/modules/courses/services/coursesService";
 import { createEvent } from "@/modules/events/services/eventsService";
+import { insertMembership, insertUser } from "@/modules/identity/repositories/directoryRepository";
 import { createContentPage } from "@/modules/pages/services/pagesService";
 import {
   connectAccount,
@@ -10,7 +11,9 @@ import {
 import { callMcpTool, listMcpTools } from "@/modules/system/services/mcpService";
 import type { McpDispatchContext } from "@/modules/system/types";
 import { createSpeaker, createTalkSubmission } from "@/modules/talks/services/talksService";
+import type { RegistryStore } from "@/shared/db/registryStore";
 import type { TenantStore } from "@/shared/db/tenantStore";
+import { openMemoryRegistry } from "../helpers/registry";
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 const START = "2026-09-01T09:00:00.000Z";
@@ -72,11 +75,16 @@ const LIVE_TOOL_NAMES = [
   "deleteSocialPost",
 ] as const;
 
-const NOT_IMPLEMENTED = ["getUserProfile", "requestImageUploadUrl", "listUsers"] as const;
+const NOT_IMPLEMENTED = ["requestImageUploadUrl"] as const;
 
-function dispatchCtx(store: TenantStore, actor = adminActor()): McpDispatchContext {
+function dispatchCtx(
+  store: TenantStore,
+  actor = adminActor(),
+  registry?: RegistryStore,
+): McpDispatchContext {
   return {
     actor,
+    openRegistry: registry ? () => registry : undefined,
     openTenant: () => store,
   };
 }
@@ -300,6 +308,43 @@ describe("callMcpTool", () => {
       return;
     }
     expect(presets.presets).toEqual([]);
+  });
+
+  it("lists org members and returns the actor profile from the registry", async () => {
+    const tenant = openMemoryTenant();
+    const registry = openMemoryRegistry();
+    const actor = adminActor({ id: "usr_ada" });
+    await insertUser(registry, {
+      clerkUserId: "clk_ada",
+      displayName: "Ada",
+      email: "ada@example.com",
+      id: actor.id,
+    });
+    await insertMembership(registry, { orgId: tenant.orgId, role: "admin", userId: actor.id });
+    const ctx = dispatchCtx(tenant, actor, registry);
+
+    const listed = await callMcpTool<{ users: { email: string }[] }>(
+      "listUsers",
+      { citySlug: CITY },
+      ctx,
+    );
+    expect(listed.ok).toBe(true);
+    if (!listed.ok) {
+      return;
+    }
+    expect(listed.users.map((user) => user.email)).toEqual(["ada@example.com"]);
+
+    const profile = await callMcpTool<{ user: { displayName: string | null; id: string } }>(
+      "getUserProfile",
+      {},
+      ctx,
+    );
+    expect(profile.ok).toBe(true);
+    if (!profile.ok) {
+      return;
+    }
+    expect(profile.user.id).toBe(actor.id);
+    expect(profile.user.displayName).toBe("Ada");
   });
 
   it("returns 501 for live tools that have no Start service yet", async () => {

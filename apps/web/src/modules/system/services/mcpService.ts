@@ -33,6 +33,10 @@ import {
   updateEvent as updateEventService,
 } from "@/modules/events/services/eventsService";
 import type { EventCreateBody, EventUpdateBody } from "@/modules/events/types";
+import {
+  getOwnProfile,
+  listUsers as listUsersService,
+} from "@/modules/identity/services/usersService";
 import { getPublishedPage, listContentPages } from "@/modules/pages/services/pagesService";
 import {
   createPreset,
@@ -74,6 +78,7 @@ import {
 import type { SpeakerInput, TalkSubmissionStatus } from "@/modules/talks/types";
 import { ensurePermission } from "@/shared/auth/actor";
 import { hasPermission } from "@/shared/auth/permissions";
+import type { RegistryStore } from "@/shared/db/registryStore";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 
@@ -90,6 +95,13 @@ async function openStore(
     return err("bad_request", 400, "citySlug is required");
   }
   return ok({ store: await ctx.openTenant(citySlug) });
+}
+
+async function openRegistry(ctx: McpDispatchContext): Promise<Result<{ registry: RegistryStore }>> {
+  if (!ctx.openRegistry) {
+    return err("unavailable", 503, "Registry is not configured");
+  }
+  return ok({ registry: await ctx.openRegistry() });
 }
 
 function eventBody(args: McpArgs): EventCreateBody | EventUpdateBody {
@@ -568,6 +580,14 @@ const HANDLERS: Record<string, Handler> = {
     }
     return listSpaces(opened.store);
   },
+
+  async getUserProfile(_args, ctx) {
+    const registry = await openRegistry(ctx);
+    if (!registry.ok) {
+      return registry;
+    }
+    return getOwnProfile(registry.registry, ctx.actor);
+  },
   health() {
     const snapshot = healthService();
     return ok({
@@ -657,6 +677,22 @@ const HANDLERS: Record<string, Handler> = {
     }
     return listTalkSubmissions(opened.store, ctx.actor, {
       status: status as TalkSubmissionStatus | undefined,
+    });
+  },
+
+  async listUsers(args, ctx) {
+    const opened = await openStore(args, ctx);
+    if (!opened.ok) {
+      return opened;
+    }
+    const registry = await openRegistry(ctx);
+    if (!registry.ok) {
+      return registry;
+    }
+    return listUsersService(registry.registry, ctx.actor, opened.store.orgId, {
+      limit: num(args, "limit"),
+      offset: num(args, "offset"),
+      search: str(args, "search"),
     });
   },
 
