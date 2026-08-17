@@ -1,0 +1,269 @@
+import { describe, expect, it } from "vitest";
+import {
+  createContentPage,
+  deleteContentPage,
+  getContentPage,
+  getPublishedPage,
+  listContentPages,
+  saveHomeSections,
+  updateContentPage,
+} from "@/modules/pages/services/pagesService";
+import type { Block, ContentPageInput, RichTextBlock } from "@/modules/pages/types";
+import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
+
+function textBlock(id: string, body = "Hello", heading: string | null = null): RichTextBlock {
+  return { body, enabled: true, heading, id, type: "richText" };
+}
+
+function pageInput(overrides: Partial<ContentPageInput> = {}): ContentPageInput {
+  return {
+    blocks: [textBlock("blk_1", "Welcome")],
+    slug: "about",
+    title: "About us",
+    ...overrides,
+  };
+}
+
+describe("pagesService content pages", () => {
+  it("creates a content page and lists it without the home row", async () => {
+    const store = openMemoryTenant();
+    const created = await createContentPage(store, adminActor(), pageInput({ slug: "zeta" }));
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    expect(created.page.slug).toBe("zeta");
+    expect(created.page.title).toBe("About us");
+    expect(created.page.status).toBe("draft");
+
+    await createContentPage(store, adminActor(), pageInput({ slug: "alpha", title: "Alpha" }));
+    await saveHomeSections(store, adminActor(), [
+      { enabled: true, heading: "City", id: "hero_1", type: "hero" },
+    ]);
+
+    const listed = await listContentPages(store, adminActor());
+    expect(listed.ok).toBe(true);
+    if (!listed.ok) {
+      return;
+    }
+    expect(listed.pages.map((p) => p.slug)).toEqual(["alpha", "zeta"]);
+  });
+
+  it("rejects create without pages.edit, reserved home slug, and duplicates", async () => {
+    const store = openMemoryTenant();
+    const denied = await createContentPage(store, memberActor(), pageInput());
+    expect(denied.ok).toBe(false);
+    if (!denied.ok) {
+      expect(denied.error.status).toBe(403);
+    }
+
+    const reserved = await createContentPage(store, adminActor(), pageInput({ slug: "home" }));
+    expect(reserved.ok).toBe(false);
+    if (!reserved.ok) {
+      expect(reserved.error.status).toBe(400);
+    }
+
+    const first = await createContentPage(store, adminActor(), pageInput({ slug: "dup" }));
+    expect(first.ok).toBe(true);
+    const clash = await createContentPage(
+      store,
+      adminActor(),
+      pageInput({ slug: "dup", title: "B" }),
+    );
+    expect(clash.ok).toBe(false);
+    if (!clash.ok) {
+      expect(clash.error.status).toBe(409);
+    }
+  });
+
+  it("validates nested slugs, title, and richText-only content blocks", async () => {
+    const store = openMemoryTenant();
+    const badSegment = await createContentPage(
+      store,
+      adminActor(),
+      pageInput({ slug: "About Us" }),
+    );
+    expect(badSegment.ok).toBe(false);
+
+    const tooDeep = await createContentPage(
+      store,
+      adminActor(),
+      pageInput({ slug: "a/b/c/d/e/f" }),
+    );
+    expect(tooDeep.ok).toBe(false);
+
+    const nested = await createContentPage(
+      store,
+      adminActor(),
+      pageInput({ slug: "/Guides/Getting-Started/" }),
+    );
+    expect(nested.ok).toBe(true);
+    if (!nested.ok) {
+      return;
+    }
+    expect(nested.page.slug).toBe("guides/getting-started");
+
+    const emptyTitle = await createContentPage(store, adminActor(), pageInput({ title: "  " }));
+    expect(emptyTitle.ok).toBe(false);
+
+    const heroOnContent = await createContentPage(
+      store,
+      adminActor(),
+      pageInput({
+        blocks: [{ enabled: true, id: "h1", type: "hero" }],
+        slug: "bad-blocks",
+      }),
+    );
+    expect(heroOnContent.ok).toBe(false);
+  });
+
+  it("loads, updates, and deletes a content page, but not home", async () => {
+    const store = openMemoryTenant();
+    const created = await createContentPage(store, adminActor(), pageInput());
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const loaded = await getContentPage(store, adminActor(), created.page.id);
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) {
+      return;
+    }
+    expect(loaded.page.blocks).toEqual([textBlock("blk_1", "Welcome")]);
+
+    const updated = await updateContentPage(store, adminActor(), created.page.id, {
+      blocks: [textBlock("blk_2", "Updated", "Heading")],
+      slug: "about-team",
+      status: "published",
+      title: "About the team",
+    });
+    expect(updated.ok).toBe(true);
+    if (!updated.ok) {
+      return;
+    }
+    expect(updated.page.slug).toBe("about-team");
+    expect(updated.page.status).toBe("published");
+
+    const other = await createContentPage(store, adminActor(), pageInput({ slug: "taken" }));
+    expect(other.ok).toBe(true);
+    const taken = await updateContentPage(
+      store,
+      adminActor(),
+      created.page.id,
+      pageInput({ slug: "taken" }),
+    );
+    expect(taken.ok).toBe(false);
+    if (!taken.ok) {
+      expect(taken.error.status).toBe(409);
+    }
+
+    const home = await saveHomeSections(store, adminActor(), [
+      { enabled: true, id: "hero_1", type: "hero" },
+    ]);
+    expect(home.ok).toBe(true);
+    const publishedHome = await getPublishedPage(store, "home");
+    expect(publishedHome.ok).toBe(true);
+    if (!(publishedHome.ok && publishedHome.page)) {
+      return;
+    }
+    const asContent = await getContentPage(store, adminActor(), publishedHome.page.id);
+    expect(asContent.ok).toBe(false);
+    const deleteHome = await deleteContentPage(store, adminActor(), publishedHome.page.id);
+    expect(deleteHome.ok).toBe(false);
+
+    const removed = await deleteContentPage(store, adminActor(), created.page.id);
+    expect(removed.ok).toBe(true);
+    const gone = await getContentPage(store, adminActor(), created.page.id);
+    expect(gone.ok).toBe(false);
+  });
+});
+
+describe("pagesService home and public read", () => {
+  it("saves home sections and only serves published pages publicly", async () => {
+    const store = openMemoryTenant();
+    const draft = await createContentPage(store, adminActor(), pageInput({ slug: "city" }));
+    expect(draft.ok).toBe(true);
+
+    const hidden = await getPublishedPage(store, "city");
+    expect(hidden.ok).toBe(true);
+    if (!hidden.ok) {
+      return;
+    }
+    expect(hidden.page).toBeNull();
+
+    if (!draft.ok) {
+      return;
+    }
+    await updateContentPage(store, adminActor(), draft.page.id, {
+      ...pageInput({ slug: "city" }),
+      status: "published",
+    });
+    const live = await getPublishedPage(store, "city");
+    expect(live.ok).toBe(true);
+    if (!live.ok) {
+      return;
+    }
+    expect(live.page?.title).toBe("About us");
+    expect(live.page?.blocks).toHaveLength(1);
+
+    const blocks: Block[] = [
+      { body: "Join us", enabled: true, heading: "Welcome", id: "rt_1", type: "richText" },
+      { enabled: true, id: "ev_1", type: "events" },
+    ];
+    const saved = await saveHomeSections(store, adminActor(), blocks);
+    expect(saved.ok).toBe(true);
+    if (!saved.ok) {
+      return;
+    }
+    expect(saved.blocks).toEqual(blocks);
+
+    const home = await getPublishedPage(store, "home");
+    expect(home.ok).toBe(true);
+    if (!home.ok) {
+      return;
+    }
+    expect(home.page?.slug).toBe("home");
+    expect(home.page?.blocks).toEqual(blocks);
+
+    const again = await saveHomeSections(store, adminActor(), [
+      { enabled: true, heading: "Updated home", id: "hero_2", type: "hero" },
+    ]);
+    expect(again.ok).toBe(true);
+    const reread = await getPublishedPage(store, "home");
+    expect(reread.ok).toBe(true);
+    if (!reread.ok) {
+      return;
+    }
+    expect(reread.page?.blocks[0]).toMatchObject({ heading: "Updated home", type: "hero" });
+  });
+
+  it("rejects unknown home blocks, unsafe links, and member home edits", async () => {
+    const store = openMemoryTenant();
+    const denied = await saveHomeSections(store, memberActor(), [
+      { enabled: true, id: "hero_1", type: "hero" },
+    ]);
+    expect(denied.ok).toBe(false);
+
+    const unknown = await saveHomeSections(store, adminActor(), [
+      { enabled: true, id: "x1", type: "mystery" } as unknown as Block,
+    ]);
+    expect(unknown.ok).toBe(false);
+
+    const unsafe = await saveHomeSections(store, adminActor(), [
+      {
+        description: "Talk",
+        enabled: true,
+        href: "javascript:alert(1)",
+        id: "w1",
+        thumbnailUrl: "https://example.com/t.png",
+        title: "Webinar",
+        type: "webinar",
+      },
+    ]);
+    expect(unsafe.ok).toBe(false);
+
+    const listed = await listContentPages(store, memberActor());
+    expect(listed.ok).toBe(false);
+  });
+});
