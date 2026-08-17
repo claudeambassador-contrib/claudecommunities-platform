@@ -142,7 +142,7 @@ export async function saveHomeSections(
   if (!checked.ok) {
     return checked;
   }
-  return ok({ blocks: await pagesRepo.upsertHome(store, checked.blocks) });
+  return await pagesRepo.upsertHome(store, checked.blocks);
 }
 
 export async function getPublishedPage(
@@ -150,18 +150,4 @@ export async function getPublishedPage(
   slug: string,
 ): Promise<Result<{ page: PublishedPage | null }>> {
   return ok({ page: await pagesRepo.findPublishedBySlug(store, slug) });
-}
-
-/** Thin city-slug adapter for marketing routes that have not opened a TenantStore yet. */
-export async function getPublishedPageForCity(
-  citySlug: string,
-  slug: string,
-): Promise<Result<{ page: PublishedPage | null }>> {
-  const { resolveCityContext } = await import("@/modules/tenants/services/resolveCityService");
-  const city = await resolveCityContext(citySlug);
-  if (!city.ok) {
-    return city;
-  }
-  const { openTenantStore } = await import("@/shared/db/env");
-  return getPublishedPage(openTenantStore(city.tenant), slug);
 }

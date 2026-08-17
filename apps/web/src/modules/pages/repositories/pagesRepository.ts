@@ -3,9 +3,10 @@ import type {
   Block,
   ContentPageDetail,
   ContentPageSummary,
-  PageStatus,
+  ContentPageWrite,
   PublishedPage,
 } from "@/modules/pages/types";
+import { KNOWN_BLOCK_TYPES } from "@/modules/pages/validators";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
@@ -23,7 +24,7 @@ function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
 
-function parseBlocks(raw: string): Block[] {
+function parseBlocks(raw: string, contentOnly: boolean): Block[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -39,10 +40,15 @@ function parseBlocks(raw: string): Block[] {
   if (!arr) {
     return [];
   }
-  return arr.filter(
-    (item): item is Block =>
-      isObj(item) && typeof item.id === "string" && typeof item.type === "string",
-  );
+  return arr.filter((item): item is Block => {
+    if (!(isObj(item) && typeof item.id === "string" && typeof item.enabled === "boolean")) {
+      return false;
+    }
+    if (contentOnly) {
+      return item.type === "richText" && typeof item.body === "string";
+    }
+    return typeof item.type === "string" && KNOWN_BLOCK_TYPES.has(item.type);
+  });
 }
 
 function encodeBlocks(blocks: Block[]): string {
@@ -59,12 +65,12 @@ function toSummary(row: PageRow): ContentPageSummary {
 }
 
 function toDetail(row: PageRow): ContentPageDetail {
-  return { ...toSummary(row), blocks: parseBlocks(row.bodyJson) };
+  return { ...toSummary(row), blocks: parseBlocks(row.bodyJson, true) };
 }
 
 function toPublished(row: PageRow): PublishedPage {
   return {
-    blocks: parseBlocks(row.bodyJson),
+    blocks: parseBlocks(row.bodyJson, row.slug !== HOME_SLUG),
     id: row.id,
     slug: row.slug,
     title: row.title,
@@ -87,16 +93,17 @@ export async function findBySlug(
   ignoreId?: string,
 ): Promise<{ id: string } | null> {
   const { pages } = store.tables;
+  const filters = [eq(pages.orgId, store.orgId), eq(pages.slug, slug)];
+  if (ignoreId) {
+    filters.push(ne(pages.id, ignoreId));
+  }
   const rows = await store.db
     .select()
     .from(pages)
-    .where(and(eq(pages.orgId, store.orgId), eq(pages.slug, slug)))
+    .where(and(...filters))
     .limit(1);
   const row = first(rows);
-  if (!row || row.id === ignoreId) {
-    return null;
-  }
-  return { id: row.id };
+  return row ? { id: row.id } : null;
 }
 
 export async function listContent(store: TenantStore): Promise<ContentPageSummary[]> {
@@ -129,7 +136,7 @@ function isUniqueConstraint(error: unknown): boolean {
 
 export async function insertContent(
   store: TenantStore,
-  input: { blocks: Block[]; slug: string; status: PageStatus; title: string },
+  input: ContentPageWrite,
 ): Promise<Result<{ page: ContentPageSummary }>> {
   const { pages } = store.tables;
   const now = new Date();
@@ -141,7 +148,7 @@ export async function insertContent(
       id,
       orgId: store.orgId,
       slug: input.slug,
-      status: input.status,
+      status: input.status ?? "draft",
       title: input.title,
       updatedAt: now,
     });
@@ -151,13 +158,15 @@ export async function insertContent(
     }
     throw error;
   }
-  return ok({ page: { id, slug: input.slug, status: input.status, title: input.title } });
+  return ok({
+    page: { id, slug: input.slug, status: input.status ?? "draft", title: input.title },
+  });
 }
 
 export async function updateContent(
   store: TenantStore,
   id: string,
-  input: { blocks: Block[]; slug: string; status?: PageStatus; title: string },
+  input: ContentPageWrite,
 ): Promise<Result<{ page: ContentPageSummary }>> {
   const current = await pageById(store, id);
   if (!current || current.slug === HOME_SLUG) {
@@ -165,16 +174,23 @@ export async function updateContent(
   }
   const { pages } = store.tables;
   const status = input.status ?? current.status;
-  await store.db
-    .update(pages)
-    .set({
-      bodyJson: encodeBlocks(input.blocks),
-      slug: input.slug,
-      status,
-      title: input.title,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(pages.orgId, store.orgId), eq(pages.id, id)));
+  try {
+    await store.db
+      .update(pages)
+      .set({
+        bodyJson: encodeBlocks(input.blocks),
+        slug: input.slug,
+        status,
+        title: input.title,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(pages.orgId, store.orgId), eq(pages.id, id)));
+  } catch (error) {
+    if (isUniqueConstraint(error)) {
+      return err("conflict", 409, "A page with this path already exists");
+    }
+    throw error;
+  }
   return ok({ page: { id, slug: input.slug, status, title: input.title } });
 }
 
@@ -191,7 +207,10 @@ export async function deleteContent(
   return ok({ success: true });
 }
 
-export async function upsertHome(store: TenantStore, blocks: Block[]): Promise<Block[]> {
+export async function upsertHome(
+  store: TenantStore,
+  blocks: Block[],
+): Promise<Result<{ blocks: Block[] }>> {
   const existing = await findBySlug(store, HOME_SLUG);
   const { pages } = store.tables;
   const now = new Date();
@@ -201,19 +220,26 @@ export async function upsertHome(store: TenantStore, blocks: Block[]): Promise<B
       .update(pages)
       .set({ bodyJson, status: "published", title: "Home", updatedAt: now })
       .where(and(eq(pages.orgId, store.orgId), eq(pages.id, existing.id)));
-    return blocks;
+    return ok({ blocks });
   }
-  await store.db.insert(pages).values({
-    bodyJson,
-    createdAt: now,
-    id: newId("pg"),
-    orgId: store.orgId,
-    slug: HOME_SLUG,
-    status: "published",
-    title: "Home",
-    updatedAt: now,
-  });
-  return blocks;
+  try {
+    await store.db.insert(pages).values({
+      bodyJson,
+      createdAt: now,
+      id: newId("pg"),
+      orgId: store.orgId,
+      slug: HOME_SLUG,
+      status: "published",
+      title: "Home",
+      updatedAt: now,
+    });
+  } catch (error) {
+    if (isUniqueConstraint(error)) {
+      return err("conflict", 409, "A page with this path already exists");
+    }
+    throw error;
+  }
+  return ok({ blocks });
 }
 
 export async function findPublishedBySlug(

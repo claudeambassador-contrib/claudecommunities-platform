@@ -104,6 +104,13 @@ export interface ContentPageInput {
   title: string;
 }
 
+export interface ContentPageWrite {
+  blocks: Block[];
+  slug: string;
+  status?: PageStatus;
+  title: string;
+}
+
 export interface ContentPageSummary {
   id: string;
   slug: string;

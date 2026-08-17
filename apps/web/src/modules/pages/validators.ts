@@ -6,7 +6,7 @@ const MAX_PATH_SEGMENTS = 5;
 const MAX_TITLE = 200;
 const PATH_SEGMENT_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-const KNOWN_TYPES: ReadonlySet<string> = new Set<BlockType>([
+export const KNOWN_BLOCK_TYPES: ReadonlySet<string> = new Set<BlockType>([
   "audienceSplit",
   "benefits",
   "cta",
@@ -192,7 +192,7 @@ function validateHomeBlock(raw: unknown, index: number): Result<Record<string, n
   if (typeof raw.enabled !== "boolean") {
     return bad(`${where}: enabled must be a boolean`);
   }
-  if (typeof raw.type !== "string" || !KNOWN_TYPES.has(raw.type)) {
+  if (typeof raw.type !== "string" || !KNOWN_BLOCK_TYPES.has(raw.type)) {
     return bad(`${where}: unknown block type "${String(raw.type)}"`);
   }
   return validateHomeFields(raw, raw.type as BlockType, where);
