@@ -1,13 +1,23 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listEvents } from "@/modules/events/services/eventsService";
+import { resolveCityContext } from "@/modules/tenants/services/resolveCityService";
+import { openTenantStore } from "@/shared/db/env";
 
 const getEvents = createServerFn({ method: "GET" })
   .inputValidator((d: { citySlug: string }) => d)
   .handler(async ({ data }) => {
-    const result = await listEvents(data.citySlug);
-    if (!result.ok) return { events: [] as Awaited<ReturnType<typeof listEvents>> extends { ok: true; events: infer E } ? E : never };
-    return { events: result.events };
+    const city = await resolveCityContext(data.citySlug);
+    if (!city.ok) {
+      return { events: [] as { id: string; title: string; startTime: string | null }[] };
+    }
+    const result = await listEvents(openTenantStore(city.tenant));
+    if (!result.ok) {
+      return { events: [] as { id: string; title: string; startTime: string | null }[] };
+    }
+    return {
+      events: result.events.map((e) => ({ id: e.id, title: e.title, startTime: e.startTime })),
+    };
   });
 
 export const Route = createFileRoute("/$citySlug/")({
@@ -27,10 +37,14 @@ function CityHome() {
           This city runs on its own D1 database. Content below is scoped via TenantStore + orgId.
         </p>
         <div className="row">
-          <Link to="/$citySlug/events" params={{ citySlug: tenant.slug }} className="btn btn-primary">
+          <Link
+            className="btn btn-primary"
+            params={{ citySlug: tenant.slug }}
+            to="/$citySlug/events"
+          >
             Browse events
           </Link>
-          <Link to="/$citySlug/community" params={{ citySlug: tenant.slug }} className="btn">
+          <Link className="btn" params={{ citySlug: tenant.slug }} to="/$citySlug/community">
             Community
           </Link>
         </div>
@@ -44,7 +58,9 @@ function CityHome() {
           events.slice(0, 5).map((e) => (
             <div key={e.id}>
               <strong>{e.title}</strong>
-              <div className="muted">{e.startsAt ? new Date(e.startsAt).toLocaleString() : "TBA"}</div>
+              <div className="muted">
+                {e.startTime ? new Date(e.startTime).toLocaleString() : "TBA"}
+              </div>
             </div>
           ))
         )}

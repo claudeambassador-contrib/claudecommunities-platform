@@ -14,6 +14,8 @@ import * as pages from "@/modules/pages/schema.tenant";
 export const eventsTable = events.events;
 export const eventRsvps = events.eventRsvps;
 export const eventAgendaItems = events.eventAgendaItems;
+export const eventLumaInterests = events.eventLumaInterests;
+export const eventResources = events.eventResources;
 export type EventRow = events.EventRow;
 
 export const spaces = community.spaces;
@@ -50,6 +52,8 @@ export function createTenantSchema() {
     events: events.events,
     eventRsvps: events.eventRsvps,
     eventAgendaItems: events.eventAgendaItems,
+    eventLumaInterests: events.eventLumaInterests,
+    eventResources: events.eventResources,
     spaces: community.spaces,
     posts: community.posts,
     comments: community.comments,

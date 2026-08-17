@@ -8,10 +8,22 @@ CREATE TABLE IF NOT EXISTS events (
   title TEXT NOT NULL,
   description TEXT,
   location TEXT,
+  city TEXT,
+  timezone TEXT,
+  event_type TEXT NOT NULL DEFAULT 'meetup',
   cover_url TEXT,
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'cancelled')),
   starts_at INTEGER,
   ends_at INTEGER,
+  max_attendees INTEGER,
+  is_online INTEGER NOT NULL DEFAULT 0,
+  meeting_url TEXT,
+  luma_url TEXT,
+  luma_event_id TEXT,
+  rsvp_enabled INTEGER NOT NULL DEFAULT 0,
+  header_text TEXT,
+  footer_text TEXT,
+  feedback_url TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -23,7 +35,7 @@ CREATE TABLE IF NOT EXISTS event_rsvps (
   org_id TEXT NOT NULL,
   event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'going' CHECK (status IN ('going', 'waitlist', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'going' CHECK (status IN ('going', 'interested')),
   created_at INTEGER NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS event_rsvps_event_user ON event_rsvps (event_id, user_id);
@@ -32,9 +44,43 @@ CREATE TABLE IF NOT EXISTS event_agenda_items (
   id TEXT PRIMARY KEY NOT NULL,
   org_id TEXT NOT NULL,
   event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'custom'
+    CHECK (type IN ('speaker', 'welcome', 'break', 'custom')),
+  title TEXT,
+  description TEXT,
   starts_at INTEGER,
+  ends_at INTEGER,
   sort_order INTEGER NOT NULL DEFAULT 0,
+  speaker_id TEXT,
+  submission_id TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS event_agenda_event_order ON event_agenda_items (org_id, event_id, sort_order);
+
+CREATE TABLE IF NOT EXISTS event_luma_interests (
+  id TEXT PRIMARY KEY NOT NULL,
+  org_id TEXT NOT NULL,
+  event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  notified_at INTEGER,
+  created_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS event_luma_interests_event_user
+  ON event_luma_interests (event_id, user_id);
+
+CREATE TABLE IF NOT EXISTS event_resources (
+  id TEXT PRIMARY KEY NOT NULL,
+  org_id TEXT NOT NULL,
+  event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  file_url TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  file_size INTEGER NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  uploaded_by TEXT,
   created_at INTEGER NOT NULL
 );
 
