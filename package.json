@@ -8,6 +8,10 @@
     "node": ">=20.19"
   },
   "scripts": {
+    "web:dev": "bun --cwd apps/web run dev",
+    "web:build": "bun --cwd apps/web run build",
+    "web:test": "bun --cwd apps/web run test",
+    "web:check": "bun --cwd apps/web run check",
     "dev": "bun run build:mcp-ui && DEPLOY_TARGET=cloudflare node scripts/prisma-generate.mjs && DEPLOY_TARGET=cloudflare next dev --webpack",
     "build": "bun run build:mcp-ui && DEPLOY_TARGET=cloudflare node scripts/prisma-generate.mjs && DEPLOY_TARGET=cloudflare next build --webpack",
     "build:mcp-ui": "node scripts/build-mcp-ui.mjs",
