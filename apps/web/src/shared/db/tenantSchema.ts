@@ -5,12 +5,14 @@
 /** biome-ignore-all lint/performance/noNamespaceImport: domain schema barrels */
 /** biome-ignore-all lint/style/useDestructuring: re-export table aliases */
 
+import * as activityTables from "@/modules/activity/schema.tenant";
 import * as badgeTables from "@/modules/badges/schema.tenant";
 import * as community from "@/modules/community/schema.tenant";
 import * as courses from "@/modules/courses/schema.tenant";
 import * as email from "@/modules/email/schema.tenant";
 import * as events from "@/modules/events/schema.tenant";
 import * as pages from "@/modules/pages/schema.tenant";
+import * as pollTables from "@/modules/polls/schema.tenant";
 import * as roleTables from "@/modules/roles/schema.tenant";
 import * as slides from "@/modules/slides/schema.tenant";
 import * as social from "@/modules/social/schema.tenant";
@@ -58,10 +60,15 @@ export const badges = badgeTables.badges;
 export const userBadges = badgeTables.userBadges;
 export const notifications = pages.notifications;
 export const roles = roleTables.roles;
+export const activities = activityTables.activities;
+export const polls = pollTables.polls;
+export const pollOptions = pollTables.pollOptions;
+export const pollVotes = pollTables.pollVotes;
 
 /** Stable object of tenant tables (no per-schema factory needed on D1). */
 export function createTenantSchema() {
   return {
+    activities: activityTables.activities,
     badges: badgeTables.badges,
     bookmarks: community.bookmarks,
     commentReactions: community.commentReactions,
@@ -80,6 +87,9 @@ export function createTenantSchema() {
     likes: community.likes,
     notifications: pages.notifications,
     pages: pages.pages,
+    pollOptions: pollTables.pollOptions,
+    pollVotes: pollTables.pollVotes,
+    polls: pollTables.polls,
     posts: community.posts,
     reactions: community.reactions,
     roles: roleTables.roles,
