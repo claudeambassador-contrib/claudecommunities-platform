@@ -40,18 +40,17 @@ export interface TalkLocksInput {
   slidesLocked?: boolean;
 }
 
-export interface TalkWrite {
+export interface TalkPatch {
   bio?: string | null;
   city?: string | null;
   contentLocked?: boolean;
-  deletedAt?: Date | null;
+  deleted?: boolean;
   description?: string | null;
-  email: string;
-  name: string;
+  email?: string;
+  name?: string;
   slidesLocked?: boolean;
   status?: TalkSubmissionStatus;
-  title: string;
-  userId: string | null;
+  title?: string;
 }
 
 export interface SpeakerInput {
@@ -88,22 +87,4 @@ export interface SpeakerDetail {
   twitterHandle: string | null;
   updatedAt: string;
   websiteUrl: string | null;
-}
-
-export interface SpeakerWrite {
-  bio?: string | null;
-  company?: string | null;
-  companyLogoUrl?: string | null;
-  eventId: string;
-  headshotUrl?: string | null;
-  linkedinUrl?: string | null;
-  name: string;
-  sortOrder: number;
-  submissionId?: string | null;
-  talkDescription?: string | null;
-  talkDescriptionShort?: string | null;
-  talkTitle?: string | null;
-  title?: string | null;
-  twitterHandle?: string | null;
-  websiteUrl?: string | null;
 }

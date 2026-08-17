@@ -2,10 +2,11 @@ import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import type { SpeakerRow, TalkSubmissionRow } from "@/modules/talks/schema.tenant";
 import type {
   SpeakerDetail,
-  SpeakerWrite,
+  SpeakerInput,
   TalkDetail,
   TalkListOptions,
-  TalkWrite,
+  TalkPatch,
+  TalkSubmissionInput,
 } from "@/modules/talks/types";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
@@ -88,7 +89,7 @@ export async function eventExists(store: TenantStore, eventId: string): Promise<
 
 export async function insertTalk(
   store: TenantStore,
-  input: TalkWrite,
+  input: TalkSubmissionInput & { email: string; name: string; title: string; userId: string },
 ): Promise<Result<{ talk: TalkDetail }>> {
   const { talkSubmissions } = store.tables;
   const now = new Date();
@@ -163,16 +164,22 @@ export async function listTalksForUser(store: TenantStore, userId: string): Prom
 export async function updateTalkById(
   store: TenantStore,
   id: string,
-  patch: Partial<TalkWrite>,
+  patch: TalkPatch,
 ): Promise<Result<{ talk: TalkDetail }>> {
   const existing = await getTalkById(store, id);
   if (!existing.ok) {
     return existing;
   }
+  const { deleted, ...rest } = patch;
   const { talkSubmissions } = store.tables;
   await store.db
     .update(talkSubmissions)
-    .set(patchSet(patch))
+    .set(
+      patchSet({
+        ...rest,
+        ...(deleted === undefined ? {} : { deletedAt: deleted ? new Date() : null }),
+      }),
+    )
     .where(and(eq(talkSubmissions.orgId, store.orgId), eq(talkSubmissions.id, id)));
   return getTalkById(store, id);
 }
@@ -194,7 +201,8 @@ export async function deleteTalkById(
 
 export async function insertSpeaker(
   store: TenantStore,
-  input: SpeakerWrite,
+  eventId: string,
+  input: SpeakerInput & { name: string; submissionId?: string | null },
 ): Promise<Result<{ speaker: SpeakerDetail }>> {
   const { speakers } = store.tables;
   const now = new Date();
@@ -204,13 +212,13 @@ export async function insertSpeaker(
     company: input.company ?? null,
     companyLogoUrl: input.companyLogoUrl ?? null,
     createdAt: now,
-    eventId: input.eventId,
+    eventId,
     id,
     imageUrl: input.headshotUrl ?? null,
     linkedinUrl: input.linkedinUrl ?? null,
     name: input.name,
     orgId: store.orgId,
-    sortOrder: input.sortOrder,
+    sortOrder: await nextSpeakerOrder(store, eventId),
     submissionId: input.submissionId ?? null,
     talkDescription: input.talkDescription ?? null,
     talkDescriptionShort: input.talkDescriptionShort ?? null,
@@ -254,17 +262,20 @@ export async function listSpeakersForEvent(
 }
 
 export async function nextSpeakerOrder(store: TenantStore, eventId: string): Promise<number> {
-  const existing = await listSpeakersForEvent(store, eventId);
-  if (existing.length === 0) {
-    return 0;
-  }
-  return Math.max(...existing.map((speaker) => speaker.order)) + 1;
+  const { speakers } = store.tables;
+  const rows = await store.db
+    .select({ sortOrder: speakers.sortOrder })
+    .from(speakers)
+    .where(and(eq(speakers.orgId, store.orgId), eq(speakers.eventId, eventId)))
+    .orderBy(desc(speakers.sortOrder))
+    .limit(1);
+  return (first(rows)?.sortOrder ?? -1) + 1;
 }
 
 export async function updateSpeakerById(
   store: TenantStore,
   id: string,
-  patch: Partial<Omit<SpeakerWrite, "eventId" | "sortOrder">> & { sortOrder?: number },
+  patch: SpeakerInput & { sortOrder?: number },
 ): Promise<Result<{ speaker: SpeakerDetail }>> {
   const existing = await getSpeakerById(store, id);
   if (!existing.ok) {

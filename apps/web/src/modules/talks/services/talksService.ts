@@ -3,13 +3,12 @@ import * as talksRepo from "@/modules/talks/repositories/talksRepository";
 import type {
   SpeakerDetail,
   SpeakerInput,
-  SpeakerWrite,
   TalkDetail,
   TalkListOptions,
   TalkLocksInput,
+  TalkPatch,
   TalkSubmissionInput,
   TalkSubmissionStatus,
-  TalkWrite,
 } from "@/modules/talks/types";
 import { isStorageUrl, isValidEmail } from "@/modules/talks/validators";
 import type { Actor } from "@/shared/auth/actor";
@@ -54,8 +53,8 @@ function validateStorageUrl(
   return ok({ valid: true });
 }
 
-function nullableSpeakerPatch(input: SpeakerInput): Partial<SpeakerWrite> {
-  const patch: Partial<SpeakerWrite> = {};
+function nullableSpeakerPatch(input: SpeakerInput): SpeakerInput {
+  const patch: SpeakerInput = {};
   for (const field of NULLABLE_SPEAKER_FIELDS) {
     if (input[field] !== undefined) {
       patch[field] = input[field] || null;
@@ -64,8 +63,8 @@ function nullableSpeakerPatch(input: SpeakerInput): Partial<SpeakerWrite> {
   return patch;
 }
 
-function talkContentPatch(input: TalkSubmissionInput): Result<{ patch: Partial<TalkWrite> }> {
-  const patch: Partial<TalkWrite> = {};
+function talkContentPatch(input: TalkSubmissionInput): Result<{ patch: TalkPatch }> {
+  const patch: TalkPatch = {};
   if (input.name !== undefined) {
     const name = (input.name ?? "").trim();
     if (!name) {
@@ -216,7 +215,7 @@ export async function setTalkLocks(
   if (!perm.ok) {
     return perm;
   }
-  const patch: Partial<TalkWrite> = {};
+  const patch: TalkPatch = {};
   if (locks.contentLocked !== undefined) {
     patch.contentLocked = locks.contentLocked;
   }
@@ -239,7 +238,7 @@ export async function setTalkDeleted(
   if (!perm.ok) {
     return perm;
   }
-  return await talksRepo.updateTalkById(store, id, { deletedAt: deleted ? new Date() : null });
+  return await talksRepo.updateTalkById(store, id, { deleted });
 }
 
 export async function deleteTalkSubmission(
@@ -311,21 +310,9 @@ export async function createSpeaker(
   if (!name) {
     return err("bad_request", 400, "name is required");
   }
-  return await talksRepo.insertSpeaker(store, {
-    bio: input.bio ?? null,
-    company: input.company ?? null,
-    companyLogoUrl: input.companyLogoUrl ?? null,
-    eventId,
-    headshotUrl: input.headshotUrl ?? null,
-    linkedinUrl: input.linkedinUrl ?? null,
+  return await talksRepo.insertSpeaker(store, eventId, {
+    ...input,
     name,
-    sortOrder: await talksRepo.nextSpeakerOrder(store, eventId),
-    talkDescription: input.talkDescription ?? null,
-    talkDescriptionShort: input.talkDescriptionShort ?? null,
-    talkTitle: input.talkTitle ?? null,
-    title: input.title ?? null,
-    twitterHandle: input.twitterHandle ?? null,
-    websiteUrl: input.websiteUrl ?? null,
   });
 }
 
@@ -346,11 +333,9 @@ export async function createSpeakerFromSubmission(
   if (!submission.ok) {
     return submission;
   }
-  return await talksRepo.insertSpeaker(store, {
+  return await talksRepo.insertSpeaker(store, eventId, {
     bio: submission.talk.bio,
-    eventId,
     name: submission.talk.name,
-    sortOrder: await talksRepo.nextSpeakerOrder(store, eventId),
     submissionId: submission.talk.id,
     talkDescription: submission.talk.description,
     talkTitle: submission.talk.title,
@@ -379,7 +364,7 @@ export async function updateSpeaker(
       return logo;
     }
   }
-  const patch: Partial<SpeakerWrite> = nullableSpeakerPatch(input);
+  const patch: SpeakerInput = nullableSpeakerPatch(input);
   if (input.name !== undefined) {
     const name = (input.name ?? "").trim();
     if (!name) {

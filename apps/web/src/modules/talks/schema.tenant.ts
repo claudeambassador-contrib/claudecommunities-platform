@@ -18,7 +18,7 @@ export const speakers = sqliteTable("speakers", {
   talkTitle: text("talk_title"),
   title: text("title"),
   twitterHandle: text("twitter_handle"),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(0),
   websiteUrl: text("website_url"),
 });
 

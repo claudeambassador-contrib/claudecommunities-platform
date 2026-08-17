@@ -17,6 +17,7 @@ import {
   updateSpeaker,
   updateTalkContent,
 } from "@/modules/talks/services/talksService";
+import { isStorageUrl } from "@/modules/talks/validators";
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 const START = "2026-09-01T09:00:00.000Z";
@@ -320,6 +321,15 @@ describe("talksService speakers", () => {
       name: "Ada",
     });
     expect(okUrl.ok).toBe(true);
+
+    const previous = process.env.R2_PUBLIC_URL;
+    process.env.R2_PUBLIC_URL = "https://cdn.example.com";
+    expect(isStorageUrl("https://cdn.example.com/ada.png")).toBe(true);
+    if (previous === undefined) {
+      process.env.R2_PUBLIC_URL = undefined;
+    } else {
+      process.env.R2_PUBLIC_URL = previous;
+    }
   });
 
   it("requires speakers.view to list or get a speaker", async () => {
