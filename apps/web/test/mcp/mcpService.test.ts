@@ -75,17 +75,16 @@ const LIVE_TOOL_NAMES = [
   "deleteSocialPost",
 ] as const;
 
-const NOT_IMPLEMENTED = ["requestImageUploadUrl"] as const;
-
 function dispatchCtx(
   store: TenantStore,
   actor = adminActor(),
-  registry?: RegistryStore,
+  extras: { registry?: RegistryStore; upload?: McpDispatchContext["upload"] } = {},
 ): McpDispatchContext {
   return {
     actor,
-    openRegistry: registry ? () => registry : undefined,
+    openRegistry: extras.registry ? () => extras.registry : undefined,
     openTenant: () => store,
+    upload: extras.upload,
   };
 }
 
@@ -321,7 +320,7 @@ describe("callMcpTool", () => {
       id: actor.id,
     });
     await insertMembership(registry, { orgId: tenant.orgId, role: "admin", userId: actor.id });
-    const ctx = dispatchCtx(tenant, actor, registry);
+    const ctx = dispatchCtx(tenant, actor, { registry });
 
     const listed = await callMcpTool<{ users: { email: string }[] }>(
       "listUsers",
@@ -347,17 +346,27 @@ describe("callMcpTool", () => {
     expect(profile.user.displayName).toBe("Ada");
   });
 
-  it("returns 501 for live tools that have no Start service yet", async () => {
-    const ctx = dispatchCtx(openMemoryTenant());
-    const results = await Promise.all(
-      NOT_IMPLEMENTED.map((name) => callMcpTool(name, { citySlug: CITY }, ctx)),
+  it("returns MCP upload credentials from the injected upload port", async () => {
+    const result = await callMcpTool<{ curl_command: string; upload_url: string }>(
+      "requestImageUploadUrl",
+      { folder: "events" },
+      dispatchCtx(openMemoryTenant(), adminActor(), {
+        upload: { baseUrl: "https://example.test", token: "tok_mcp" },
+      }),
     );
-    for (const result of results) {
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.status).toBe(501);
-        expect(result.error.code).toBe("not_implemented");
-      }
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.upload_url).toBe("https://example.test/api/upload/mcp");
+    expect(result.curl_command).toContain("folder=events");
+  });
+
+  it("returns 503 for requestImageUploadUrl when upload is not configured", async () => {
+    const result = await callMcpTool("requestImageUploadUrl", {}, dispatchCtx(openMemoryTenant()));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.status).toBe(503);
     }
   });
 

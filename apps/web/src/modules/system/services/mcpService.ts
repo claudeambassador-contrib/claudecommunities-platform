@@ -63,6 +63,7 @@ import type {
 import { bool, num, requireStr, str, strOrNull, strs } from "@/modules/system/mcpArgs";
 import { MCP_CATALOG } from "@/modules/system/mcpCatalog";
 import { healthService } from "@/modules/system/services/healthService";
+import { requestImageUploadUrl } from "@/modules/system/services/uploadService";
 import type { McpArgs, McpDispatchContext, McpToolInfo } from "@/modules/system/types";
 import {
   createSpeaker,
@@ -770,6 +771,21 @@ const HANDLERS: Record<string, Handler> = {
       return err("bad_request", 400, "speakerIds is required");
     }
     return reorderSpeakers(opened.store, ctx.actor, eventId.value, speakerIds);
+  },
+
+  requestImageUploadUrl(args, ctx) {
+    if (!ctx.upload) {
+      return err("unavailable", 503, "Upload is not configured");
+    }
+    const result = requestImageUploadUrl(ctx.upload, { folder: str(args, "folder") });
+    if (!result.ok) {
+      return result;
+    }
+    return ok({
+      curl_command: result.curlCommand,
+      note: result.note,
+      upload_url: result.uploadUrl,
+    });
   },
 
   async setEventActiveState(args, ctx) {
