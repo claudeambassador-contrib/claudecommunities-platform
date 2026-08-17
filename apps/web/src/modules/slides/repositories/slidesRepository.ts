@@ -1,0 +1,331 @@
+import { and, desc, eq } from "drizzle-orm";
+import { slideStylePresets } from "@/modules/slides/schema.tenant";
+import type {
+  SlideExportJobDetail,
+  SlideExportJobListItem,
+  SlideExportJobStatusValue,
+  SlideExportWorkflowParams,
+  SlideGeneratorState,
+  SlideStatePutResult,
+  SlideStylePresetCreated,
+  SlideStylePresetDetail,
+} from "@/modules/slides/types";
+import type { TenantStore } from "@/shared/db/tenantStore";
+import { err, ok, type Result } from "@/shared/http/errors";
+import { newId } from "@/shared/ids";
+
+const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
+
+function first<T>(rows: T[]): T | undefined {
+  const [row] = rows;
+  return row;
+}
+
+function isUniqueConstraint(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return UNIQUE_CONSTRAINT.test(message);
+}
+
+function parseJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function parseParams(raw: string): SlideExportWorkflowParams | null {
+  const parsed = parseJson(raw);
+  if (!parsed || typeof parsed !== "object") {
+    return null;
+  }
+  return parsed as SlideExportWorkflowParams;
+}
+
+function asJobStatus(value: string): SlideExportJobStatusValue {
+  if (value === "queued" || value === "running" || value === "completed" || value === "failed") {
+    return value;
+  }
+  return "failed";
+}
+
+function asOutputKind(value: string | null): "png" | "zip" | null {
+  if (value === "png" || value === "zip") {
+    return value;
+  }
+  return null;
+}
+
+function toJobDetail(row: {
+  completedCount: number;
+  errorMessage: string | null;
+  eventId: string | null;
+  id: string;
+  outputKind: string | null;
+  paramsJson: string;
+  resultKey: string | null;
+  status: string;
+  totalCount: number;
+  updatedAt: Date;
+  userId: string | null;
+}): SlideExportJobDetail {
+  return {
+    completedCount: row.completedCount,
+    errorMessage: row.errorMessage,
+    eventId: row.eventId,
+    id: row.id,
+    outputKind: asOutputKind(row.outputKind),
+    params: parseParams(row.paramsJson),
+    resultKey: row.resultKey,
+    status: asJobStatus(row.status),
+    totalCount: row.totalCount,
+    updatedAt: row.updatedAt.toISOString(),
+    userId: row.userId,
+  };
+}
+
+export async function getStateByScope(
+  store: TenantStore,
+  scope: string,
+): Promise<SlideGeneratorState> {
+  const { slideGeneratorStates } = store.tables;
+  const rows = await store.db
+    .select()
+    .from(slideGeneratorStates)
+    .where(and(eq(slideGeneratorStates.orgId, store.orgId), eq(slideGeneratorStates.scope, scope)))
+    .limit(1);
+  const row = first(rows);
+  if (!row) {
+    return { data: null, scope, updatedAt: null };
+  }
+  return {
+    data: parseJson(row.stateJson),
+    scope: row.scope,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export async function upsertState(
+  store: TenantStore,
+  scope: string,
+  eventId: string | null,
+  dataJson: string,
+): Promise<SlideStatePutResult> {
+  const { slideGeneratorStates } = store.tables;
+  const now = new Date();
+  const existing = await store.db
+    .select()
+    .from(slideGeneratorStates)
+    .where(and(eq(slideGeneratorStates.orgId, store.orgId), eq(slideGeneratorStates.scope, scope)))
+    .limit(1);
+  const row = first(existing);
+  if (row) {
+    await store.db
+      .update(slideGeneratorStates)
+      .set({ eventId, stateJson: dataJson, updatedAt: now })
+      .where(and(eq(slideGeneratorStates.orgId, store.orgId), eq(slideGeneratorStates.id, row.id)));
+    return { scope, updatedAt: now.toISOString() };
+  }
+  await store.db.insert(slideGeneratorStates).values({
+    createdAt: now,
+    eventId,
+    id: newId("sgs"),
+    orgId: store.orgId,
+    scope,
+    stateJson: dataJson,
+    updatedAt: now,
+  });
+  return { scope, updatedAt: now.toISOString() };
+}
+
+export async function listPresets(store: TenantStore): Promise<SlideStylePresetDetail[]> {
+  const rows = await store.db
+    .select()
+    .from(slideStylePresets)
+    .where(eq(slideStylePresets.orgId, store.orgId))
+    .orderBy(desc(slideStylePresets.updatedAt));
+  return rows.map((row) => ({
+    createdAt: row.createdAt.toISOString(),
+    data: parseJson(row.dataJson),
+    id: row.id,
+    name: row.name,
+    updatedAt: row.updatedAt.toISOString(),
+  }));
+}
+
+export async function getPresetById(
+  store: TenantStore,
+  id: string,
+): Promise<Result<{ preset: SlideStylePresetDetail }>> {
+  const rows = await store.db
+    .select()
+    .from(slideStylePresets)
+    .where(and(eq(slideStylePresets.orgId, store.orgId), eq(slideStylePresets.id, id)))
+    .limit(1);
+  const row = first(rows);
+  if (!row) {
+    return err("not_found", 404, "Preset not found");
+  }
+  return ok({
+    preset: {
+      createdAt: row.createdAt.toISOString(),
+      data: parseJson(row.dataJson),
+      id: row.id,
+      name: row.name,
+      updatedAt: row.updatedAt.toISOString(),
+    },
+  });
+}
+
+export async function insertPreset(
+  store: TenantStore,
+  name: string,
+  dataJson: string,
+): Promise<Result<{ preset: SlideStylePresetCreated }>> {
+  const now = new Date();
+  const id = newId("prst");
+  try {
+    await store.db.insert(slideStylePresets).values({
+      createdAt: now,
+      dataJson,
+      id,
+      name,
+      orgId: store.orgId,
+      updatedAt: now,
+    });
+  } catch (error) {
+    if (isUniqueConstraint(error)) {
+      return err("conflict", 409, `A preset named "${name}" already exists`);
+    }
+    throw error;
+  }
+  return ok({ preset: { id, name } });
+}
+
+export async function updatePresetById(
+  store: TenantStore,
+  id: string,
+  name: string | undefined,
+  dataJson: string | undefined,
+): Promise<Result<{ preset: SlideStylePresetCreated }>> {
+  const existing = await getPresetById(store, id);
+  if (!existing.ok) {
+    return existing;
+  }
+  if (name === undefined && dataJson === undefined) {
+    return ok({ preset: { id, name: existing.preset.name } });
+  }
+  const set: { dataJson?: string; name?: string; updatedAt: Date } = { updatedAt: new Date() };
+  if (name !== undefined) {
+    set.name = name;
+  }
+  if (dataJson !== undefined) {
+    set.dataJson = dataJson;
+  }
+  try {
+    await store.db
+      .update(slideStylePresets)
+      .set(set)
+      .where(and(eq(slideStylePresets.orgId, store.orgId), eq(slideStylePresets.id, id)));
+  } catch (error) {
+    if (isUniqueConstraint(error)) {
+      return err("conflict", 409, `A preset named "${name}" already exists`);
+    }
+    throw error;
+  }
+  return ok({ preset: { id, name: name ?? existing.preset.name } });
+}
+
+export async function deletePresetById(
+  store: TenantStore,
+  id: string,
+): Promise<Result<{ success: true }>> {
+  const existing = await getPresetById(store, id);
+  if (!existing.ok) {
+    return existing;
+  }
+  await store.db
+    .delete(slideStylePresets)
+    .where(and(eq(slideStylePresets.orgId, store.orgId), eq(slideStylePresets.id, id)));
+  return ok({ success: true });
+}
+
+export async function listJobs(store: TenantStore): Promise<SlideExportJobListItem[]> {
+  const { slideExportJobs } = store.tables;
+  const rows = await store.db
+    .select()
+    .from(slideExportJobs)
+    .where(eq(slideExportJobs.orgId, store.orgId))
+    .orderBy(desc(slideExportJobs.createdAt));
+  return rows.map((row) => ({
+    id: row.id,
+    status: asJobStatus(row.status),
+  }));
+}
+
+export async function getJobById(
+  store: TenantStore,
+  id: string,
+): Promise<Result<{ job: SlideExportJobDetail }>> {
+  const { slideExportJobs } = store.tables;
+  const rows = await store.db
+    .select()
+    .from(slideExportJobs)
+    .where(and(eq(slideExportJobs.orgId, store.orgId), eq(slideExportJobs.id, id)))
+    .limit(1);
+  const row = first(rows);
+  if (!row) {
+    return err("not_found", 404, "Job not found");
+  }
+  return ok({ job: toJobDetail(row) });
+}
+
+export async function insertJob(
+  store: TenantStore,
+  input: {
+    eventId: string;
+    id: string;
+    paramsJson: string;
+    totalCount: number;
+    userId: string;
+  },
+): Promise<Result<{ jobId: string }>> {
+  const { slideExportJobs } = store.tables;
+  const now = new Date();
+  try {
+    await store.db.insert(slideExportJobs).values({
+      completedCount: 0,
+      createdAt: now,
+      eventId: input.eventId,
+      id: input.id,
+      orgId: store.orgId,
+      paramsJson: input.paramsJson,
+      status: "queued",
+      totalCount: input.totalCount,
+      updatedAt: now,
+      userId: input.userId,
+    });
+  } catch (error) {
+    if (isUniqueConstraint(error)) {
+      return err("conflict", 409, "Export job already exists");
+    }
+    throw error;
+  }
+  return ok({ jobId: input.id });
+}
+
+export async function markJobFailed(
+  store: TenantStore,
+  id: string,
+  errorMessage: string,
+): Promise<void> {
+  const { slideExportJobs } = store.tables;
+  await store.db
+    .update(slideExportJobs)
+    .set({
+      errorMessage: errorMessage.slice(0, 1000),
+      status: "failed",
+      updatedAt: new Date(),
+    })
+    .where(and(eq(slideExportJobs.orgId, store.orgId), eq(slideExportJobs.id, id)));
+}

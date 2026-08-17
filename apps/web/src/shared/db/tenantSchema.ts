@@ -43,6 +43,7 @@ export const socialAccounts = social.socialAccounts;
 export const socialPosts = social.socialPosts;
 
 export const slideGeneratorStates = slides.slideGeneratorStates;
+export const slideStylePresets = slides.slideStylePresets;
 export const slideExportJobs = slides.slideExportJobs;
 
 export const pagesTable = pages.pages;
@@ -73,6 +74,7 @@ export function createTenantSchema() {
     reactions: community.reactions,
     slideExportJobs: slides.slideExportJobs,
     slideGeneratorStates: slides.slideGeneratorStates,
+    slideStylePresets: slides.slideStylePresets,
     socialAccounts: social.socialAccounts,
     socialPosts: social.socialPosts,
     spaces: community.spaces,
