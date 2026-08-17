@@ -11,6 +11,7 @@ import {
   markSpaceViewed,
   setPostPin,
   togglePostBookmark,
+  togglePostLike,
   togglePostReaction,
   unreadCounts,
   updatePost,
@@ -157,6 +158,17 @@ describe("comments, reactions, bookmarks", () => {
       return;
     }
     expect(bookmarked.isBookmarked).toBe(true);
+
+    const liked = await togglePostLike(store, memberActor(), post.post.id);
+    expect(liked.ok).toBe(true);
+    if (liked.ok) {
+      expect(liked.liked).toBe(true);
+    }
+    const unliked = await togglePostLike(store, memberActor(), post.post.id);
+    expect(unliked.ok).toBe(true);
+    if (unliked.ok) {
+      expect(unliked.liked).toBe(false);
+    }
   });
 });
 

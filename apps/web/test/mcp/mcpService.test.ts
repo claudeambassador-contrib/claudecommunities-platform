@@ -72,16 +72,7 @@ const LIVE_TOOL_NAMES = [
   "deleteSocialPost",
 ] as const;
 
-const NOT_IMPLEMENTED = [
-  "getUserProfile",
-  "getScheduledCourses",
-  "requestImageUploadUrl",
-  "likePost",
-  "createScheduledCourse",
-  "updateScheduledCourse",
-  "deleteScheduledCourse",
-  "listUsers",
-] as const;
+const NOT_IMPLEMENTED = ["getUserProfile", "requestImageUploadUrl", "listUsers"] as const;
 
 function dispatchCtx(store: TenantStore, actor = adminActor()): McpDispatchContext {
   return {

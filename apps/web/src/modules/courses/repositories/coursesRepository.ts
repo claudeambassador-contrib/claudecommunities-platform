@@ -1,13 +1,17 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, or, sql } from "drizzle-orm";
 import type {
   CourseDetail,
   CourseListItem,
   LessonDetail,
   LessonInput,
+  ScheduledCourseDetail,
+  ScheduledCourseWrite,
 } from "@/modules/courses/types";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
+
+const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
 
 function first<T>(rows: T[]): T | undefined {
   const [row] = rows;
@@ -244,6 +248,201 @@ export async function replaceLessons(
       }),
     ),
   );
+}
+
+function iso(value: Date | null | undefined): string | null {
+  return value ? value.toISOString() : null;
+}
+
+function toScheduled(
+  row: TenantStore["tables"]["scheduledCourses"]["$inferSelect"],
+): ScheduledCourseDetail {
+  return {
+    city: row.city,
+    courseType: row.courseType,
+    description: row.description,
+    endTime: iso(row.endTime),
+    id: row.id,
+    imageUrl: row.imageUrl,
+    instructor: row.instructor,
+    isOnline: Boolean(row.isOnline),
+    isPublished: Boolean(row.isPublished),
+    location: row.location,
+    maxAttendees: row.maxAttendees,
+    meetingUrl: row.meetingUrl,
+    price: row.price,
+    registrationUrl: row.registrationUrl,
+    slug: row.slug,
+    startTime: row.startTime.toISOString(),
+    timezone: row.timezone,
+    title: row.title,
+  };
+}
+
+export async function findScheduledBySlug(
+  store: TenantStore,
+  slug: string,
+  ignoreId?: string,
+): Promise<ScheduledCourseDetail | null> {
+  const { scheduledCourses } = store.tables;
+  const row = first(
+    await store.db
+      .select()
+      .from(scheduledCourses)
+      .where(and(eq(scheduledCourses.orgId, store.orgId), eq(scheduledCourses.slug, slug)))
+      .limit(1),
+  );
+  if (!row || row.id === ignoreId) {
+    return null;
+  }
+  return toScheduled(row);
+}
+
+export async function listScheduled(
+  store: TenantStore,
+  options: { publishedOnly?: boolean; upcoming?: boolean } = {},
+): Promise<ScheduledCourseDetail[]> {
+  const { scheduledCourses } = store.tables;
+  const filters = [eq(scheduledCourses.orgId, store.orgId)];
+  if (options.publishedOnly) {
+    filters.push(eq(scheduledCourses.isPublished, true));
+  }
+  if (options.upcoming) {
+    filters.push(gte(scheduledCourses.startTime, new Date()));
+  }
+  const rows = await store.db
+    .select()
+    .from(scheduledCourses)
+    .where(and(...filters))
+    .orderBy(asc(scheduledCourses.startTime));
+  return rows.map(toScheduled);
+}
+
+export async function getScheduledByIdOrSlug(
+  store: TenantStore,
+  idOrSlug: string,
+): Promise<Result<{ course: ScheduledCourseDetail }>> {
+  const { scheduledCourses } = store.tables;
+  const row = first(
+    await store.db
+      .select()
+      .from(scheduledCourses)
+      .where(
+        and(
+          eq(scheduledCourses.orgId, store.orgId),
+          or(eq(scheduledCourses.id, idOrSlug), eq(scheduledCourses.slug, idOrSlug)),
+        ),
+      )
+      .limit(1),
+  );
+  if (!row) {
+    return err("not_found", 404, "Scheduled course not found");
+  }
+  return ok({ course: toScheduled(row) });
+}
+
+export async function insertScheduled(
+  store: TenantStore,
+  write: ScheduledCourseWrite,
+): Promise<Result<{ course: ScheduledCourseDetail }>> {
+  const { scheduledCourses } = store.tables;
+  const now = new Date();
+  const id = newId("sc");
+  try {
+    await store.db.insert(scheduledCourses).values({
+      city: write.city ?? null,
+      courseType: write.courseType ?? "workshop",
+      createdAt: now,
+      description: write.description ?? null,
+      endTime: write.endTime ?? null,
+      id,
+      imageUrl: write.imageUrl ?? null,
+      instructor: write.instructor ?? null,
+      isOnline: write.isOnline ?? false,
+      isPublished: write.isPublished ?? false,
+      location: write.location ?? null,
+      maxAttendees: write.maxAttendees ?? null,
+      meetingUrl: write.meetingUrl ?? null,
+      orgId: store.orgId,
+      price: write.price ?? null,
+      registrationUrl: write.registrationUrl ?? null,
+      slug: write.slug,
+      startTime: write.startTime,
+      timezone: write.timezone ?? null,
+      title: write.title,
+      updatedAt: now,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (UNIQUE_CONSTRAINT.test(message)) {
+      return err("conflict", 409, "A scheduled course with this slug already exists");
+    }
+    throw error;
+  }
+  return getScheduledByIdOrSlug(store, id);
+}
+
+function scheduledPatch(write: Partial<ScheduledCourseWrite>): Record<string, unknown> {
+  return {
+    ...(write.city === undefined ? {} : { city: write.city }),
+    ...(write.courseType === undefined ? {} : { courseType: write.courseType }),
+    ...(write.description === undefined ? {} : { description: write.description }),
+    ...(write.endTime === undefined ? {} : { endTime: write.endTime }),
+    ...(write.imageUrl === undefined ? {} : { imageUrl: write.imageUrl }),
+    ...(write.instructor === undefined ? {} : { instructor: write.instructor }),
+    ...(write.isOnline === undefined ? {} : { isOnline: write.isOnline }),
+    ...(write.isPublished === undefined ? {} : { isPublished: write.isPublished }),
+    ...(write.location === undefined ? {} : { location: write.location }),
+    ...(write.maxAttendees === undefined ? {} : { maxAttendees: write.maxAttendees }),
+    ...(write.meetingUrl === undefined ? {} : { meetingUrl: write.meetingUrl }),
+    ...(write.price === undefined ? {} : { price: write.price }),
+    ...(write.registrationUrl === undefined ? {} : { registrationUrl: write.registrationUrl }),
+    ...(write.slug === undefined ? {} : { slug: write.slug }),
+    ...(write.startTime === undefined ? {} : { startTime: write.startTime }),
+    ...(write.timezone === undefined ? {} : { timezone: write.timezone }),
+    ...(write.title === undefined ? {} : { title: write.title }),
+    updatedAt: new Date(),
+  };
+}
+
+export async function updateScheduled(
+  store: TenantStore,
+  id: string,
+  write: Partial<ScheduledCourseWrite>,
+): Promise<Result<{ course: ScheduledCourseDetail }>> {
+  const existing = await getScheduledByIdOrSlug(store, id);
+  if (!existing.ok) {
+    return existing;
+  }
+  const { scheduledCourses } = store.tables;
+  try {
+    await store.db
+      .update(scheduledCourses)
+      .set(scheduledPatch(write))
+      .where(and(eq(scheduledCourses.orgId, store.orgId), eq(scheduledCourses.id, id)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (UNIQUE_CONSTRAINT.test(message)) {
+      return err("conflict", 409, "A scheduled course with this slug already exists");
+    }
+    throw error;
+  }
+  return getScheduledByIdOrSlug(store, id);
+}
+
+export async function deleteScheduled(
+  store: TenantStore,
+  id: string,
+): Promise<Result<{ success: true }>> {
+  const existing = await getScheduledByIdOrSlug(store, id);
+  if (!existing.ok) {
+    return existing;
+  }
+  const { scheduledCourses } = store.tables;
+  await store.db
+    .delete(scheduledCourses)
+    .where(and(eq(scheduledCourses.orgId, store.orgId), eq(scheduledCourses.id, id)));
+  return ok({ success: true });
 }
 
 export async function insertEnrollment(

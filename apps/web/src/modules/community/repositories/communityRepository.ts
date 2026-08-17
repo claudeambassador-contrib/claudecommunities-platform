@@ -462,6 +462,34 @@ export async function listReactions(
   }));
 }
 
+export async function toggleLike(
+  store: TenantStore,
+  postId: string,
+  userId: string,
+): Promise<boolean> {
+  const { likes } = store.tables;
+  const rows = await store.db
+    .select()
+    .from(likes)
+    .where(and(eq(likes.orgId, store.orgId), eq(likes.postId, postId), eq(likes.userId, userId)))
+    .limit(1);
+  const existing = first(rows);
+  if (existing) {
+    await store.db
+      .delete(likes)
+      .where(and(eq(likes.orgId, store.orgId), eq(likes.id, existing.id)));
+    return false;
+  }
+  await store.db.insert(likes).values({
+    createdAt: new Date(),
+    id: newId("like"),
+    orgId: store.orgId,
+    postId,
+    userId,
+  });
+  return true;
+}
+
 export async function toggleBookmark(
   store: TenantStore,
   postId: string,

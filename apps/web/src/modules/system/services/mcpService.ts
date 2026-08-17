@@ -9,15 +9,20 @@ import {
   listSpaces,
   toggleCommentReaction,
   togglePostBookmark,
+  togglePostLike,
   togglePostReaction,
   updateComment as updateCommentService,
   updatePost as updateCommunityPost,
 } from "@/modules/community/services/communityService";
 import {
   createCourse as createCourseService,
+  createScheduledCourse,
   listPublished,
+  listPublishedScheduled,
   removeCourse,
+  removeScheduledCourse,
   updateCourse as updateCourseService,
+  updateScheduledCourse,
 } from "@/modules/courses/services/coursesService";
 import {
   createEvent as createEventService,
@@ -253,6 +258,37 @@ const HANDLERS: Record<string, Handler> = {
     });
   },
 
+  async createScheduledCourse(args, ctx) {
+    const opened = await openStore(args, ctx);
+    if (!opened.ok) {
+      return opened;
+    }
+    const title = requireStr(args, "title");
+    if (!title.ok) {
+      return title;
+    }
+    const startTime = requireStr(args, "startTime");
+    if (!startTime.ok) {
+      return startTime;
+    }
+    return createScheduledCourse(opened.store, ctx.actor, {
+      city: str(args, "city"),
+      courseType: str(args, "courseType"),
+      description: str(args, "description"),
+      imageUrl: str(args, "imageUrl"),
+      instructor: str(args, "instructor"),
+      isOnline: bool(args, "isOnline"),
+      isPublished: bool(args, "isPublished"),
+      location: str(args, "location"),
+      maxAttendees: num(args, "maxAttendees"),
+      meetingUrl: str(args, "meetingUrl"),
+      price: str(args, "price"),
+      registrationUrl: str(args, "registrationUrl"),
+      startTime: startTime.value,
+      title: title.value,
+    });
+  },
+
   async createSlideStylePreset(args, ctx) {
     const opened = await openStore(args, ctx);
     if (!opened.ok) {
@@ -359,6 +395,18 @@ const HANDLERS: Record<string, Handler> = {
       return postId;
     }
     return deleteCommunityPost(opened.store, ctx.actor, postId.value);
+  },
+
+  async deleteScheduledCourse(args, ctx) {
+    const opened = await openStore(args, ctx);
+    if (!opened.ok) {
+      return opened;
+    }
+    const courseId = requireStr(args, "courseId");
+    if (!courseId.ok) {
+      return courseId;
+    }
+    return removeScheduledCourse(opened.store, ctx.actor, courseId.value);
   },
 
   async deleteSlideStylePreset(args, ctx) {
@@ -481,6 +529,14 @@ const HANDLERS: Record<string, Handler> = {
     return ok({ comments: comments.comments, post: post.post });
   },
 
+  async getScheduledCourses(args, ctx) {
+    const opened = await openStore(args, ctx);
+    if (!opened.ok) {
+      return opened;
+    }
+    return listPublishedScheduled(opened.store, { upcoming: bool(args, "upcoming") });
+  },
+
   async getSlideGeneratorState(args, ctx) {
     const opened = await openStore(args, ctx);
     if (!opened.ok) {
@@ -520,6 +576,18 @@ const HANDLERS: Record<string, Handler> = {
       siteName: snapshot.siteName,
       ts: snapshot.ts,
     });
+  },
+
+  async likePost(args, ctx) {
+    const opened = await openStore(args, ctx);
+    if (!opened.ok) {
+      return opened;
+    }
+    const postId = requireStr(args, "postId");
+    if (!postId.ok) {
+      return postId;
+    }
+    return togglePostLike(opened.store, ctx.actor, postId.value);
   },
 
   async list_pages(args, ctx) {
@@ -755,6 +823,33 @@ const HANDLERS: Record<string, Handler> = {
       mediaUrl: str(args, "imageUrl"),
       removeImage: bool(args, "removeImage"),
       spaceId: str(args, "spaceId"),
+      title: str(args, "title"),
+    });
+  },
+
+  async updateScheduledCourse(args, ctx) {
+    const opened = await openStore(args, ctx);
+    if (!opened.ok) {
+      return opened;
+    }
+    const courseId = requireStr(args, "courseId");
+    if (!courseId.ok) {
+      return courseId;
+    }
+    return updateScheduledCourse(opened.store, ctx.actor, courseId.value, {
+      city: str(args, "city"),
+      courseType: str(args, "courseType"),
+      description: str(args, "description"),
+      imageUrl: str(args, "imageUrl"),
+      instructor: str(args, "instructor"),
+      isOnline: bool(args, "isOnline"),
+      isPublished: bool(args, "isPublished"),
+      location: str(args, "location"),
+      maxAttendees: num(args, "maxAttendees"),
+      meetingUrl: str(args, "meetingUrl"),
+      price: str(args, "price"),
+      registrationUrl: str(args, "registrationUrl"),
+      startTime: str(args, "startTime"),
       title: str(args, "title"),
     });
   },

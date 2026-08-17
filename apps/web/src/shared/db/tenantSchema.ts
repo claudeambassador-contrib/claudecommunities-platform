@@ -25,12 +25,14 @@ export const comments = community.comments;
 export const reactions = community.reactions;
 export const commentReactions = community.commentReactions;
 export const bookmarks = community.bookmarks;
+export const likes = community.likes;
 export const spaceViews = community.spaceViews;
 export type PostRow = community.PostRow;
 
 export const coursesTable = courses.courses;
 export const lessons = courses.lessons;
 export const courseEnrollments = courses.courseEnrollments;
+export const scheduledCourses = courses.scheduledCourses;
 
 export const speakers = talks.speakers;
 export const talkSubmissions = talks.talkSubmissions;
@@ -68,10 +70,12 @@ export function createTenantSchema() {
     eventRsvps: events.eventRsvps,
     events: events.events,
     lessons: courses.lessons,
+    likes: community.likes,
     notifications: pages.notifications,
     pages: pages.pages,
     posts: community.posts,
     reactions: community.reactions,
+    scheduledCourses: courses.scheduledCourses,
     slideExportJobs: slides.slideExportJobs,
     slideGeneratorStates: slides.slideGeneratorStates,
     slideStylePresets: slides.slideStylePresets,

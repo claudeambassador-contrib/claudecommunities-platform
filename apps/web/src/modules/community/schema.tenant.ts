@@ -70,6 +70,20 @@ export const commentReactions = sqliteTable(
   (t) => [uniqueIndex("comment_reactions_comment_user_emoji").on(t.commentId, t.userId, t.emoji)],
 );
 
+export const likes = sqliteTable(
+  "likes",
+  {
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    id: text("id").primaryKey(),
+    orgId: text("org_id").notNull(),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+  },
+  (t) => [uniqueIndex("likes_org_user_post").on(t.orgId, t.userId, t.postId)],
+);
+
 export const bookmarks = sqliteTable(
   "bookmarks",
   {

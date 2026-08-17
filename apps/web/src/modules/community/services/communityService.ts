@@ -332,6 +332,18 @@ export async function listCommentReactions(
   });
 }
 
+export async function togglePostLike(
+  store: TenantStore,
+  actor: Actor,
+  postId: string,
+): Promise<Result<{ liked: boolean }>> {
+  const post = await communityRepo.getPost(store, postId);
+  if (!post.ok) {
+    return post;
+  }
+  return ok({ liked: await communityRepo.toggleLike(store, postId, actor.id) });
+}
+
 export async function togglePostBookmark(
   store: TenantStore,
   actor: Actor,
