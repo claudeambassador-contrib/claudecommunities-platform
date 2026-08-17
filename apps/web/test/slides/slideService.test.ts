@@ -90,6 +90,20 @@ describe("slideGeneratorService", () => {
     expect(loaded.state.updatedAt).toBeTruthy();
   });
 
+  it("treats a unique race on first save as an update", async () => {
+    const store = openMemoryTenant();
+    const [a, b] = await Promise.all([
+      putState(store, adminActor(), "global", { name: "A" }),
+      putState(store, adminActor(), "global", { name: "B" }),
+    ]);
+    expect(a.ok && b.ok).toBe(true);
+    const loaded = await getState(store, adminActor(), "global");
+    expect(loaded.ok).toBe(true);
+    if (loaded.ok) {
+      expect(loaded.state.data).toEqual(expect.objectContaining({ name: expect.any(String) }));
+    }
+  });
+
   it("rejects invalid scopes and oversized bodies", async () => {
     const store = openMemoryTenant();
     const actor = adminActor();
@@ -354,6 +368,38 @@ describe("slideExportService", () => {
       return;
     }
     expect(batched.cached).toBeNull();
+  });
+
+  it("declines the cache short-circuit when lookup throws, and keeps a hit if speaker lookup fails", async () => {
+    const store = openMemoryTenant();
+    const throwingCache: SlideRenderCache = {
+      getFresh: () => Promise.reject(new Error("r2 down")),
+    };
+    const declined = await tryShortCircuitCachedExport(store, adminActor(), exportInput(), {
+      cache: throwingCache,
+    });
+    expect(declined.ok).toBe(true);
+    if (declined.ok) {
+      expect(declined.cached).toBeNull();
+    }
+
+    const cache: SlideRenderCache = {
+      getFresh: () =>
+        Promise.resolve({ contentHash: "hash_1", url: "https://files.test/slides/hash_1.png" }),
+    };
+    const hit = await tryShortCircuitCachedExport(store, adminActor(), exportInput(), {
+      cache,
+      resolveSpeakerName: () => Promise.reject(new Error("speaker missing")),
+    });
+    expect(hit.ok).toBe(true);
+    if (hit.ok) {
+      expect(hit.cached).toEqual({
+        contentHash: "hash_1",
+        filename: "meetup_slides.png",
+        kind: "png",
+        url: "https://files.test/slides/hash_1.png",
+      });
+    }
   });
 
   it("probes a stale queued job and persists a terminal workflow failure", async () => {

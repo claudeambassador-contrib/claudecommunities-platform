@@ -9,6 +9,21 @@ export interface SlideStatePutResult {
   updatedAt: string;
 }
 
+/** Persistence write DTO — JSON stays a string only inside the repository. */
+export interface SlideStateWrite {
+  dataJson: string;
+  eventId: string | null;
+  scope: string;
+}
+
+export interface SlideExportJobWrite {
+  eventId: string;
+  id: string;
+  paramsJson: string;
+  totalCount: number;
+  userId: string;
+}
+
 export interface SlideStateWriteDeps {
   invalidateForScope?: (scope: string) => Promise<void>;
 }
@@ -114,7 +129,7 @@ export interface SlideExportStatusDeps {
 
 export interface SlideExportCacheDeps {
   cache: SlideRenderCache;
-  resolveSpeakerName?: (speakerId: string) => Promise<string | null>;
+  resolveSpeakerName?: (speakerId: string, eventId: string) => Promise<string | null>;
 }
 
 export type SlideExportJobStatusValue = "queued" | "running" | "completed" | "failed";

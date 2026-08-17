@@ -89,9 +89,16 @@ export async function putState(
   if (!body.ok) {
     return body;
   }
-  const saved = await slidesRepo.upsertState(store, scope, eventIdFromScope(scope), body.dataJson);
+  const saved = await slidesRepo.upsertState(store, {
+    dataJson: body.dataJson,
+    eventId: eventIdFromScope(scope),
+    scope,
+  });
+  if (!saved.ok) {
+    return saved;
+  }
   await deps.invalidateForScope?.(scope);
-  return ok(saved);
+  return saved;
 }
 
 export async function listPresets(

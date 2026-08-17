@@ -58,8 +58,12 @@ function toPublicStatus(
   }
   if (job.status === "completed" && job.resultKey) {
     status.outputUrl = publicUrl?.(job.resultKey);
-    const base = job.params?.filenameBase || "export";
-    status.downloadFilename = job.outputKind === "zip" ? `${base}_all.zip` : `${base}.png`;
+    if (job.params?.filenameBase) {
+      const base = job.params.filenameBase;
+      status.downloadFilename = job.outputKind === "zip" ? `${base}_all.zip` : `${base}.png`;
+    } else {
+      status.downloadFilename = job.outputKind === "zip" ? "export.zip" : "export.png";
+    }
   }
   return status;
 }
@@ -191,24 +195,33 @@ export async function tryShortCircuitCachedExport(
   }
 
   const refWidth = clampRefWidth(input.refWidth);
-  const cached = await deps.cache.getFresh({
-    eventId: input.eventId,
-    refWidth,
-    slideId,
-    speakerId,
-  });
+  let cached: { contentHash: string; url: string } | null;
+  try {
+    cached = await deps.cache.getFresh({
+      eventId: input.eventId,
+      refWidth,
+      slideId,
+      speakerId,
+    });
+  } catch {
+    return ok({ cached: null });
+  }
   if (!cached) {
     return ok({ cached: null });
   }
 
   const base = safeName(input.filenameBase) || "slides";
   let filename = `${base}.png`;
-  const speakerName = await deps.resolveSpeakerName?.(speakerId);
-  if (speakerName) {
-    const nameSlug = safeName(speakerName);
-    filename = input.disambiguateFilenames
-      ? `${base}_${nameSlug}_${safeName(slideId)}.png`
-      : `${base}_${nameSlug}.png`;
+  try {
+    const speakerName = await deps.resolveSpeakerName?.(speakerId, input.eventId);
+    if (speakerName) {
+      const nameSlug = safeName(speakerName);
+      filename = input.disambiguateFilenames
+        ? `${base}_${nameSlug}_${safeName(slideId)}.png`
+        : `${base}_${nameSlug}.png`;
+    }
+  } catch {
+    // Keep the simpler filename — short-circuit is an optimisation.
   }
   return ok({
     cached: {

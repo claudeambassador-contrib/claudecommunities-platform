@@ -1,12 +1,13 @@
 import { and, desc, eq } from "drizzle-orm";
-import { slideStylePresets } from "@/modules/slides/schema.tenant";
 import type {
   SlideExportJobDetail,
   SlideExportJobListItem,
   SlideExportJobStatusValue,
+  SlideExportJobWrite,
   SlideExportWorkflowParams,
   SlideGeneratorState,
   SlideStatePutResult,
+  SlideStateWrite,
   SlideStylePresetCreated,
   SlideStylePresetDetail,
 } from "@/modules/slides/types";
@@ -107,38 +108,60 @@ export async function getStateByScope(
 
 export async function upsertState(
   store: TenantStore,
-  scope: string,
-  eventId: string | null,
-  dataJson: string,
-): Promise<SlideStatePutResult> {
+  write: SlideStateWrite,
+): Promise<Result<SlideStatePutResult>> {
   const { slideGeneratorStates } = store.tables;
   const now = new Date();
-  const existing = await store.db
-    .select()
-    .from(slideGeneratorStates)
-    .where(and(eq(slideGeneratorStates.orgId, store.orgId), eq(slideGeneratorStates.scope, scope)))
-    .limit(1);
-  const row = first(existing);
-  if (row) {
+  const existing = first(
+    await store.db
+      .select()
+      .from(slideGeneratorStates)
+      .where(
+        and(
+          eq(slideGeneratorStates.orgId, store.orgId),
+          eq(slideGeneratorStates.scope, write.scope),
+        ),
+      )
+      .limit(1),
+  );
+  if (existing) {
     await store.db
       .update(slideGeneratorStates)
-      .set({ eventId, stateJson: dataJson, updatedAt: now })
-      .where(and(eq(slideGeneratorStates.orgId, store.orgId), eq(slideGeneratorStates.id, row.id)));
-    return { scope, updatedAt: now.toISOString() };
+      .set({ eventId: write.eventId, stateJson: write.dataJson, updatedAt: now })
+      .where(
+        and(eq(slideGeneratorStates.orgId, store.orgId), eq(slideGeneratorStates.id, existing.id)),
+      );
+    return ok({ scope: write.scope, updatedAt: now.toISOString() });
   }
-  await store.db.insert(slideGeneratorStates).values({
-    createdAt: now,
-    eventId,
-    id: newId("sgs"),
-    orgId: store.orgId,
-    scope,
-    stateJson: dataJson,
-    updatedAt: now,
-  });
-  return { scope, updatedAt: now.toISOString() };
+  try {
+    await store.db.insert(slideGeneratorStates).values({
+      createdAt: now,
+      eventId: write.eventId,
+      id: newId("sgs"),
+      orgId: store.orgId,
+      scope: write.scope,
+      stateJson: write.dataJson,
+      updatedAt: now,
+    });
+  } catch (error) {
+    if (!isUniqueConstraint(error)) {
+      throw error;
+    }
+    await store.db
+      .update(slideGeneratorStates)
+      .set({ eventId: write.eventId, stateJson: write.dataJson, updatedAt: now })
+      .where(
+        and(
+          eq(slideGeneratorStates.orgId, store.orgId),
+          eq(slideGeneratorStates.scope, write.scope),
+        ),
+      );
+  }
+  return ok({ scope: write.scope, updatedAt: now.toISOString() });
 }
 
 export async function listPresets(store: TenantStore): Promise<SlideStylePresetDetail[]> {
+  const { slideStylePresets } = store.tables;
   const rows = await store.db
     .select()
     .from(slideStylePresets)
@@ -157,6 +180,7 @@ export async function getPresetById(
   store: TenantStore,
   id: string,
 ): Promise<Result<{ preset: SlideStylePresetDetail }>> {
+  const { slideStylePresets } = store.tables;
   const rows = await store.db
     .select()
     .from(slideStylePresets)
@@ -182,6 +206,7 @@ export async function insertPreset(
   name: string,
   dataJson: string,
 ): Promise<Result<{ preset: SlideStylePresetCreated }>> {
+  const { slideStylePresets } = store.tables;
   const now = new Date();
   const id = newId("prst");
   try {
@@ -222,6 +247,7 @@ export async function updatePresetById(
   if (dataJson !== undefined) {
     set.dataJson = dataJson;
   }
+  const { slideStylePresets } = store.tables;
   try {
     await store.db
       .update(slideStylePresets)
@@ -244,6 +270,7 @@ export async function deletePresetById(
   if (!existing.ok) {
     return existing;
   }
+  const { slideStylePresets } = store.tables;
   await store.db
     .delete(slideStylePresets)
     .where(and(eq(slideStylePresets.orgId, store.orgId), eq(slideStylePresets.id, id)));
@@ -282,13 +309,7 @@ export async function getJobById(
 
 export async function insertJob(
   store: TenantStore,
-  input: {
-    eventId: string;
-    id: string;
-    paramsJson: string;
-    totalCount: number;
-    userId: string;
-  },
+  input: SlideExportJobWrite,
 ): Promise<Result<{ jobId: string }>> {
   const { slideExportJobs } = store.tables;
   const now = new Date();
