@@ -3,6 +3,7 @@ import * as talksRepo from "@/modules/talks/repositories/talksRepository";
 import type {
   SpeakerDetail,
   SpeakerInput,
+  TalkComment,
   TalkDetail,
   TalkListOptions,
   TalkLocksInput,
@@ -411,4 +412,68 @@ export async function reorderSpeakers(
     }
   }
   return ok({ success: true });
+}
+
+export async function listTalkComments(
+  store: TenantStore,
+  actor: Actor,
+  submissionId: string,
+): Promise<Result<{ comments: TalkComment[] }>> {
+  const found = await talksRepo.getTalkById(store, submissionId);
+  if (!found.ok) {
+    return found;
+  }
+  const allowed = requireOwnerOrAdmin(actor, found.talk.userId);
+  if (!allowed.ok) {
+    return allowed;
+  }
+  return ok({ comments: await talksRepo.listTalkComments(store, submissionId) });
+}
+
+export async function createTalkComment(
+  store: TenantStore,
+  actor: Actor,
+  submissionId: string,
+  content: string,
+): Promise<Result<{ comment: TalkComment }>> {
+  const found = await talksRepo.getTalkById(store, submissionId);
+  if (!found.ok) {
+    return found;
+  }
+  const allowed = requireOwnerOrAdmin(actor, found.talk.userId);
+  if (!allowed.ok) {
+    return allowed;
+  }
+  if (found.talk.contentLocked && !isTalkAdmin(actor)) {
+    return err("forbidden", 403, "This talk is locked — comments are read-only");
+  }
+  const trimmed = content.trim();
+  if (!trimmed) {
+    return err("bad_request", 400, "Comment cannot be empty");
+  }
+  if (trimmed.length > 10_000) {
+    return err("bad_request", 400, "Comment is too long");
+  }
+  return ok({
+    comment: await talksRepo.insertTalkComment(store, {
+      authorId: actor.id,
+      content: trimmed,
+      submissionId,
+    }),
+  });
+}
+
+export async function deleteTalkComment(
+  store: TenantStore,
+  actor: Actor,
+  commentId: string,
+): Promise<Result<{ success: true }>> {
+  const existing = await talksRepo.getTalkCommentById(store, commentId);
+  if (!existing.ok) {
+    return existing;
+  }
+  if (!isTalkAdmin(actor) && existing.comment.authorId !== actor.id) {
+    return err("forbidden", 403, "Not allowed");
+  }
+  return await talksRepo.deleteTalkCommentById(store, commentId);
 }

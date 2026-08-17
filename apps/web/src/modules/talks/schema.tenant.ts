@@ -46,5 +46,18 @@ export const talkSubmissions = sqliteTable("talk_submissions", {
   userId: text("user_id"),
 });
 
+export const talkComments = sqliteTable("talk_comments", {
+  authorId: text("author_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  id: text("id").primaryKey(),
+  orgId: text("org_id").notNull(),
+  submissionId: text("submission_id")
+    .notNull()
+    .references(() => talkSubmissions.id, { onDelete: "cascade" }),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+
 export type SpeakerRow = typeof speakers.$inferSelect;
+export type TalkCommentRow = typeof talkComments.$inferSelect;
 export type TalkSubmissionRow = typeof talkSubmissions.$inferSelect;

@@ -3,6 +3,7 @@ import type { SpeakerRow, TalkSubmissionRow } from "@/modules/talks/schema.tenan
 import type {
   SpeakerDetail,
   SpeakerInput,
+  TalkComment,
   TalkDetail,
   TalkListOptions,
   TalkPatch,
@@ -305,5 +306,95 @@ export async function deleteSpeakerById(
   }
   const { speakers } = store.tables;
   await store.db.delete(speakers).where(and(eq(speakers.orgId, store.orgId), eq(speakers.id, id)));
+  return ok({ success: true });
+}
+
+function toComment(row: {
+  authorId: string;
+  content: string;
+  createdAt: Date;
+  id: string;
+  submissionId: string;
+  updatedAt: Date;
+}): TalkComment {
+  return {
+    authorId: row.authorId,
+    content: row.content,
+    createdAt: row.createdAt.toISOString(),
+    id: row.id,
+    submissionId: row.submissionId,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export async function listTalkComments(
+  store: TenantStore,
+  submissionId: string,
+): Promise<TalkComment[]> {
+  const { talkComments } = store.tables;
+  const rows = await store.db
+    .select()
+    .from(talkComments)
+    .where(and(eq(talkComments.orgId, store.orgId), eq(talkComments.submissionId, submissionId)))
+    .orderBy(asc(talkComments.createdAt));
+  return rows.map(toComment);
+}
+
+export async function insertTalkComment(
+  store: TenantStore,
+  input: { authorId: string; content: string; submissionId: string },
+): Promise<TalkComment> {
+  const { talkComments } = store.tables;
+  const now = new Date();
+  const id = newId("tcm");
+  await store.db.insert(talkComments).values({
+    authorId: input.authorId,
+    content: input.content,
+    createdAt: now,
+    id,
+    orgId: store.orgId,
+    submissionId: input.submissionId,
+    updatedAt: now,
+  });
+  return {
+    authorId: input.authorId,
+    content: input.content,
+    createdAt: now.toISOString(),
+    id,
+    submissionId: input.submissionId,
+    updatedAt: now.toISOString(),
+  };
+}
+
+export async function getTalkCommentById(
+  store: TenantStore,
+  id: string,
+): Promise<Result<{ comment: TalkComment }>> {
+  const { talkComments } = store.tables;
+  const row = first(
+    await store.db
+      .select()
+      .from(talkComments)
+      .where(and(eq(talkComments.orgId, store.orgId), eq(talkComments.id, id)))
+      .limit(1),
+  );
+  if (!row) {
+    return err("not_found", 404, "Comment not found");
+  }
+  return ok({ comment: toComment(row) });
+}
+
+export async function deleteTalkCommentById(
+  store: TenantStore,
+  id: string,
+): Promise<Result<{ success: true }>> {
+  const existing = await getTalkCommentById(store, id);
+  if (!existing.ok) {
+    return existing;
+  }
+  const { talkComments } = store.tables;
+  await store.db
+    .delete(talkComments)
+    .where(and(eq(talkComments.orgId, store.orgId), eq(talkComments.id, id)));
   return ok({ success: true });
 }

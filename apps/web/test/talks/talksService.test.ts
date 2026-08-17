@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   createSpeaker,
   createSpeakerFromSubmission,
+  createTalkComment,
   createTalkSubmission,
   deleteSpeaker,
+  deleteTalkComment,
   deleteTalkSubmission,
   getSpeaker,
   getTalk,
   listSpeakers,
+  listTalkComments,
   listTalkSubmissions,
   listUserTalks,
   reorderSpeakers,
@@ -433,5 +436,48 @@ describe("talksService speakers", () => {
     expect(promoted.speaker.talkDescription).toBe("How we ship");
     expect(promoted.speaker.bio).toBe("Builds things");
     expect(promoted.speaker.submissionId).toBe(talk.id);
+  });
+});
+
+describe("talksService comments", () => {
+  it("lets the owner and admins thread comments and blocks outsiders", async () => {
+    const { store, talk } = await seedTalk();
+    const outsider = memberActor({ id: "usr_other" });
+    const denied = await listTalkComments(store, outsider, talk.id);
+    expect(denied.ok).toBe(false);
+    if (!denied.ok) {
+      expect(denied.error.status).toBe(403);
+    }
+
+    const posted = await createTalkComment(store, memberActor(), talk.id, "Need a title tweak?");
+    expect(posted.ok).toBe(true);
+    if (!posted.ok) {
+      return;
+    }
+    expect(posted.comment.authorId).toBe("usr_member");
+
+    const listed = await listTalkComments(store, adminActor(), talk.id);
+    expect(listed.ok).toBe(true);
+    if (listed.ok) {
+      expect(listed.comments.map((comment) => comment.content)).toEqual(["Need a title tweak?"]);
+    }
+
+    const strangerDelete = await deleteTalkComment(store, outsider, posted.comment.id);
+    expect(strangerDelete.ok).toBe(false);
+    const removed = await deleteTalkComment(store, memberActor(), posted.comment.id);
+    expect(removed.ok).toBe(true);
+  });
+
+  it("blocks owner comments when the talk is content-locked", async () => {
+    const { store, talk } = await seedTalk();
+    const locked = await setTalkLocks(store, adminActor(), talk.id, { contentLocked: true });
+    expect(locked.ok).toBe(true);
+    const ownerPost = await createTalkComment(store, memberActor(), talk.id, "Still editing");
+    expect(ownerPost.ok).toBe(false);
+    if (!ownerPost.ok) {
+      expect(ownerPost.error.status).toBe(403);
+    }
+    const adminPost = await createTalkComment(store, adminActor(), talk.id, "Admin follow-up");
+    expect(adminPost.ok).toBe(true);
   });
 });

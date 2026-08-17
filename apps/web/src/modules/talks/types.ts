@@ -68,6 +68,15 @@ export interface SpeakerInput {
   websiteUrl?: string | null;
 }
 
+export interface TalkComment {
+  authorId: string;
+  content: string;
+  createdAt: string;
+  id: string;
+  submissionId: string;
+  updatedAt: string;
+}
+
 export interface SpeakerDetail {
   bio: string | null;
   company: string | null;

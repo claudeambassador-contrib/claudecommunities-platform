@@ -38,6 +38,7 @@ export const courseEnrollments = courses.courseEnrollments;
 export const scheduledCourses = courses.scheduledCourses;
 
 export const speakers = talks.speakers;
+export const talkComments = talks.talkComments;
 export const talkSubmissions = talks.talkSubmissions;
 
 export const emailCampaigns = email.emailCampaigns;
@@ -88,6 +89,7 @@ export function createTenantSchema() {
     spaces: community.spaces,
     spaceViews: community.spaceViews,
     speakers: talks.speakers,
+    talkComments: talks.talkComments,
     talkSubmissions: talks.talkSubmissions,
     userBadges: badgeTables.userBadges,
   };
