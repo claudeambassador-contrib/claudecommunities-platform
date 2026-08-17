@@ -1,17 +1,39 @@
-export {
-  tenants,
-  tenantSettings,
-  type TenantRow,
-} from "@/modules/tenants/schema.registry";
-export {
-  users,
-  userMemberships,
-  pendingAdminGrants,
+import {
   auditLog,
-  type UserRow,
-  type MembershipRow,
+  pendingAdminGrants,
+  userMemberships,
+  users,
 } from "@/modules/identity/schema.registry";
-export {
+import {
+  impactLabCoffeeCodes,
+  impactLabConfig,
   impactLabInterests,
+  impactLabParticipants,
   impactLabSponsors,
+  impactLabStatements,
+  impactLabTeams,
+  impactLabVotes,
 } from "@/modules/impact-lab/schema.registry";
+import { tenantSettings, tenants } from "@/modules/tenants/schema.registry";
+
+/** Stable object of registry tables for drizzle + RegistryStore. */
+export function createRegistrySchema() {
+  return {
+    auditLog,
+    impactLabCoffeeCodes,
+    impactLabConfig,
+    impactLabInterests,
+    impactLabParticipants,
+    impactLabSponsors,
+    impactLabStatements,
+    impactLabTeams,
+    impactLabVotes,
+    pendingAdminGrants,
+    tenantSettings,
+    tenants,
+    userMemberships,
+    users,
+  };
+}
+
+export type RegistryTables = ReturnType<typeof createRegistrySchema>;

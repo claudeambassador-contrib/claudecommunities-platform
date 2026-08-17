@@ -1,13 +1,13 @@
-import { drizzle } from "drizzle-orm/d1";
 import type { D1Database } from "@cloudflare/workers-types";
-import * as registrySchema from "./registrySchema";
+import { drizzle } from "drizzle-orm/d1";
+import { createRegistrySchema } from "./registrySchema";
 import { createTenantSchema } from "./tenantSchema";
 
 export type RegistryDb = ReturnType<typeof createRegistryDb>;
 export type TenantDb = ReturnType<typeof createTenantDb>;
 
 export function createRegistryDb(d1: D1Database) {
-  return drizzle(d1, { schema: registrySchema });
+  return drizzle(d1, { schema: createRegistrySchema() });
 }
 
 export function createTenantDb(d1: D1Database) {
