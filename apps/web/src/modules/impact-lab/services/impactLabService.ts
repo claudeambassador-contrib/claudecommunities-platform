@@ -243,6 +243,24 @@ export async function verifyAccessCode(
   return ok({});
 }
 
+async function stampCheckIn(
+  store: RegistryStore,
+  participant: ParticipantDetail,
+  input: { name: string; sessionToken: string; teamId: string | null },
+): Promise<Result<{ participant: ParticipantDetail; sessionToken: string }>> {
+  const updated = await repo.updateParticipant(store, participant.id, {
+    checkedIn: true,
+    checkedInAt: participant.checkedInAt ? new Date(participant.checkedInAt) : new Date(),
+    name: input.name,
+    sessionToken: input.sessionToken,
+    teamId: input.teamId ?? participant.teamId,
+  });
+  if (!updated) {
+    return err("internal", 500, "Failed to check in");
+  }
+  return ok({ participant: updated, sessionToken: input.sessionToken });
+}
+
 export async function checkInParticipant(
   store: RegistryStore,
   input: CheckInInput,
@@ -267,20 +285,10 @@ export async function checkInParticipant(
     const team = await repo.findTeam(store, input.teamId);
     teamId = team?.id ?? null;
   }
-  const token = genToken();
+  const sessionToken = genToken();
   const existing = await repo.findParticipantByEmail(store, email);
   if (existing) {
-    const participant = await repo.updateParticipant(store, existing.id, {
-      checkedIn: true,
-      checkedInAt: existing.checkedInAt ? new Date(existing.checkedInAt) : new Date(),
-      name,
-      sessionToken: token,
-      teamId: teamId ?? existing.teamId,
-    });
-    if (!participant) {
-      return err("internal", 500, "Failed to check in");
-    }
-    return ok({ participant, sessionToken: token });
+    return stampCheckIn(store, existing, { name, sessionToken, teamId });
   }
   const created = await repo.insertParticipantWithPool(
     store,
@@ -290,15 +298,21 @@ export async function checkInParticipant(
       email,
       name,
       role: "participant",
-      sessionToken: token,
+      sessionToken,
       teamId,
     },
     await uniqueCoffeeCode(store),
   );
-  if (!created.ok) {
-    return created;
+  if (created.ok) {
+    return ok({ participant: created.participant, sessionToken });
   }
-  return ok({ participant: created.participant, sessionToken: token });
+  if (created.error.status === 409) {
+    const raced = await repo.findParticipantByEmail(store, email);
+    if (raced) {
+      return stampCheckIn(store, raced, { name, sessionToken, teamId });
+    }
+  }
+  return created;
 }
 
 export async function getParticipantFromSession(

@@ -1,4 +1,4 @@
-import { asc, count, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
 import type {
   CoffeePoolStatus,
   ConfigRow,
@@ -19,6 +19,7 @@ import { newId } from "@/shared/ids";
 export const CONFIG_ID = "config";
 
 const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
+const PARTICIPANT_UNIQUE_COLUMN = /impact_lab_participants\.(\w+)/;
 
 function first<T>(rows: T[]): T | undefined {
   const [row] = rows;
@@ -28,6 +29,40 @@ function first<T>(rows: T[]): T | undefined {
 function isUniqueConstraint(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return UNIQUE_CONSTRAINT.test(message);
+}
+
+function uniqueColumn(error: unknown): string | null {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.match(PARTICIPANT_UNIQUE_COLUMN)?.[1] ?? null;
+}
+
+type PoolClaim =
+  | { kind: "claimed"; code: string; id: string }
+  | { kind: "empty" }
+  | { kind: "lost" };
+
+async function claimPoolRow(store: RegistryStore, participantId: string): Promise<PoolClaim> {
+  const { impactLabCoffeeCodes } = store.tables;
+  const entry = await findNextUnassignedCoffee(store);
+  if (!entry) {
+    return { kind: "empty" };
+  }
+  const claimed = first(
+    await store.db
+      .update(impactLabCoffeeCodes)
+      .set({ participantId })
+      .where(and(eq(impactLabCoffeeCodes.id, entry.id), isNull(impactLabCoffeeCodes.participantId)))
+      .returning({ code: impactLabCoffeeCodes.code, id: impactLabCoffeeCodes.id }),
+  );
+  return claimed ? { kind: "claimed", ...claimed } : { kind: "lost" };
+}
+
+async function unclaimPoolRow(store: RegistryStore, claimedId: string): Promise<void> {
+  const { impactLabCoffeeCodes } = store.tables;
+  await store.db
+    .update(impactLabCoffeeCodes)
+    .set({ participantId: null })
+    .where(eq(impactLabCoffeeCodes.id, claimedId));
 }
 
 function iso(value: Date | null | undefined): string | null {
@@ -300,48 +335,66 @@ export async function findNextUnassignedCoffee(
   return row ?? null;
 }
 
-export async function insertParticipantWithPool(
+async function insertClaimedParticipant(
   store: RegistryStore,
   input: ParticipantWrite,
-  fallbackCode: string,
+  id: string,
+  coffeeCode: string,
 ): Promise<Result<{ participant: ParticipantDetail }>> {
-  const { impactLabCoffeeCodes, impactLabParticipants } = store.tables;
+  const { impactLabParticipants } = store.tables;
   const now = new Date();
-  const id = newId("ilp");
-  const entry = await findNextUnassignedCoffee(store);
-  const coffeeCode = entry?.code ?? fallbackCode;
-  try {
-    await store.db.insert(impactLabParticipants).values({
-      checkedIn: input.checkedIn ?? false,
-      checkedInAt: input.checkedInAt ?? null,
-      coffeeCode,
-      createdAt: now,
-      email: input.email,
-      id,
-      name: input.name,
-      preRegistered: input.preRegistered ?? false,
-      role: input.role ?? "participant",
-      sessionToken: input.sessionToken ?? null,
-      teamId: input.teamId ?? null,
-      updatedAt: now,
-    });
-  } catch (error) {
-    if (isUniqueConstraint(error)) {
-      return err("conflict", 409, "Someone with that email is already registered");
-    }
-    throw error;
-  }
-  if (entry) {
-    await store.db
-      .update(impactLabCoffeeCodes)
-      .set({ participantId: id })
-      .where(eq(impactLabCoffeeCodes.id, entry.id));
-  }
+  await store.db.insert(impactLabParticipants).values({
+    checkedIn: input.checkedIn ?? false,
+    checkedInAt: input.checkedInAt ?? null,
+    coffeeCode,
+    createdAt: now,
+    email: input.email,
+    id,
+    name: input.name,
+    preRegistered: input.preRegistered ?? false,
+    role: input.role ?? "participant",
+    sessionToken: input.sessionToken ?? null,
+    teamId: input.teamId ?? null,
+    updatedAt: now,
+  });
   const participant = await findParticipantById(store, id);
   if (!participant) {
     return err("internal", 500, "Failed to create participant");
   }
   return ok({ participant });
+}
+
+export async function insertParticipantWithPool(
+  store: RegistryStore,
+  input: ParticipantWrite,
+  fallbackCode: string,
+): Promise<Result<{ participant: ParticipantDetail }>> {
+  const id = newId("ilp");
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    // biome-ignore lint/performance/noAwaitInLoops: claim the next free pool row before insert
+    const claimed = await claimPoolRow(store, id);
+    if (claimed.kind === "lost") {
+      continue;
+    }
+    const coffeeCode = claimed.kind === "claimed" ? claimed.code : fallbackCode;
+    try {
+      return await insertClaimedParticipant(store, input, id, coffeeCode);
+    } catch (error) {
+      if (claimed.kind === "claimed") {
+        await unclaimPoolRow(store, claimed.id);
+      }
+      if (uniqueColumn(error) === "coffee_code") {
+        continue;
+      }
+      if (isUniqueConstraint(error)) {
+        return err("conflict", 409, "Someone with that email is already registered");
+      }
+      throw error;
+    }
+  }
+
+  return err("conflict", 409, "Could not assign a coffee code — try again");
 }
 
 export async function updateParticipant(
@@ -462,26 +515,22 @@ export async function upsertVote(
   statementId: string,
 ): Promise<void> {
   const { impactLabVotes } = store.tables;
-  const existing = first(
-    await store.db
-      .select({ id: impactLabVotes.id })
-      .from(impactLabVotes)
-      .where(eq(impactLabVotes.participantId, participantId))
-      .limit(1),
-  );
-  if (existing) {
+  try {
+    await store.db.insert(impactLabVotes).values({
+      createdAt: new Date(),
+      id: newId("ilv"),
+      participantId,
+      statementId,
+    });
+  } catch (error) {
+    if (!isUniqueConstraint(error)) {
+      throw error;
+    }
     await store.db
       .update(impactLabVotes)
       .set({ statementId })
-      .where(eq(impactLabVotes.id, existing.id));
-    return;
+      .where(eq(impactLabVotes.participantId, participantId));
   }
-  await store.db.insert(impactLabVotes).values({
-    createdAt: new Date(),
-    id: newId("ilv"),
-    participantId,
-    statementId,
-  });
 }
 
 export async function voteTallies(store: RegistryStore): Promise<Record<string, number>> {

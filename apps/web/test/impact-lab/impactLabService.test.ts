@@ -166,6 +166,26 @@ describe("impactLabService check-in and session", () => {
       expect(status.status.unassigned).toBe(1);
     }
   });
+
+  it("falls back to a generated code when the pool is exhausted", async () => {
+    const { store, token } = await adminToken();
+    await growCoffeePool(store, token, 1);
+    const first = await checkInParticipant(store, {
+      code: DEFAULT_ACCESS_CODE,
+      email: "pool@example.com",
+      name: "Pool",
+    });
+    const overflow = await checkInParticipant(store, {
+      code: DEFAULT_ACCESS_CODE,
+      email: "overflow@example.com",
+      name: "Overflow",
+    });
+    expect(first.ok && overflow.ok).toBe(true);
+    if (!(first.ok && overflow.ok)) {
+      return;
+    }
+    expect(overflow.participant.coffeeCode).not.toBe(first.participant.coffeeCode);
+  });
 });
 
 describe("impactLabService coffee, teams, and voting", () => {
