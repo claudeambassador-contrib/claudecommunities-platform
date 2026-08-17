@@ -11,6 +11,7 @@ import * as courses from "@/modules/courses/schema.tenant";
 import * as email from "@/modules/email/schema.tenant";
 import * as events from "@/modules/events/schema.tenant";
 import * as pages from "@/modules/pages/schema.tenant";
+import * as roleTables from "@/modules/roles/schema.tenant";
 import * as slides from "@/modules/slides/schema.tenant";
 import * as social from "@/modules/social/schema.tenant";
 import * as talks from "@/modules/talks/schema.tenant";
@@ -56,6 +57,7 @@ export const pagesTable = pages.pages;
 export const badges = badgeTables.badges;
 export const userBadges = badgeTables.userBadges;
 export const notifications = pages.notifications;
+export const roles = roleTables.roles;
 
 /** Stable object of tenant tables (no per-schema factory needed on D1). */
 export function createTenantSchema() {
@@ -80,6 +82,7 @@ export function createTenantSchema() {
     pages: pages.pages,
     posts: community.posts,
     reactions: community.reactions,
+    roles: roleTables.roles,
     scheduledCourses: courses.scheduledCourses,
     slideExportJobs: slides.slideExportJobs,
     slideGeneratorStates: slides.slideGeneratorStates,

@@ -21,6 +21,16 @@ export function openMemoryTenant(orgId = "org_test"): TenantStore {
   });
 }
 
+export function ownerActor(overrides: Partial<Actor> = {}): Actor {
+  return {
+    email: "owner@example.com",
+    id: "usr_owner",
+    name: "Owner",
+    permissions: permissionsForRole("owner"),
+    ...overrides,
+  };
+}
+
 export function adminActor(overrides: Partial<Actor> = {}): Actor {
   return {
     email: "admin@example.com",

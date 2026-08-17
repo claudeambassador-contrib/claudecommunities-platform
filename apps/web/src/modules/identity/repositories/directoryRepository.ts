@@ -77,6 +77,40 @@ export async function findUserById(store: RegistryStore, id: string): Promise<Us
   };
 }
 
+export async function findMembership(
+  store: RegistryStore,
+  userId: string,
+  orgId: string,
+): Promise<{ role: MembershipRole; userId: string } | null> {
+  const { userMemberships } = store.tables;
+  const row = first(
+    await store.db
+      .select()
+      .from(userMemberships)
+      .where(and(eq(userMemberships.orgId, orgId), eq(userMemberships.userId, userId)))
+      .limit(1),
+  );
+  if (!row) {
+    return null;
+  }
+  return { role: asRole(row.role), userId: row.userId };
+}
+
+export async function updateMembershipRole(
+  store: RegistryStore,
+  orgId: string,
+  userId: string,
+  role: MembershipRole,
+): Promise<boolean> {
+  const { userMemberships } = store.tables;
+  const result = await store.db
+    .update(userMemberships)
+    .set({ role, updatedAt: new Date() })
+    .where(and(eq(userMemberships.orgId, orgId), eq(userMemberships.userId, userId)))
+    .returning({ id: userMemberships.id });
+  return Boolean(first(result));
+}
+
 export async function listOrgMembers(
   store: RegistryStore,
   orgId: string,

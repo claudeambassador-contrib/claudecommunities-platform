@@ -71,6 +71,23 @@ export function permissionsForRole(
   return MEMBER_PERMS;
 }
 
+export function parsePermissions(raw: string | null | undefined): Permission[] {
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter(
+      (item): item is Permission => typeof item === "string" && item in PERMISSIONS,
+    );
+  } catch {
+    return [];
+  }
+}
+
 export function hasPermission(
   permissions: ReadonlySet<Permission>,
   permission: Permission | Permission[],
