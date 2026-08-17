@@ -6,11 +6,13 @@ const getPosts = createServerFn({ method: "GET" })
   .inputValidator((d: { citySlug: string }) => d)
   .handler(async ({ data }) => {
     const result = await listPosts(data.citySlug);
-    if (!result.ok) return { posts: [] as { id: string; body: string; createdAt: Date }[] };
+    if (!result.ok) {
+      return { posts: [] as { id: string; content: string; createdAt: string }[] };
+    }
     return {
       posts: result.posts.map((p) => ({
         id: p.id,
-        body: p.body,
+        content: p.content,
         createdAt: p.createdAt,
       })),
     };
@@ -31,8 +33,8 @@ function CommunityPage() {
         <div className="card muted">No posts yet. Sign in to create one.</div>
       ) : (
         posts.map((p) => (
-          <article key={p.id} className="card">
-            <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{p.body}</p>
+          <article className="card" key={p.id}>
+            <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{p.content}</p>
             <div className="muted" style={{ marginTop: "0.5rem" }}>
               {new Date(p.createdAt).toLocaleString()}
             </div>

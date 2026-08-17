@@ -29,3 +29,14 @@ export function requireActor(actor: Actor | null | undefined): Result<{ actor: A
   }
   return ok({ actor });
 }
+
+export function ensureOwnerOrPermission(
+  actor: Actor,
+  ownerId: string,
+  permission: Permission,
+): Result<Record<string, never>> {
+  if (actor.id === ownerId) {
+    return ok({});
+  }
+  return ensurePermission(actor, permission);
+}

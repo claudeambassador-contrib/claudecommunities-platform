@@ -90,6 +90,10 @@ CREATE TABLE IF NOT EXISTS spaces (
   slug TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
+  icon TEXT,
+  color TEXT,
+  is_private INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS spaces_org_slug ON spaces (org_id, slug);
@@ -99,7 +103,11 @@ CREATE TABLE IF NOT EXISTS posts (
   org_id TEXT NOT NULL,
   space_id TEXT REFERENCES spaces(id) ON DELETE SET NULL,
   author_user_id TEXT NOT NULL,
+  title TEXT,
   body TEXT NOT NULL,
+  media_url TEXT,
+  media_type TEXT,
+  is_pinned INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -109,9 +117,11 @@ CREATE TABLE IF NOT EXISTS comments (
   id TEXT PRIMARY KEY NOT NULL,
   org_id TEXT NOT NULL,
   post_id TEXT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  parent_id TEXT,
   author_user_id TEXT NOT NULL,
   body TEXT NOT NULL,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS reactions (
@@ -132,6 +142,26 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   created_at INTEGER NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS bookmarks_post_user ON bookmarks (post_id, user_id);
+
+CREATE TABLE IF NOT EXISTS comment_reactions (
+  id TEXT PRIMARY KEY NOT NULL,
+  org_id TEXT NOT NULL,
+  comment_id TEXT NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  emoji TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS comment_reactions_comment_user_emoji
+  ON comment_reactions (comment_id, user_id, emoji);
+
+CREATE TABLE IF NOT EXISTS space_views (
+  id TEXT PRIMARY KEY NOT NULL,
+  org_id TEXT NOT NULL,
+  space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  viewed_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS space_views_space_user ON space_views (space_id, user_id);
 
 CREATE TABLE IF NOT EXISTS courses (
   id TEXT PRIMARY KEY NOT NULL,

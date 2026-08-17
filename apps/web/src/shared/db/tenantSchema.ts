@@ -2,14 +2,15 @@
  * Single SQLite table set applied to every city D1.
  * Unlike Robinson's pgSchema(name), D1 isolation is physical (one DB per city).
  */
-import * as events from "@/modules/events/schema.tenant";
+
 import * as community from "@/modules/community/schema.tenant";
 import * as courses from "@/modules/courses/schema.tenant";
-import * as talks from "@/modules/talks/schema.tenant";
 import * as email from "@/modules/email/schema.tenant";
-import * as social from "@/modules/social/schema.tenant";
-import * as slides from "@/modules/slides/schema.tenant";
+import * as events from "@/modules/events/schema.tenant";
 import * as pages from "@/modules/pages/schema.tenant";
+import * as slides from "@/modules/slides/schema.tenant";
+import * as social from "@/modules/social/schema.tenant";
+import * as talks from "@/modules/talks/schema.tenant";
 
 export const eventsTable = events.events;
 export const eventRsvps = events.eventRsvps;
@@ -22,7 +23,9 @@ export const spaces = community.spaces;
 export const posts = community.posts;
 export const comments = community.comments;
 export const reactions = community.reactions;
+export const commentReactions = community.commentReactions;
 export const bookmarks = community.bookmarks;
+export const spaceViews = community.spaceViews;
 export type PostRow = community.PostRow;
 
 export const coursesTable = courses.courses;
@@ -49,31 +52,33 @@ export const notifications = pages.notifications;
 /** Stable object of tenant tables (no per-schema factory needed on D1). */
 export function createTenantSchema() {
   return {
-    events: events.events,
-    eventRsvps: events.eventRsvps,
+    badges: pages.badges,
+    bookmarks: community.bookmarks,
+    commentReactions: community.commentReactions,
+    comments: community.comments,
+    courseEnrollments: courses.courseEnrollments,
+    courses: courses.courses,
+    emailCampaigns: email.emailCampaigns,
+    emailSends: email.emailSends,
+    emailTemplates: email.emailTemplates,
     eventAgendaItems: events.eventAgendaItems,
     eventLumaInterests: events.eventLumaInterests,
     eventResources: events.eventResources,
-    spaces: community.spaces,
-    posts: community.posts,
-    comments: community.comments,
-    reactions: community.reactions,
-    bookmarks: community.bookmarks,
-    courses: courses.courses,
+    eventRsvps: events.eventRsvps,
+    events: events.events,
     lessons: courses.lessons,
-    courseEnrollments: courses.courseEnrollments,
-    speakers: talks.speakers,
-    talkSubmissions: talks.talkSubmissions,
-    emailCampaigns: email.emailCampaigns,
-    emailTemplates: email.emailTemplates,
-    emailSends: email.emailSends,
+    notifications: pages.notifications,
+    pages: pages.pages,
+    posts: community.posts,
+    reactions: community.reactions,
+    slideExportJobs: slides.slideExportJobs,
+    slideGeneratorStates: slides.slideGeneratorStates,
     socialAccounts: social.socialAccounts,
     socialPosts: social.socialPosts,
-    slideGeneratorStates: slides.slideGeneratorStates,
-    slideExportJobs: slides.slideExportJobs,
-    pages: pages.pages,
-    badges: pages.badges,
-    notifications: pages.notifications,
+    spaces: community.spaces,
+    spaceViews: community.spaceViews,
+    speakers: talks.speakers,
+    talkSubmissions: talks.talkSubmissions,
   };
 }
 
