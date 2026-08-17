@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   addAgendaItem,
   createEvent,
+  deleteAgendaItem,
   deleteEvent,
   getEvent,
   getLumaInterestStatus,
+  getLumaWaitlistCount,
   getRsvpStats,
   listAgenda,
   listEventSitemapEntries,
@@ -15,6 +17,8 @@ import {
   reorderAgenda,
   rsvpToEvent,
   setEventActive,
+  unregisterLumaInterest,
+  updateAgendaItem,
   updateEvent,
 } from "@/modules/events/services/eventsService";
 import {
@@ -375,6 +379,19 @@ describe("event agenda", () => {
       return;
     }
     expect(after.items.map((i) => i.title)).toEqual(["Talks", "Doors"]);
+
+    const renamed = await updateAgendaItem(store, adminActor(), custom.item.id, {
+      title: "Keynotes",
+    });
+    expect(renamed.ok).toBe(true);
+    const removed = await deleteAgendaItem(store, adminActor(), welcome.item.id);
+    expect(removed.ok).toBe(true);
+    const leftover = await listAgenda(store, adminActor(), created.event.id);
+    expect(leftover.ok).toBe(true);
+    if (!leftover.ok) {
+      return;
+    }
+    expect(leftover.items.map((i) => i.title)).toEqual(["Keynotes"]);
   });
 
   it("rejects agenda writes without events.edit", async () => {
@@ -422,6 +439,84 @@ describe("luma interest", () => {
     }
     expect(status.registered).toBe(true);
     expect(status.count).toBe(1);
+
+    const cleared = await unregisterLumaInterest(store, memberActor(), created.event.id);
+    expect(cleared.ok).toBe(true);
+    const after = await getLumaWaitlistCount(store, created.event.id);
+    expect(after.ok).toBe(true);
+    if (!after.ok) {
+      return;
+    }
+    expect(after.count).toBe(0);
+  });
+
+  it("does not burn the waitlist when a Luma URL is set without a notifier", async () => {
+    const store = openMemoryTenant();
+    const created = await createEvent(store, adminActor(), {
+      startTime: FUTURE,
+      title: "Hold",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    await registerLumaInterest(store, memberActor(), created.event.id, {
+      now: () => new Date("2026-09-01T00:00:00.000Z"),
+    });
+
+    const updated = await updateEvent(store, adminActor(), created.event.id, {
+      lumaUrl: "https://lu.ma/hold",
+    });
+    expect(updated.ok).toBe(true);
+
+    const pending = await notifyLumaWaitlist(store, created.event.id, {
+      notify: ({ userId }) => {
+        expect(userId).toBe("usr_member");
+        return Promise.resolve();
+      },
+    });
+    expect(pending.ok).toBe(true);
+    if (!pending.ok) {
+      return;
+    }
+    expect(pending.notified).toBe(1);
+  });
+
+  it("does not stamp the waitlist when notify throws", async () => {
+    const store = openMemoryTenant();
+    const created = await createEvent(store, adminActor(), {
+      startTime: FUTURE,
+      title: "Retry",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    await registerLumaInterest(store, memberActor(), created.event.id, {
+      now: () => new Date("2026-09-01T00:00:00.000Z"),
+    });
+    await updateEvent(store, adminActor(), created.event.id, {
+      lumaUrl: "https://lu.ma/retry",
+    });
+
+    const failed = await notifyLumaWaitlist(store, created.event.id, {
+      notify: () => Promise.reject(new Error("smtp down")),
+    });
+    expect(failed.ok).toBe(true);
+    if (!failed.ok) {
+      return;
+    }
+    expect(failed.notified).toBe(0);
+    expect(failed.failedEmails).toBe(1);
+
+    const retried = await notifyLumaWaitlist(store, created.event.id, {
+      notify: () => Promise.resolve(),
+    });
+    expect(retried.ok).toBe(true);
+    if (!retried.ok) {
+      return;
+    }
+    expect(retried.notified).toBe(1);
   });
 
   it("rejects interest once a Luma URL exists", async () => {

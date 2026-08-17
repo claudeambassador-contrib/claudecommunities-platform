@@ -1,37 +1,16 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import type { EventAgendaRow, EventRow } from "@/modules/events/schema.tenant";
 import type {
   AgendaItemDetail,
   AgendaItemType,
   EventDetail,
-  EventStatus,
+  EventWrite,
+  RsvpRow,
   StoredRsvpStatus,
 } from "@/modules/events/types";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
-
-export interface EventWrite {
-  city?: string | null;
-  coverUrl?: string | null;
-  description?: string | null;
-  endsAt?: Date | null;
-  eventType?: string;
-  feedbackUrl?: string | null;
-  footerText?: string | null;
-  headerText?: string | null;
-  isOnline?: boolean;
-  location?: string | null;
-  lumaUrl?: string | null;
-  maxAttendees?: number | null;
-  meetingUrl?: string | null;
-  rsvpEnabled?: boolean;
-  slug: string;
-  startsAt: Date;
-  status?: EventStatus;
-  timezone?: string | null;
-  title: string;
-}
 
 function first<T>(rows: T[]): T | undefined {
   const [row] = rows;
@@ -111,7 +90,7 @@ export async function listEvents(
   store: TenantStore,
   options: { includeInactive?: boolean } = {},
 ): Promise<EventDetail[]> {
-  const { events } = store.tables;
+  const { eventRsvps, events } = store.tables;
   const rows = await store.db
     .select()
     .from(events)
@@ -121,7 +100,13 @@ export async function listEvents(
         : and(eq(events.orgId, store.orgId), eq(events.status, "published")),
     )
     .orderBy(asc(events.startsAt));
-  return Promise.all(rows.map(async (row) => toDetail(row, await rsvpCountFor(store, row.id))));
+  const counts = await store.db
+    .select({ eventId: eventRsvps.eventId, n: sql<number>`count(*)` })
+    .from(eventRsvps)
+    .where(eq(eventRsvps.orgId, store.orgId))
+    .groupBy(eventRsvps.eventId);
+  const countById = new Map(counts.map((row) => [row.eventId, Number(row.n)]));
+  return rows.map((row) => toDetail(row, countById.get(row.id) ?? 0));
 }
 
 export async function getById(
@@ -152,41 +137,54 @@ export async function findBySlug(store: TenantStore, slug: string): Promise<Even
   return row ? toDetail(row) : null;
 }
 
-export async function insert(store: TenantStore, input: EventWrite): Promise<EventDetail> {
+const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
+
+function isUniqueConstraint(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return UNIQUE_CONSTRAINT.test(message);
+}
+
+export async function insert(
+  store: TenantStore,
+  input: EventWrite,
+): Promise<Result<{ event: EventDetail }>> {
   const { events } = store.tables;
   const now = new Date();
   const id = newId("evt");
-  await store.db.insert(events).values({
-    city: input.city ?? null,
-    coverUrl: input.coverUrl ?? null,
-    createdAt: now,
-    description: input.description ?? null,
-    endsAt: input.endsAt ?? null,
-    eventType: input.eventType ?? "meetup",
-    feedbackUrl: input.feedbackUrl ?? null,
-    footerText: input.footerText ?? null,
-    headerText: input.headerText ?? null,
-    id,
-    isOnline: input.isOnline ?? false,
-    location: input.location ?? null,
-    lumaEventId: null,
-    lumaUrl: input.lumaUrl ?? null,
-    maxAttendees: input.maxAttendees ?? null,
-    meetingUrl: input.meetingUrl ?? null,
-    orgId: store.orgId,
-    rsvpEnabled: input.rsvpEnabled ?? false,
-    slug: input.slug,
-    startsAt: input.startsAt,
-    status: input.status ?? "draft",
-    timezone: input.timezone ?? null,
-    title: input.title,
-    updatedAt: now,
-  });
-  const created = await getById(store, id);
-  if (!created.ok) {
-    throw new Error("insert event failed");
+  try {
+    await store.db.insert(events).values({
+      city: input.city ?? null,
+      coverUrl: input.coverUrl ?? null,
+      createdAt: now,
+      description: input.description ?? null,
+      endsAt: input.endsAt ?? null,
+      eventType: input.eventType ?? "meetup",
+      feedbackUrl: input.feedbackUrl ?? null,
+      footerText: input.footerText ?? null,
+      headerText: input.headerText ?? null,
+      id,
+      isOnline: input.isOnline ?? false,
+      location: input.location ?? null,
+      lumaEventId: null,
+      lumaUrl: input.lumaUrl ?? null,
+      maxAttendees: input.maxAttendees ?? null,
+      meetingUrl: input.meetingUrl ?? null,
+      orgId: store.orgId,
+      rsvpEnabled: input.rsvpEnabled ?? false,
+      slug: input.slug,
+      startsAt: input.startsAt,
+      status: input.status ?? "draft",
+      timezone: input.timezone ?? null,
+      title: input.title,
+      updatedAt: now,
+    });
+  } catch (error) {
+    if (isUniqueConstraint(error)) {
+      return err("conflict", 409, "An event with this slug already exists");
+    }
+    throw error;
   }
-  return created.event;
+  return getById(store, id);
 }
 
 export async function updateById(
@@ -219,10 +217,7 @@ export async function deleteById(
   return ok({ success: true });
 }
 
-export async function listRsvps(
-  store: TenantStore,
-  eventId: string,
-): Promise<{ userId: string; status: StoredRsvpStatus; createdAt: Date }[]> {
+export async function listRsvps(store: TenantStore, eventId: string): Promise<RsvpRow[]> {
   const { eventRsvps } = store.tables;
   const rows = await store.db
     .select()
@@ -230,7 +225,7 @@ export async function listRsvps(
     .where(and(eq(eventRsvps.orgId, store.orgId), eq(eventRsvps.eventId, eventId)))
     .orderBy(desc(eventRsvps.createdAt));
   return rows.map((row) => ({
-    createdAt: row.createdAt,
+    createdAt: row.createdAt.toISOString(),
     status: row.status,
     userId: row.userId,
   }));
@@ -351,7 +346,7 @@ export async function insertAgendaItem(
     speakerId?: string | null;
     sortOrder: number;
   },
-): Promise<AgendaItemDetail> {
+): Promise<Result<{ item: AgendaItemDetail }>> {
   const { eventAgendaItems } = store.tables;
   const now = new Date();
   const id = newId("agi");
@@ -377,9 +372,9 @@ export async function insertAgendaItem(
     .limit(1);
   const row = first(rows);
   if (!row) {
-    throw new Error("insert agenda item failed");
+    return err("internal", 500, "Failed to create agenda item");
   }
-  return toAgenda(row);
+  return ok({ item: toAgenda(row) });
 }
 
 export async function updateAgendaItem(
@@ -503,10 +498,16 @@ export async function listPendingLumaInterests(
 ): Promise<{ id: string; userId: string }[]> {
   const { eventLumaInterests } = store.tables;
   const rows = await store.db
-    .select()
+    .select({ id: eventLumaInterests.id, userId: eventLumaInterests.userId })
     .from(eventLumaInterests)
-    .where(and(eq(eventLumaInterests.orgId, store.orgId), eq(eventLumaInterests.eventId, eventId)));
-  return rows.filter((row) => !row.notifiedAt).map((row) => ({ id: row.id, userId: row.userId }));
+    .where(
+      and(
+        eq(eventLumaInterests.orgId, store.orgId),
+        eq(eventLumaInterests.eventId, eventId),
+        isNull(eventLumaInterests.notifiedAt),
+      ),
+    );
+  return rows;
 }
 
 export async function stampLumaNotified(store: TenantStore, interestId: string): Promise<void> {
@@ -532,12 +533,12 @@ export async function listActiveLumaInterestsForUser(
         eq(eventLumaInterests.orgId, store.orgId),
         eq(eventLumaInterests.userId, userId),
         eq(events.status, "published"),
+        or(isNull(events.lumaUrl), eq(events.lumaUrl, "")),
+        gt(events.startsAt, now),
       ),
     )
     .orderBy(asc(events.startsAt));
-  return rows
-    .map((row) => toDetail(row.event))
-    .filter((event) => !event.lumaUrl && event.startTime && new Date(event.startTime) > now);
+  return rows.map((row) => toDetail(row.event));
 }
 
 export async function listSitemapEntries(

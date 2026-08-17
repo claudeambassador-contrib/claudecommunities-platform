@@ -26,6 +26,35 @@ export interface EventCreateBody {
 
 export type EventUpdateBody = Partial<EventCreateBody>;
 
+/** Persistence write DTO — dates stay as Date only inside the repository. */
+export interface EventWrite {
+  city?: string | null;
+  coverUrl?: string | null;
+  description?: string | null;
+  endsAt?: Date | null;
+  eventType?: string;
+  feedbackUrl?: string | null;
+  footerText?: string | null;
+  headerText?: string | null;
+  isOnline?: boolean;
+  location?: string | null;
+  lumaUrl?: string | null;
+  maxAttendees?: number | null;
+  meetingUrl?: string | null;
+  rsvpEnabled?: boolean;
+  slug: string;
+  startsAt: Date;
+  status?: EventStatus;
+  timezone?: string | null;
+  title: string;
+}
+
+export interface RsvpRow {
+  createdAt: string;
+  status: StoredRsvpStatus;
+  userId: string;
+}
+
 export interface EventDetail {
   city: string | null;
   createdAt: string;

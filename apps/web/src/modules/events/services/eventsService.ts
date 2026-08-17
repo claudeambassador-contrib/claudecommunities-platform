@@ -8,11 +8,13 @@ import type {
   EventCreateBody,
   EventDetail,
   EventUpdateBody,
+  EventWrite,
   LumaWaitlistNotifier,
   ReorderEntry,
   RsvpCounts,
   RsvpStats,
   RsvpStatus,
+  StoredRsvpStatus,
 } from "@/modules/events/types";
 import {
   isAllowedImageUrl,
@@ -61,8 +63,8 @@ function toEventWritePatch(
   input: EventUpdateBody,
   start?: { date: Date | null },
   end?: { date: Date | null },
-): Partial<eventsRepo.EventWrite> {
-  const patch: Partial<eventsRepo.EventWrite> = {};
+): Partial<EventWrite> {
+  const patch: Partial<EventWrite> = {};
   if (input.title !== undefined) {
     patch.title = input.title;
   }
@@ -194,7 +196,7 @@ export async function createEvent(
   }
 
   const slug = await uniqueSlug(store, buildDateSlug(input.title, start.date));
-  const event = await eventsRepo.insert(store, {
+  return await eventsRepo.insert(store, {
     city: input.city,
     coverUrl: input.imageUrl,
     description: input.description,
@@ -215,7 +217,6 @@ export async function createEvent(
     timezone: input.timezone,
     title: input.title,
   });
-  return ok({ event });
 }
 
 export async function updateEvent(
@@ -334,7 +335,7 @@ export async function rsvpToEvent(
   actor: Actor,
   eventId: string,
   status: RsvpStatus,
-): Promise<Result<{ success: true; status: StoredOrNull; counts: RsvpCounts }>> {
+): Promise<Result<{ success: true; status: StoredRsvpStatus | null; counts: RsvpCounts }>> {
   if (status !== "going" && status !== "interested" && status !== "not_going") {
     return err("bad_request", 400, "Invalid status. Must be 'going', 'interested', or 'not_going'");
   }
@@ -372,8 +373,6 @@ export async function rsvpToEvent(
 
   return ok({ counts: await rsvpCounts(store, eventId), status, success: true });
 }
-
-type StoredOrNull = "going" | "interested" | null;
 
 export async function deleteRsvp(
   store: TenantStore,
@@ -428,7 +427,7 @@ export async function addAgendaItem(
   }
   const existing = await eventsRepo.listAgendaItems(store, eventId);
   const nextOrder = existing.length === 0 ? 0 : Math.max(...existing.map((i) => i.order)) + 1;
-  const item = await eventsRepo.insertAgendaItem(store, eventId, {
+  return await eventsRepo.insertAgendaItem(store, eventId, {
     description: input.description,
     endsAt: end.date,
     sortOrder: nextOrder,
@@ -437,7 +436,6 @@ export async function addAgendaItem(
     title: input.title,
     type,
   });
-  return ok({ item });
 }
 
 export async function updateAgendaItem(
@@ -587,26 +585,30 @@ export async function notifyLumaWaitlist(
   if (!(found.ok && found.event.lumaUrl)) {
     return ok({ failedEmails: 0, notified: 0 });
   }
+  if (!notifier) {
+    return ok({ failedEmails: 0, notified: 0 });
+  }
   const pending = await eventsRepo.listPendingLumaInterests(store, eventId);
   let failedEmails = 0;
+  let notified = 0;
   for (const row of pending) {
-    if (notifier) {
-      try {
-        // Stamp after each fan-out so a mid-loop failure does not re-send.
-        // biome-ignore lint/performance/noAwaitInLoops: notify-then-stamp is sequential
-        await notifier.notify({
-          eventId,
-          lumaUrl: found.event.lumaUrl,
-          title: found.event.title,
-          userId: row.userId,
-        });
-      } catch {
-        failedEmails += 1;
-      }
+    try {
+      // Stamp only after a successful fan-out so a missing or failed
+      // notifier cannot burn the waitlist.
+      // biome-ignore lint/performance/noAwaitInLoops: notify-then-stamp is sequential
+      await notifier.notify({
+        eventId,
+        lumaUrl: found.event.lumaUrl,
+        title: found.event.title,
+        userId: row.userId,
+      });
+      await eventsRepo.stampLumaNotified(store, row.id);
+      notified += 1;
+    } catch {
+      failedEmails += 1;
     }
-    await eventsRepo.stampLumaNotified(store, row.id);
   }
-  return ok({ failedEmails, notified: pending.length });
+  return ok({ failedEmails, notified });
 }
 
 export async function getLumaInterestStatus(
