@@ -8,6 +8,7 @@
 import * as activityTables from "@/modules/activity/schema.tenant";
 import * as badgeTables from "@/modules/badges/schema.tenant";
 import * as community from "@/modules/community/schema.tenant";
+import * as connectionTables from "@/modules/connections/schema.tenant";
 import * as courses from "@/modules/courses/schema.tenant";
 import * as email from "@/modules/email/schema.tenant";
 import * as events from "@/modules/events/schema.tenant";
@@ -61,6 +62,7 @@ export const userBadges = badgeTables.userBadges;
 export const notifications = pages.notifications;
 export const roles = roleTables.roles;
 export const activities = activityTables.activities;
+export const connections = connectionTables.connections;
 export const polls = pollTables.polls;
 export const pollOptions = pollTables.pollOptions;
 export const pollVotes = pollTables.pollVotes;
@@ -73,6 +75,7 @@ export function createTenantSchema() {
     bookmarks: community.bookmarks,
     commentReactions: community.commentReactions,
     comments: community.comments,
+    connections: connectionTables.connections,
     courseEnrollments: courses.courseEnrollments,
     courses: courses.courses,
     emailCampaigns: email.emailCampaigns,
@@ -88,8 +91,8 @@ export function createTenantSchema() {
     notifications: pages.notifications,
     pages: pages.pages,
     pollOptions: pollTables.pollOptions,
-    pollVotes: pollTables.pollVotes,
     polls: pollTables.polls,
+    pollVotes: pollTables.pollVotes,
     posts: community.posts,
     reactions: community.reactions,
     roles: roleTables.roles,
