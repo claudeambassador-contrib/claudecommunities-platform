@@ -88,7 +88,7 @@ export function SlideCanvas({
 
   return (
     <div className="stack">
-      <div className="row" style={{ flexWrap: "wrap" }}>
+      <div className="row">
         {deck.slides.map((item, index) => (
           <button
             className={index === selected ? "btn btn-primary" : "btn"}
@@ -111,45 +111,43 @@ export function SlideCanvas({
         className="card stack"
         style={{
           aspectRatio: "16 / 9",
-          background: slide.layout === "minimal" ? "#faf9f6" : "#1c1917",
-          color: slide.layout === "minimal" ? "#1c1917" : "#faf9f6",
+          background: slide.layout === "minimal" ? "var(--fg)" : "var(--bg)",
+          color: slide.layout === "minimal" ? "var(--bg)" : "var(--fg)",
           justifyContent: slide.layout === "centered" ? "center" : "flex-end",
           minHeight: 220,
         }}
       >
-        <strong style={{ fontSize: "1.5rem" }}>{slide.title || "Untitled slide"}</strong>
+        <strong className="text-[1.5rem]">{slide.title || "Untitled slide"}</strong>
         {slide.speaker ? <div>{slide.speaker}</div> : null}
-        {slide.body ? <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{slide.body}</p> : null}
+        {slide.body ? <p className="m-0 whitespace-pre-wrap">{slide.body}</p> : null}
       </div>
       <div className="card stack">
-        <input
-          className="field"
-          name="title"
-          onChange={handleField}
-          placeholder="Title"
-          value={slide.title}
-        />
-        <input
-          className="field"
-          name="speaker"
-          onChange={handleField}
-          placeholder="Speaker"
-          value={slide.speaker}
-        />
-        <textarea
-          className="field"
-          name="body"
-          onChange={handleField}
-          placeholder="Talk / body"
-          rows={4}
-          style={{ width: "100%" }}
-          value={slide.body}
-        />
-        <select className="field" name="layout" onChange={handleField} value={slide.layout}>
-          <option value="classic">Classic</option>
-          <option value="centered">Centered</option>
-          <option value="minimal">Minimal</option>
-        </select>
+        <label className="field-label">
+          Title
+          <input className="field" name="title" onChange={handleField} value={slide.title} />
+        </label>
+        <label className="field-label">
+          Speaker
+          <input className="field" name="speaker" onChange={handleField} value={slide.speaker} />
+        </label>
+        <label className="field-label">
+          Talk / body
+          <textarea
+            className="field w-full"
+            name="body"
+            onChange={handleField}
+            rows={4}
+            value={slide.body}
+          />
+        </label>
+        <label className="field-label">
+          Layout
+          <select className="field" name="layout" onChange={handleField} value={slide.layout}>
+            <option value="classic">Classic</option>
+            <option value="centered">Centered</option>
+            <option value="minimal">Minimal</option>
+          </select>
+        </label>
       </div>
     </div>
   );

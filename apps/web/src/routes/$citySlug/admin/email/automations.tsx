@@ -1,17 +1,23 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { useCallback, useState } from "react";
+import { z } from "zod";
 import {
   createAutomation,
   listAutomations,
   setAutomationStatus,
 } from "@/modules/email/services/emailOpsService";
-import type { AutomationDetail, AutomationLiveStatus } from "@/modules/email/types";
-import { loadCityPage } from "@/shared/http/cityPage";
+import {
+  AUTOMATION_LIVE_STATUSES,
+  type AutomationDetail,
+  type AutomationLiveStatus,
+} from "@/modules/email/types";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
+import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
 const TRIGGER_OPTIONS = [
   { label: "Signup", value: "signup" },
@@ -19,8 +25,10 @@ const TRIGGER_OPTIONS = [
   { label: "Manual", value: "manual" },
 ] as const;
 
+const loadAutomationsInput = z.object({ citySlug: z.string().min(1) });
+
 const loadAutomations = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadAutomationsInput.parse(input))
   .handler(({ data }) =>
     guarded(data.citySlug, "email.view", async (page) => {
       const listed = await listAutomations(page.store, page.actor);
@@ -31,36 +39,36 @@ const loadAutomations = createServerFn({ method: "GET" })
     }),
   );
 
+const submitAutomationInput = z.object({
+  citySlug: z.string().min(1),
+  name: z.string(),
+  triggerType: z.string(),
+});
+
 const submitAutomation = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; name: string; triggerType: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { error: "unauthenticated", ok: false as const };
-    }
-    const result = await createAutomation(page.store, page.actor, {
-      name: data.name,
-      triggerType: data.triggerType,
-    });
-    if (!result.ok) {
-      return { error: result.error.message ?? result.error.code, ok: false as const };
-    }
-    return { ok: true as const };
-  });
+  .validator((input: unknown) => submitAutomationInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, "email.edit", (page) =>
+      createAutomation(page.store, page.actor, {
+        name: data.name,
+        triggerType: data.triggerType,
+      }),
+    ),
+  );
+
+const submitAutomationStatusInput = z.object({
+  citySlug: z.string().min(1),
+  id: z.string(),
+  status: z.enum(AUTOMATION_LIVE_STATUSES),
+});
 
 const submitAutomationStatus = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; id: string; status: AutomationLiveStatus }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { error: "unauthenticated", ok: false as const };
-    }
-    const result = await setAutomationStatus(page.store, page.actor, data.id, data.status);
-    if (!result.ok) {
-      return { error: result.error.message ?? result.error.code, ok: false as const };
-    }
-    return { ok: true as const };
-  });
+  .validator((input: unknown) => submitAutomationStatusInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, "email.edit", (page) =>
+      setAutomationStatus(page.store, page.actor, data.id, data.status),
+    ),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/email/automations")({
   loader: ({ params }) => loadAutomations({ data: { citySlug: params.citySlug } }),
@@ -71,7 +79,7 @@ function triggerLabel(triggerType: AutomationDetail["triggerType"]): string {
   return TRIGGER_OPTIONS.find((option) => option.value === triggerType)?.label ?? triggerType;
 }
 
-function EmailAutomationsPage() {
+function EmailAutomationsPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -106,46 +114,40 @@ function EmailAutomationsPage() {
   );
 }
 
-function AutomationForm({ citySlug }: { citySlug: string }) {
-  const router = useRouter();
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const fd = new FormData(form);
-      const result = await submitAutomation({
+function AutomationForm({ citySlug }: { citySlug: string }): ReactElement {
+  const { error, handleSubmit, pending, success } = useFormSubmit({
+    resetOnSuccess: true,
+    submit: (fd) =>
+      submitAutomation({
         data: {
           citySlug,
-          name: String(fd.get("name") ?? ""),
-          triggerType: String(fd.get("triggerType") ?? ""),
+          name: formString(fd, "name"),
+          triggerType: formString(fd, "triggerType"),
         },
-      });
-      if (result.ok) {
-        form.reset();
-        setStatus("Automation created.");
-        await router.invalidate();
-        return;
-      }
-      setStatus(result.error);
-    },
-    [citySlug, router],
-  );
+      }),
+    successMessage: "Automation created.",
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
-      <input className="field" name="name" placeholder="Name" required />
-      <select className="field" defaultValue="signup" name="triggerType" required>
-        {TRIGGER_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {status ? <p className="muted">{status}</p> : null}
-      <button className="btn btn-primary" type="submit">
-        Create automation
+      <label className="field-label">
+        Name
+        <input className="field" name="name" placeholder="Name" required />
+      </label>
+      <label className="field-label">
+        Trigger
+        <select className="field" defaultValue="signup" name="triggerType" required>
+          {TRIGGER_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Creating…" : "Create automation"}
       </button>
     </form>
   );
@@ -157,7 +159,7 @@ function AutomationStatusButtons({
 }: {
   automation: AutomationDetail;
   citySlug: string;
-}) {
+}): ReactElement {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
 
@@ -179,7 +181,7 @@ function AutomationStatusButtons({
   const handleActivate = useCallback(() => handleStatus("active"), [handleStatus]);
 
   return (
-    <div className="row" style={{ marginTop: "0.5rem" }}>
+    <div className="row mt-2">
       {automation.status === "active" ? (
         <button className="btn" onClick={handlePause} type="button">
           Pause

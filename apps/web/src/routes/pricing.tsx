@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
 import { listPublicTenants } from "@/modules/tenants/services/publicListService";
 import { getRegistryDb } from "@/shared/db/env";
 import { getRegionConfig } from "@/shared/region";
@@ -11,6 +12,7 @@ const load = createServerFn({ method: "GET" }).handler(async () => {
 
 export const Route = createFileRoute("/pricing")({
   loader: () => load(),
+  staleTime: 60_000,
   component: PricingPage,
   head: () => {
     const { siteName } = getRegionConfig();
@@ -26,13 +28,13 @@ export const Route = createFileRoute("/pricing")({
   },
 });
 
-function PricingPage() {
+function PricingPage(): ReactElement {
   const { cities } = Route.useLoaderData();
   const { majorCitiesPhrase, siteName } = getRegionConfig();
 
   return (
     <main className="shell stack">
-      <h1 style={{ margin: 0 }}>Membership & pricing</h1>
+      <h1 className="m-0">Membership & pricing</h1>
       <p className="muted">
         {siteName} — events and workshops across {majorCitiesPhrase}. Each city publishes its own
         catalog.
@@ -42,10 +44,9 @@ function PricingPage() {
       ) : (
         cities.map((city) => (
           <Link
-            className="card"
+            className="card block"
             key={city.slug}
             params={{ citySlug: city.slug }}
-            style={{ display: "block" }}
             to="/$citySlug/membership"
           >
             <strong>{city.name}</strong>

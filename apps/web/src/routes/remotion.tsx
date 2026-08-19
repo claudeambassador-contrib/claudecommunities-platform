@@ -1,24 +1,17 @@
 import { Player } from "@remotion/player";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { WebsiteTour } from "@/modules/remotion/website-tour";
+import type { ReactElement } from "react";
+import { WebsiteTour } from "@/shared/ui/website-tour";
 
 export const Route = createFileRoute("/remotion")({
   component: RemotionPage,
   head: () => ({ meta: [{ title: "Website Tour" }] }),
 });
 
-function RemotionPage() {
+function RemotionPage(): ReactElement {
   return (
-    <main
-      className="stack"
-      style={{
-        alignItems: "center",
-        background: "#1C1917",
-        minHeight: "100dvh",
-        padding: 24,
-      }}
-    >
-      <h1 style={{ color: "#FAF9F6", fontSize: 28, margin: 0 }}>Website tour</h1>
+    <main className="stack min-h-dvh items-center bg-ink p-6">
+      <h1 className="m-0 text-[28px] text-cream">Website tour</h1>
       <Player
         autoPlay
         component={WebsiteTour}
@@ -30,7 +23,7 @@ function RemotionPage() {
         loop
         style={{ borderRadius: 12, height: 540, width: 960 }}
       />
-      <p style={{ color: "#A8A29E", margin: 0 }}>20 seconds · 1920×1080 · 30fps</p>
+      <p className="muted m-0">20 seconds · 1920×1080 · 30fps</p>
       <Link className="btn" to="/">
         Back to directory
       </Link>

@@ -1,12 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listTalkSubmissions } from "@/modules/talks/services/talksService";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
+const loadSpeakersInput = z.object({ citySlug: z.string().min(1) });
+
 const loadSpeakers = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadSpeakersInput.parse(input))
   .handler(({ data }) =>
     guarded(data.citySlug, "speakers.view", async (page) => {
       const talks = await listTalkSubmissions(page.store, page.actor);
@@ -27,7 +31,7 @@ export const Route = createFileRoute("/$citySlug/admin/speakers")({
   component: AdminSpeakersPage,
 });
 
-function AdminSpeakersPage() {
+function AdminSpeakersPage(): ReactElement {
   const data = Route.useLoaderData();
 
   if (!data.allowed) {

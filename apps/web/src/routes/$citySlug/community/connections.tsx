@@ -1,16 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import type { FormEvent } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import {
   listConnections,
   respondToConnection,
 } from "@/modules/connections/services/connectionsService";
 import { listDirectory } from "@/modules/identity/services/usersService";
 import { requireCityActor } from "@/shared/http/cityPage";
+import { guardedMutation } from "@/shared/http/guarded";
 import { EmptyCard, PageHeader, SignInCard } from "@/shared/ui/page";
+import { useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadInput = z.object({ citySlug: z.string().min(1) });
 
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await requireCityActor(data.citySlug);
     if (!page.ok) {
@@ -46,33 +51,47 @@ const load = createServerFn({ method: "GET" })
     };
   });
 
-const respond = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; connectionId: string; status: "accepted" | "rejected" }) => d)
-  .handler(async ({ data }) => {
-    const page = await requireCityActor(data.citySlug);
-    if (!page.ok) {
-      return { ok: false as const };
-    }
-    const result = await respondToConnection(
-      page.store,
-      page.actor,
-      data.connectionId,
-      data.status,
-    );
-    return { ok: result.ok };
-  });
+const respondInput = z.object({
+  citySlug: z.string().min(1),
+  connectionId: z.string(),
+  status: z.enum(["accepted", "rejected"]),
+});
 
-async function handleRespond(event: FormEvent<HTMLFormElement>) {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  const citySlug = String(form.get("citySlug") ?? "");
-  const connectionId = String(form.get("connectionId") ?? "");
-  const status = String(form.get("status") ?? "");
-  if (status !== "accepted" && status !== "rejected") {
-    return;
-  }
-  await respond({ data: { citySlug, connectionId, status } });
-  window.location.reload();
+const respond = createServerFn({ method: "POST" })
+  .validator((input: unknown) => respondInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, null, (page) =>
+      respondToConnection(page.store, page.actor, data.connectionId, data.status),
+    ),
+  );
+
+function RespondForm({
+  citySlug,
+  connectionId,
+  status,
+}: {
+  citySlug: string;
+  connectionId: string;
+  status: "accepted" | "rejected";
+}): ReactElement {
+  const { error, handleSubmit, pending } = useFormSubmit({
+    submit: () => respond({ data: { citySlug, connectionId, status } }),
+  });
+  const label = status === "accepted" ? "Accept" : "Reject";
+  const buttonLabel = pending ? "Saving…" : label;
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <button
+        className={status === "accepted" ? "btn btn-primary" : "btn"}
+        disabled={pending}
+        type="submit"
+      >
+        {buttonLabel}
+      </button>
+      {error ? <p className="form-error">{error}</p> : null}
+    </form>
+  );
 }
 
 export const Route = createFileRoute("/$citySlug/community/connections")({
@@ -80,7 +99,7 @@ export const Route = createFileRoute("/$citySlug/community/connections")({
   component: ConnectionsPage,
 });
 
-function ConnectionsPage() {
+function ConnectionsPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -93,27 +112,13 @@ function ConnectionsPage() {
       <PageHeader subtitle="People you are connected with" title="Connections" />
       {data.pending.length > 0 ? (
         <div className="stack">
-          <h3 style={{ margin: 0 }}>Pending requests</h3>
+          <h3 className="m-0">Pending requests</h3>
           {data.pending.map((item) => (
-            <article className="card row" key={item.id} style={{ justifyContent: "space-between" }}>
+            <article className="card row justify-between" key={item.id}>
               <strong>{item.name}</strong>
               <div className="row">
-                <form onSubmit={handleRespond}>
-                  <input name="citySlug" type="hidden" value={citySlug} />
-                  <input name="connectionId" type="hidden" value={item.id} />
-                  <input name="status" type="hidden" value="accepted" />
-                  <button className="btn btn-primary" type="submit">
-                    Accept
-                  </button>
-                </form>
-                <form onSubmit={handleRespond}>
-                  <input name="citySlug" type="hidden" value={citySlug} />
-                  <input name="connectionId" type="hidden" value={item.id} />
-                  <input name="status" type="hidden" value="rejected" />
-                  <button className="btn" type="submit">
-                    Reject
-                  </button>
-                </form>
+                <RespondForm citySlug={citySlug} connectionId={item.id} status="accepted" />
+                <RespondForm citySlug={citySlug} connectionId={item.id} status="rejected" />
               </div>
             </article>
           ))}

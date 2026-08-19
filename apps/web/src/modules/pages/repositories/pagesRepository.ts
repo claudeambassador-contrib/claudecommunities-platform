@@ -6,7 +6,7 @@ import type {
   ContentPageWrite,
   PublishedPage,
 } from "@/modules/pages/types";
-import { KNOWN_BLOCK_TYPES } from "@/modules/pages/validators";
+import { parseStoredContentBlock, parseStoredHomeBlock } from "@/modules/pages/validators";
 import { first } from "@/shared/db/rows";
 import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
@@ -23,19 +23,6 @@ type PageRow = TenantStore["tables"]["pages"]["$inferSelect"];
 
 function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
-}
-
-function coerceHomeBlock(item: Record<string, unknown>): Block | null {
-  if (typeof item.type !== "string" || !KNOWN_BLOCK_TYPES.has(item.type)) {
-    return null;
-  }
-  if (item.type === "benefits" || item.type === "audienceSplit") {
-    return {
-      ...(item as unknown as Block),
-      cards: Array.isArray(item.cards) ? item.cards : [],
-    } as unknown as Block;
-  }
-  return item as unknown as Block;
 }
 
 function parseBlocks(raw: string, contentOnly: boolean): Block[] {
@@ -56,16 +43,7 @@ function parseBlocks(raw: string, contentOnly: boolean): Block[] {
   }
   const blocks: Block[] = [];
   for (const item of arr) {
-    if (!(isObj(item) && typeof item.id === "string" && typeof item.enabled === "boolean")) {
-      continue;
-    }
-    if (contentOnly) {
-      if (item.type === "richText" && typeof item.body === "string") {
-        blocks.push(item as unknown as Block);
-      }
-      continue;
-    }
-    const block = coerceHomeBlock(item);
+    const block = contentOnly ? parseStoredContentBlock(item) : parseStoredHomeBlock(item);
     if (block) {
       blocks.push(block);
     }

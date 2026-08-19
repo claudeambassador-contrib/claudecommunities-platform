@@ -6,6 +6,10 @@ import {
   upsertEmailPreferences,
 } from "@/modules/identity/repositories/emailPreferencesRepository";
 import {
+  findByClerkId,
+  listMembershipsForUser,
+} from "@/modules/identity/repositories/usersRepository";
+import {
   type DirectoryMember,
   EMAIL_PREF_DEFAULTS,
   type EmailPreferences,
@@ -14,12 +18,15 @@ import {
   type ImportMemberResult,
   type InviteRecord,
   type ListUsersOptions,
+  type MembershipRole,
   type PublicAuthor,
   type UserProfile,
   type UserSummary,
 } from "@/modules/identity/types";
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
+import { permissionsForRole } from "@/shared/auth/permissions";
+import type { RegistryDb } from "@/shared/db/client";
 import type { RegistryStore } from "@/shared/db/registryStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 
@@ -281,6 +288,80 @@ export async function updateEmailPreferences(
   return ok({
     preferences: await upsertEmailPreferences(store, actor.id, pickPrefBooleans(input)),
   });
+}
+
+/** Members who can receive campaign mail: not banned, has an email, not unsubscribed. */
+export async function listCampaignRecipients(
+  store: RegistryStore,
+  orgId: string,
+): Promise<Array<{ email: string; id: string }>> {
+  return await directoryRepo.listOrgRecipients(store, orgId);
+}
+
+/** One-click unsubscribe (email webhooks / signed links): opt the address out of the digest. */
+export async function unsubscribeByEmail(
+  store: RegistryStore,
+  email: string,
+): Promise<Result<{ email: string }>> {
+  const user = await directoryRepo.findUserByEmail(store, email);
+  if (!user) {
+    return err("not_found", 404, "Email not found");
+  }
+  await upsertEmailPreferences(store, user.id, { weeklyDigest: false });
+  return ok({ email: user.email });
+}
+
+/** Change a member's role within an org. Callers own the permission checks. */
+export async function setMembershipRole(
+  store: RegistryStore,
+  orgId: string,
+  targetUserId: string,
+  role: MembershipRole,
+): Promise<Result<{ id: string; role: MembershipRole }>> {
+  const user = await directoryRepo.findUserById(store, targetUserId);
+  if (!user) {
+    return err("not_found", 404, "User not found");
+  }
+  const updated = await directoryRepo.updateMembershipRole(store, orgId, targetUserId, role);
+  if (!updated) {
+    return err("not_found", 404, "User is not a member of this community");
+  }
+  return ok({ id: targetUserId, role });
+}
+
+function bestMembershipRole(
+  roles: ReadonlyArray<string | null | undefined>,
+): MembershipRole | null {
+  if (roles.includes("owner")) {
+    return "owner";
+  }
+  if (roles.includes("admin")) {
+    return "admin";
+  }
+  if (roles.includes("member")) {
+    return "member";
+  }
+  return null;
+}
+
+/** Resolve a transport-agnostic Actor for an already-verified Clerk user id (MCP bearer auth).
+ *  Returns null for unknown or banned users. */
+export async function actorFromClerkUserId(
+  db: RegistryDb,
+  clerkUserId: string,
+): Promise<Actor | null> {
+  const user = await findByClerkId(db, clerkUserId);
+  if (!user || user.isBanned) {
+    return null;
+  }
+  const memberships = await listMembershipsForUser(db, user.id);
+  const role = user.isSuperAdmin ? "owner" : bestMembershipRole(memberships.map((row) => row.role));
+  return {
+    email: user.email,
+    id: user.id,
+    isSuperAdmin: user.isSuperAdmin,
+    permissions: permissionsForRole(role),
+  };
 }
 
 export function parseMemberCsv(csv: string): ImportMemberInput[] {

@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { buildCityRouteContext } from "@/modules/identity/services/sessionService";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard } from "@/shared/ui/page";
 
+const loadAdminInput = z.object({ citySlug: z.string().min(1) });
+
 const loadAdmin = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadAdminInput.parse(input))
   .handler(async ({ data }) => {
     const built = await buildCityRouteContext(data.citySlug);
     if (!built.ok) {
@@ -30,7 +34,7 @@ export const Route = createFileRoute("/$citySlug/admin/")({
   component: AdminHome,
 });
 
-function AdminHome() {
+function AdminHome(): ReactElement {
   const data = Route.useLoaderData();
 
   if (!data.allowed) {
@@ -40,7 +44,7 @@ function AdminHome() {
   return (
     <section className="stack">
       <div className="card">
-        <h2 style={{ marginTop: 0 }}>{data.tenantName} admin</h2>
+        <h2 className="mt-0">{data.tenantName} admin</h2>
         <p className="muted">Role: {data.role ?? "none"}</p>
         <p className="muted">{data.permissions.length} permissions granted</p>
         <Can fallback={<p className="muted">Read-only analytics.</p>} permission="analytics.view">

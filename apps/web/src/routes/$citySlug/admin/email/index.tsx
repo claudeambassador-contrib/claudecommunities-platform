@@ -1,14 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listCampaigns } from "@/modules/email/services/emailCampaignsService";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
+const loadCampaignsInput = z.object({ citySlug: z.string().min(1) });
+
 const loadCampaigns = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadCampaignsInput.parse(input))
   .handler(({ data }) =>
-    guarded(data.citySlug, null, async (page) => {
+    guarded(data.citySlug, "email.view", async (page) => {
       const result = await listCampaigns(page.store, page.actor);
       if (!result.ok) {
         return result;
@@ -29,7 +33,7 @@ export const Route = createFileRoute("/$citySlug/admin/email/")({
   component: AdminEmailPage,
 });
 
-function AdminEmailPage() {
+function AdminEmailPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 

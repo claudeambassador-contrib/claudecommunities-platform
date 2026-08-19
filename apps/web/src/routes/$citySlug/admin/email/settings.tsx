@@ -1,15 +1,18 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getEmailSettings, saveEmailSettings } from "@/modules/email/services/emailOpsService";
 import type { EmailSettingsDetail } from "@/modules/email/types";
-import { loadCityPage } from "@/shared/http/cityPage";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
+import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadEmailSettingsInput = z.object({ citySlug: z.string().min(1) });
 
 const loadEmailSettings = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadEmailSettingsInput.parse(input))
   .handler(({ data }) =>
     guarded(data.citySlug, "email.settings", async (page) => {
       const loaded = await getEmailSettings(page.store, page.actor);
@@ -20,39 +23,33 @@ const loadEmailSettings = createServerFn({ method: "GET" })
     }),
   );
 
+const submitEmailSettingsInput = z.object({
+  citySlug: z.string().min(1),
+  senderEmail: z.string(),
+  senderName: z.string(),
+  trackClicks: z.boolean(),
+  trackOpens: z.boolean(),
+});
+
 const submitEmailSettings = createServerFn({ method: "POST" })
-  .validator(
-    (d: {
-      citySlug: string;
-      senderEmail: string;
-      senderName: string;
-      trackClicks: boolean;
-      trackOpens: boolean;
-    }) => d,
-  )
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { error: "unauthenticated", ok: false as const };
-    }
-    const result = await saveEmailSettings(page.store, page.actor, {
-      senderEmail: data.senderEmail,
-      senderName: data.senderName,
-      trackClicks: data.trackClicks,
-      trackOpens: data.trackOpens,
-    });
-    if (!result.ok) {
-      return { error: result.error.message ?? result.error.code, ok: false as const };
-    }
-    return { ok: true as const };
-  });
+  .validator((input: unknown) => submitEmailSettingsInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, "email.settings", (page) =>
+      saveEmailSettings(page.store, page.actor, {
+        senderEmail: data.senderEmail,
+        senderName: data.senderName,
+        trackClicks: data.trackClicks,
+        trackOpens: data.trackOpens,
+      }),
+    ),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/email/settings")({
   loader: ({ params }) => loadEmailSettings({ data: { citySlug: params.citySlug } }),
   component: EmailSettingsPage,
 });
 
-function EmailSettingsPage() {
+function EmailSettingsPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -68,48 +65,48 @@ function EmailSettingsPage() {
   );
 }
 
-function SettingsForm({ citySlug, settings }: { citySlug: string; settings: EmailSettingsDetail }) {
-  const router = useRouter();
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const fd = new FormData(event.currentTarget);
-      const result = await submitEmailSettings({
+function SettingsForm({
+  citySlug,
+  settings,
+}: {
+  citySlug: string;
+  settings: EmailSettingsDetail;
+}): ReactElement {
+  const { error, handleSubmit, pending, success } = useFormSubmit({
+    submit: (fd) =>
+      submitEmailSettings({
         data: {
           citySlug,
-          senderEmail: String(fd.get("senderEmail") ?? ""),
-          senderName: String(fd.get("senderName") ?? ""),
+          senderEmail: formString(fd, "senderEmail"),
+          senderName: formString(fd, "senderName"),
           trackClicks: fd.get("trackClicks") === "on",
           trackOpens: fd.get("trackOpens") === "on",
         },
-      });
-      if (result.ok) {
-        setStatus("Saved.");
-        await router.invalidate();
-        return;
-      }
-      setStatus(result.error);
-    },
-    [citySlug, router],
-  );
+      }),
+    successMessage: "Saved.",
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
-      <input
-        className="field"
-        defaultValue={settings.senderName}
-        name="senderName"
-        placeholder="Sender name"
-      />
-      <input
-        className="field"
-        defaultValue={settings.senderEmail}
-        name="senderEmail"
-        placeholder="Sender email"
-        type="email"
-      />
+      <label className="field-label">
+        Sender name
+        <input
+          className="field"
+          defaultValue={settings.senderName}
+          name="senderName"
+          placeholder="Sender name"
+        />
+      </label>
+      <label className="field-label">
+        Sender email
+        <input
+          className="field"
+          defaultValue={settings.senderEmail}
+          name="senderEmail"
+          placeholder="Sender email"
+          type="email"
+        />
+      </label>
       <label htmlFor="trackOpens">
         <input
           defaultChecked={settings.trackOpens}
@@ -128,9 +125,10 @@ function SettingsForm({ citySlug, settings }: { citySlug: string; settings: Emai
         />{" "}
         Track clicks
       </label>
-      {status ? <p className="muted">{status}</p> : null}
-      <button className="btn btn-primary" type="submit">
-        Save
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Saving…" : "Save"}
       </button>
     </form>
   );

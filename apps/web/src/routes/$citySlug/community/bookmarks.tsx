@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listBookmarks } from "@/modules/community/services/communityService";
 import { requireCityActor } from "@/shared/http/cityPage";
 import { ItemList, PageHeader, SignInCard } from "@/shared/ui/page";
 
+const loadInput = z.object({ citySlug: z.string().min(1) });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await requireCityActor(data.citySlug);
     if (!page.ok) {
@@ -28,7 +32,7 @@ export const Route = createFileRoute("/$citySlug/community/bookmarks")({
   component: BookmarksPage,
 });
 
-function BookmarksPage() {
+function BookmarksPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 

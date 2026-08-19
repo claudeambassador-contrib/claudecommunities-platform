@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
 import { listPublicTenants } from "@/modules/tenants/services/publicListService";
 import { getRegistryDb } from "@/shared/db/env";
 import { getRegionConfig } from "@/shared/region";
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/sitemap")({
   }),
 });
 
-function SitemapPage() {
+function SitemapPage(): ReactElement {
   const { tenants } = Route.useLoaderData();
   const platform = [
     { href: "/", label: "Home" },
@@ -31,7 +32,7 @@ function SitemapPage() {
 
   return (
     <main className="shell stack">
-      <h1 style={{ margin: 0 }}>Sitemap</h1>
+      <h1 className="m-0">Sitemap</h1>
       <section className="card stack">
         <strong>Platform</strong>
         {platform.map((item) => (
@@ -43,9 +44,7 @@ function SitemapPage() {
       <section className="card stack">
         <strong>Cities</strong>
         {tenants.length === 0 ? (
-          <p className="muted" style={{ margin: 0 }}>
-            No cities provisioned yet.
-          </p>
+          <p className="muted m-0">No cities provisioned yet.</p>
         ) : (
           tenants.map((t) => (
             <Link key={t.slug} params={{ citySlug: t.slug }} to="/$citySlug">

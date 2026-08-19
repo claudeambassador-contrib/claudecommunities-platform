@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listPublishedPages } from "@/modules/pages/services/pagesService";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { EmptyCard, ItemList, PageHeader } from "@/shared/ui/page";
@@ -17,8 +19,10 @@ function publicHref(citySlug: string, slug: string): string {
   return `/${citySlug}/p/${slug}`;
 }
 
+const loadInput = z.object({ citySlug: z.string().min(1) });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -39,10 +43,11 @@ const load = createServerFn({ method: "GET" })
 
 export const Route = createFileRoute("/$citySlug/resources/")({
   loader: ({ params }) => load({ data: { citySlug: params.citySlug } }),
+  staleTime: 60_000,
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { items } = Route.useLoaderData();
 

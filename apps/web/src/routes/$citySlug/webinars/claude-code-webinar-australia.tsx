@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { getRegionConfig } from "@/shared/region";
 import { ItemList, PageHeader } from "@/shared/ui/page";
@@ -28,8 +30,10 @@ const TALKS = [
 
 const REPLAY_HREF = "https://www.youtube.com/watch?v=3-G3raRMl4w";
 
+const loadInput = z.object({ citySlug: z.string().min(1) });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     await loadCityPage(data.citySlug);
     return {};
@@ -40,7 +44,7 @@ export const Route = createFileRoute("/$citySlug/webinars/claude-code-webinar-au
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { siteName } = getRegionConfig();
 
@@ -61,7 +65,7 @@ function Page() {
         title="Claude Code webinar Australia"
       />
       <div className="card">
-        <p style={{ margin: 0 }}>
+        <p className="m-0">
           Replay of the Australia webinar: how local developers and founders use Claude Code in real
           workflows. Hosted with community lightning talks.
         </p>

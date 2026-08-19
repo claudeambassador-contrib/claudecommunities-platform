@@ -1,14 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listContentPages } from "@/modules/pages/services/pagesService";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
+const loadPagesInput = z.object({ citySlug: z.string().min(1) });
+
 const loadPages = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadPagesInput.parse(input))
   .handler(({ data }) =>
-    guarded(data.citySlug, null, async (page) => {
+    guarded(data.citySlug, "pages.view", async (page) => {
       const result = await listContentPages(page.store, page.actor);
       if (!result.ok) {
         return result;
@@ -29,7 +33,7 @@ export const Route = createFileRoute("/$citySlug/admin/pages/")({
   component: AdminPagesPage,
 });
 
-function AdminPagesPage() {
+function AdminPagesPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 

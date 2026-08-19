@@ -1,12 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getOwnProfile } from "@/modules/identity/services/usersService";
 import { requireCityActor } from "@/shared/http/cityPage";
 import { Avatar } from "@/shared/ui/avatar";
 import { EmptyCard, PageHeader, SignInCard } from "@/shared/ui/page";
 
+const loadInput = z.object({ citySlug: z.string().min(1) });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await requireCityActor(data.citySlug);
     if (!page.ok) {
@@ -33,7 +37,7 @@ export const Route = createFileRoute("/$citySlug/community/profile/")({
   component: OwnProfilePage,
 });
 
-function OwnProfilePage() {
+function OwnProfilePage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -51,12 +55,12 @@ function OwnProfilePage() {
       <div className="card stack">
         <Avatar
           className="size-16 rounded-full"
-          fallbackClassName="bg-[#D4836A] text-white text-xl font-bold"
+          fallbackClassName="bg-accent text-white text-xl font-bold"
           name={data.user.name}
           src={data.user.imageUrl}
         />
-        <p style={{ margin: 0 }}>Role: {data.user.role ?? "member"}</p>
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="m-0">Role: {data.user.role ?? "member"}</p>
+        <p className="muted m-0">
           <a href={`/${citySlug}/community/settings/profile`}>Profile settings</a>
         </p>
       </div>

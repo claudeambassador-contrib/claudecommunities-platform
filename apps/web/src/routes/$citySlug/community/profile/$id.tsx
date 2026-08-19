@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getOwnProfile, listDirectory } from "@/modules/identity/services/usersService";
 import { requireCityActor } from "@/shared/http/cityPage";
 import { EmptyCard, PageHeader, SignInCard } from "@/shared/ui/page";
 
+const loadInput = z.object({ citySlug: z.string().min(1), id: z.string() });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string; id: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await requireCityActor(data.citySlug);
     if (!page.ok) {
@@ -49,7 +53,7 @@ export const Route = createFileRoute("/$citySlug/community/profile/$id")({
   component: MemberProfilePage,
 });
 
-function MemberProfilePage() {
+function MemberProfilePage(): ReactElement {
   const data = Route.useLoaderData();
 
   if (!data.signedIn) {
@@ -67,7 +71,7 @@ function MemberProfilePage() {
         title={data.user.name}
       />
       <div className="card">
-        <p style={{ margin: 0 }}>Role: {data.user.role ?? "member"}</p>
+        <p className="m-0">Role: {data.user.role ?? "member"}</p>
       </div>
     </section>
   );

@@ -1,10 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listEvents } from "@/modules/events/services/eventsService";
 import { loadCityPage } from "@/shared/http/cityPage";
 
+const getEventsInput = z.object({ citySlug: z.string().min(1) });
+
 const getEvents = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => getEventsInput.parse(input))
   .handler(async ({ data }) => {
     const empty = {
       events: [] as { id: string; title: string; startTime: string | null; slug: string }[],
@@ -29,17 +33,18 @@ const getEvents = createServerFn({ method: "GET" })
 
 export const Route = createFileRoute("/$citySlug/events/")({
   loader: ({ params }) => getEvents({ data: { citySlug: params.citySlug } }),
+  staleTime: 30_000,
   component: EventsPage,
 });
 
-function EventsPage() {
+function EventsPage(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { events } = Route.useLoaderData();
 
   return (
     <section className="stack">
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h2 style={{ margin: 0 }}>Events</h2>
+      <div className="row justify-between">
+        <h2 className="m-0">Events</h2>
         <Link className="btn" params={{ citySlug: tenant.slug }} to="/$citySlug">
           Back
         </Link>
@@ -49,10 +54,9 @@ function EventsPage() {
       ) : (
         events.map((e) => (
           <Link
-            className="card"
+            className="card block"
             key={e.id}
             params={{ citySlug: tenant.slug, slug: e.slug }}
-            style={{ display: "block" }}
             to="/$citySlug/events/$slug"
           >
             <strong>{e.title}</strong>

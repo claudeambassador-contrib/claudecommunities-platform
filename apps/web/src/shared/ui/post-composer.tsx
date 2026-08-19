@@ -1,7 +1,6 @@
-import { useRouter } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { type FormEvent, useCallback, useState } from "react";
 import type { FeedSpaceOption } from "@/modules/community/types";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
 export interface PostComposerProps {
   citySlug: string;
@@ -19,31 +18,22 @@ export function PostComposer({
   onSubmit,
   spaces,
 }: PostComposerProps): ReactElement | null {
-  const router = useRouter();
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const fd = new FormData(form);
-      const title = String(fd.get("title") ?? "").trim();
+  const { error, handleSubmit, pending } = useFormSubmit({
+    resetOnSuccess: true,
+    submit: async (fd) => {
+      const title = formString(fd, "title").trim();
       const result = await onSubmit({
         citySlug,
-        content: String(fd.get("content") ?? ""),
-        spaceId: String(fd.get("spaceId") ?? ""),
+        content: formString(fd, "content"),
+        spaceId: formString(fd, "spaceId"),
         title: title || undefined,
       });
       if (result.ok) {
-        form.reset();
-        setStatus(null);
-        await router.invalidate();
-        return;
+        return { ok: true as const };
       }
-      setStatus(result.error ?? "Could not publish");
+      return { error: result.error ?? "Could not publish", ok: false as const };
     },
-    [citySlug, onSubmit, router],
-  );
+  });
 
   if (spaces.length === 0) {
     return null;
@@ -51,27 +41,36 @@ export function PostComposer({
 
   return (
     <form className="card stack post-composer" onSubmit={handleSubmit}>
-      <input className="field" name="title" placeholder="Title (optional)" />
-      <textarea
-        className="field"
-        name="content"
-        placeholder="Share something with this city"
-        required
-        rows={4}
-      />
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <select className="field" defaultValue={spaces[0]?.id} name="spaceId" required>
-          {spaces.map((space) => (
-            <option key={space.id} value={space.id}>
-              {space.name}
-            </option>
-          ))}
-        </select>
-        <button className="btn btn-primary" type="submit">
-          Post
+      <label className="field-label">
+        Title (optional)
+        <input className="field" name="title" />
+      </label>
+      <label className="field-label">
+        Post
+        <textarea
+          className="field"
+          name="content"
+          placeholder="Share something with this city"
+          required
+          rows={4}
+        />
+      </label>
+      <div className="row justify-between">
+        <label className="field-label">
+          Space
+          <select className="field" defaultValue={spaces[0]?.id} name="spaceId" required>
+            {spaces.map((space) => (
+              <option key={space.id} value={space.id}>
+                {space.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button className="btn btn-primary" disabled={pending} type="submit">
+          {pending ? "Posting…" : "Post"}
         </button>
       </div>
-      {status ? <p className="muted">{status}</p> : null}
+      {error ? <p className="form-error">{error}</p> : null}
     </form>
   );
 }

@@ -1,5 +1,7 @@
-import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, Outlet, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { hasAnyAdminPermission } from "@/modules/identity/services/sessionService";
 import { getOwnProfile } from "@/modules/identity/services/usersService";
 import { loadCityPage } from "@/shared/http/cityPage";
@@ -10,12 +12,14 @@ function selectPathname(state: { location: { pathname: string } }): string {
   return state.location.pathname;
 }
 
+const loadCityInput = z.object({ citySlug: z.string().min(1) });
+
 const loadCity = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadCityInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
-      throw redirect({ to: "/" });
+      throw notFound();
     }
     const region = getRegionConfig();
     let viewer: CityViewer | null = null;
@@ -41,9 +45,28 @@ const loadCity = createServerFn({ method: "GET" })
 export const Route = createFileRoute("/$citySlug")({
   beforeLoad: async ({ params }) => loadCity({ data: { citySlug: params.citySlug } }),
   component: CityLayout,
+  notFoundComponent: CityNotFound,
 });
 
-function CityLayout() {
+function CityNotFound(): ReactElement {
+  return (
+    <main className="shell stack">
+      <div className="card stack">
+        <h1 className="m-0">City not found</h1>
+        <p className="muted m-0">
+          This city community does not exist or is not available in this region.
+        </p>
+        <div className="row">
+          <Link className="btn btn-primary" to="/">
+            Browse all cities
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function CityLayout(): ReactElement {
   const { countryName, merchEnabled, tenant, viewer } = Route.useRouteContext();
   const pathname = useRouterState({ select: selectPathname });
   const isCityAdmin = pathname.startsWith(`/${tenant.slug}/admin`);

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactElement } from "react";
 import { PageHeader } from "@/shared/ui/page";
 
 export const Route = createFileRoute("/$citySlug/community/bug-report")({
@@ -10,12 +10,12 @@ function handleSubmit(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
 }
 
-function BugReportPage() {
+function BugReportPage(): ReactElement {
   return (
     <section className="stack">
       <PageHeader subtitle="Reports go to the maintainers" title="Report a bug" />
       <form className="card stack" onSubmit={handleSubmit}>
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="muted m-0">
           This form is not connected to a backend. Copy your notes and send them to the maintainers.
         </p>
         <label className="stack">

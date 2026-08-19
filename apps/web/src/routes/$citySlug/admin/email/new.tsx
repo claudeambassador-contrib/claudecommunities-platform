@@ -1,79 +1,73 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { createCampaign } from "@/modules/email/services/emailCampaignsService";
-import { loadCityPage } from "@/shared/http/cityPage";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
+import { guarded, guardedMutation, type Mutated } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadInput = z.object({ citySlug: z.string().min(1) });
 
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
-  .handler(({ data }) => guarded(data.citySlug, null, async () => ok({})));
+  .validator((input: unknown) => loadInput.parse(input))
+  .handler(({ data }) => guarded(data.citySlug, "email.view", async () => ok({})));
+
+const submitInput = z.object({
+  bodyHtml: z.string(),
+  citySlug: z.string().min(1),
+  name: z.string(),
+  scheduledAt: z.string(),
+  subject: z.string(),
+});
 
 const submit = createServerFn({ method: "POST" })
-  .validator(
-    (d: {
-      bodyHtml: string;
-      citySlug: string;
-      name: string;
-      scheduledAt: string;
-      subject: string;
-    }) => d,
-  )
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { error: "unauthenticated", ok: false as const };
-    }
-    const result = await createCampaign(page.store, page.actor, {
-      bodyHtml: data.bodyHtml,
-      name: data.name,
-      scheduledAt: data.scheduledAt.trim() || null,
-      subject: data.subject,
-    });
-    if (!result.ok) {
-      return { error: result.error.message ?? result.error.code, ok: false as const };
-    }
-    return { id: result.campaign.id, ok: true as const };
-  });
+  .validator((input: unknown) => submitInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, "email.edit", async (page) => {
+      const result = await createCampaign(page.store, page.actor, {
+        bodyHtml: data.bodyHtml,
+        name: data.name,
+        scheduledAt: data.scheduledAt.trim() || null,
+        subject: data.subject,
+      });
+      if (!result.ok) {
+        return result;
+      }
+      return ok({ id: result.campaign.id });
+    }),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/email/new")({
   loader: ({ params }) => load({ data: { citySlug: params.citySlug } }),
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
-  const router = useRouter();
-  const [status, setStatus] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const fd = new FormData(event.currentTarget);
-      const result = await submit({
-        data: {
-          bodyHtml: String(fd.get("bodyHtml") ?? ""),
-          citySlug,
-          name: String(fd.get("name") ?? ""),
-          scheduledAt: String(fd.get("scheduledAt") ?? ""),
-          subject: String(fd.get("subject") ?? ""),
-        },
+  const { error, handleSubmit, pending, success } = useFormSubmit<Mutated<{ id: string }>>({
+    onSuccess: async (result) => {
+      await navigate({
+        params: { citySlug, id: result.id },
+        to: "/$citySlug/admin/email/$id",
       });
-      if (result.ok) {
-        await router.navigate({
-          params: { citySlug, id: result.id },
-          to: "/$citySlug/admin/email/$id",
-        });
-        return;
-      }
-      setStatus(result.error);
     },
-    [citySlug, router],
-  );
+    submit: (fd) =>
+      submit({
+        data: {
+          bodyHtml: formString(fd, "bodyHtml"),
+          citySlug,
+          name: formString(fd, "name"),
+          scheduledAt: formString(fd, "scheduledAt"),
+          subject: formString(fd, "subject"),
+        },
+      }),
+  });
 
   if (!data.allowed) {
     return <DeniedCard reason={data.reason} title="New campaign" />;
@@ -91,19 +85,31 @@ function Page() {
       />
       <Can permission="email.edit">
         <form className="card stack" onSubmit={handleSubmit}>
-          <input className="field" name="name" placeholder="Campaign name" required />
-          <input className="field" name="subject" placeholder="Subject" required />
-          <input className="field" name="scheduledAt" type="datetime-local" />
-          <textarea
-            className="field"
-            name="bodyHtml"
-            placeholder="<h1>Hello</h1><p>Write the email body in HTML.</p>"
-            rows={14}
-            style={{ width: "100%" }}
-          />
-          {status ? <p className="muted">{status}</p> : null}
-          <button className="btn btn-primary" type="submit">
-            Create draft
+          <label className="field-label">
+            Campaign name
+            <input className="field" name="name" placeholder="Campaign name" required />
+          </label>
+          <label className="field-label">
+            Subject
+            <input className="field" name="subject" placeholder="Subject" required />
+          </label>
+          <label className="field-label">
+            Scheduled at
+            <input className="field" name="scheduledAt" type="datetime-local" />
+          </label>
+          <label className="field-label">
+            Body HTML
+            <textarea
+              className="field w-full"
+              name="bodyHtml"
+              placeholder="<h1>Hello</h1><p>Write the email body in HTML.</p>"
+              rows={14}
+            />
+          </label>
+          {error ? <p className="form-error">{error}</p> : null}
+          {success ? <p className="form-success">{success}</p> : null}
+          <button className="btn btn-primary" disabled={pending} type="submit">
+            {pending ? "Creating…" : "Create draft"}
           </button>
         </form>
       </Can>

@@ -1,18 +1,20 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type ChangeEvent, type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { type ChangeEvent, useCallback, useRef, useState } from "react";
+import { z } from "zod";
 import {
   createPreset,
   getState,
   listPresets,
   putState,
 } from "@/modules/slides/services/slideGeneratorService";
-import { loadCityPage } from "@/shared/http/cityPage";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
+import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 import { SlideCanvas } from "@/shared/ui/slide-canvas";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
 function formatStateJson(data: unknown): string {
   return JSON.stringify(data ?? {}, null, 2);
@@ -29,10 +31,12 @@ function parseJsonField(raw: string): { error: string; ok: false } | { ok: true;
   }
 }
 
+const loadSlideGeneratorInput = z.object({ citySlug: z.string().min(1), scope: z.string() });
+
 const loadSlideGenerator = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string; scope: string }) => d)
+  .validator((input: unknown) => loadSlideGeneratorInput.parse(input))
   .handler(({ data }) =>
-    guarded(data.citySlug, null, async (page) => {
+    guarded(data.citySlug, "tools.use", async (page) => {
       const presetsResult = await listPresets(page.store, page.actor);
       if (!presetsResult.ok) {
         return presetsResult;
@@ -53,36 +57,36 @@ const loadSlideGenerator = createServerFn({ method: "GET" })
     }),
   );
 
+const saveWorkingStateInput = z.object({
+  citySlug: z.string().min(1),
+  data: z.unknown(),
+  scope: z.string(),
+});
+
 const saveWorkingState = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; data: unknown; scope: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { error: "unauthenticated", ok: false as const };
-    }
-    const result = await putState(page.store, page.actor, data.scope, data.data);
-    if (!result.ok) {
-      return { error: result.error.message ?? result.error.code, ok: false as const };
-    }
-    return { ok: true as const };
-  });
+  .validator((input: unknown) => saveWorkingStateInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, "tools.use", (page) =>
+      putState(page.store, page.actor, data.scope, data.data),
+    ),
+  );
+
+const submitPresetInput = z.object({
+  citySlug: z.string().min(1),
+  data: z.unknown(),
+  name: z.string(),
+});
 
 const submitPreset = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; data: unknown; name: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { error: "unauthenticated", ok: false as const };
-    }
-    const result = await createPreset(page.store, page.actor, {
-      data: data.data,
-      name: data.name,
-    });
-    if (!result.ok) {
-      return { error: result.error.message ?? result.error.code, ok: false as const };
-    }
-    return { ok: true as const };
-  });
+  .validator((input: unknown) => submitPresetInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, "tools.use", (page) =>
+      createPreset(page.store, page.actor, {
+        data: data.data,
+        name: data.name,
+      }),
+    ),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/tools/slide-generator")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -94,7 +98,7 @@ export const Route = createFileRoute("/$citySlug/admin/tools/slide-generator")({
   component: SlideGeneratorPage,
 });
 
-function SlideGeneratorPage() {
+function SlideGeneratorPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -136,126 +140,134 @@ function WorkingStateForm({
   stateError: string | null;
   stateJson: string;
   updatedAt: string | null;
-}) {
+}): ReactElement {
   const navigate = Route.useNavigate();
   const router = useRouter();
-  const [status, setStatus] = useState<string | null>(stateError);
   const [draftJson, setDraftJson] = useState(stateJson);
+  const lastSubmit = useRef<{ action: "load" | "save"; nextScope: string }>({
+    action: "save",
+    nextScope: scope,
+  });
   const handleDraftChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => setDraftJson(event.target.value),
     [],
   );
 
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const fd = new FormData(form);
-      const nextScope = String(fd.get("scope") ?? "").trim() || "global";
-      const { submitter } = event.nativeEvent as SubmitEvent;
-      if (submitter instanceof HTMLButtonElement && submitter.value === "load") {
+  const { error, handleSubmit, pending, success } = useFormSubmit({
+    invalidate: false,
+    onSuccess: async () => {
+      const { action, nextScope } = lastSubmit.current;
+      if (action === "load") {
         await navigate({ search: { scope: nextScope } });
         return;
       }
-      const parsed = parseJsonField(String(fd.get("data") ?? ""));
-      if (!parsed.ok) {
-        setStatus(parsed.error);
-        return;
+      if (nextScope !== scope) {
+        await navigate({ search: { scope: nextScope } });
       }
-      const result = await saveWorkingState({
+      await router.invalidate();
+    },
+    submit: async (fd) => {
+      const nextScope = formString(fd, "scope").trim() || "global";
+      const action = formString(fd, "action") === "load" ? ("load" as const) : ("save" as const);
+      lastSubmit.current = { action, nextScope };
+      if (action === "load") {
+        return { ok: true as const };
+      }
+      const parsed = parseJsonField(formString(fd, "data"));
+      if (!parsed.ok) {
+        return { error: parsed.error, ok: false as const };
+      }
+      return await saveWorkingState({
         data: { citySlug, data: parsed.value, scope: nextScope },
       });
-      if (result.ok) {
-        setStatus("Saved.");
-        if (nextScope !== scope) {
-          await navigate({ search: { scope: nextScope } });
-        }
-        await router.invalidate();
-        return;
-      }
-      setStatus(result.error);
     },
-    [citySlug, navigate, router, scope],
-  );
+    successMessage: () => (lastSubmit.current.action === "save" ? "Saved." : ""),
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
-      <input
-        className="field"
-        defaultValue={scope}
-        name="scope"
-        placeholder="global or event:<id>"
-      />
+      <label className="field-label">
+        Scope
+        <input
+          className="field"
+          defaultValue={scope}
+          name="scope"
+          placeholder="global or event:<id>"
+        />
+      </label>
       <SlideCanvas initialJson={stateJson} onChange={setDraftJson} />
-      <textarea
-        className="field"
-        name="data"
-        onChange={handleDraftChange}
-        placeholder="{}"
-        rows={12}
-        style={{ width: "100%" }}
-        value={draftJson}
-      />
+      <label className="field-label">
+        State JSON
+        <textarea
+          className="field w-full"
+          name="data"
+          onChange={handleDraftChange}
+          placeholder="{}"
+          rows={12}
+          value={draftJson}
+        />
+      </label>
       {updatedAt ? <p className="muted">Updated {new Date(updatedAt).toLocaleString()}</p> : null}
-      {status ? <p className="muted">{status}</p> : null}
+      {stateError ? <p className="form-error">{stateError}</p> : null}
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
       <div className="row">
-        <button className="btn" name="action" type="submit" value="load">
-          Load
+        <button className="btn" disabled={pending} name="action" type="submit" value="load">
+          {pending ? "Loading…" : "Load"}
         </button>
-        <button className="btn btn-primary" name="action" type="submit" value="save">
-          Save
+        <button
+          className="btn btn-primary"
+          disabled={pending}
+          name="action"
+          type="submit"
+          value="save"
+        >
+          {pending ? "Saving…" : "Save"}
         </button>
       </div>
     </form>
   );
 }
 
-function PresetForm({ citySlug }: { citySlug: string }) {
-  const router = useRouter();
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const fd = new FormData(form);
-      const parsed = parseJsonField(String(fd.get("data") ?? ""));
+function PresetForm({ citySlug }: { citySlug: string }): ReactElement {
+  const { error, handleSubmit, pending, success } = useFormSubmit({
+    resetOnSuccess: true,
+    submit: async (fd) => {
+      const parsed = parseJsonField(formString(fd, "data"));
       if (!parsed.ok) {
-        setStatus(parsed.error);
-        return;
+        return { error: parsed.error, ok: false as const };
       }
-      const result = await submitPreset({
+      return await submitPreset({
         data: {
           citySlug,
           data: parsed.value,
-          name: String(fd.get("name") ?? ""),
+          name: formString(fd, "name"),
         },
       });
-      if (result.ok) {
-        form.reset();
-        setStatus("Preset created.");
-        await router.invalidate();
-        return;
-      }
-      setStatus(result.error);
     },
-    [citySlug, router],
-  );
+    successMessage: "Preset created.",
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
-      <input className="field" name="name" placeholder="Preset name" required />
-      <textarea
-        className="field"
-        defaultValue="{}"
-        name="data"
-        placeholder="{}"
-        rows={8}
-        style={{ width: "100%" }}
-      />
-      {status ? <p className="muted">{status}</p> : null}
-      <button className="btn btn-primary" type="submit">
-        Create preset
+      <label className="field-label">
+        Preset name
+        <input className="field" name="name" placeholder="Preset name" required />
+      </label>
+      <label className="field-label">
+        Preset JSON
+        <textarea
+          className="field w-full"
+          defaultValue="{}"
+          name="data"
+          placeholder="{}"
+          rows={8}
+        />
+      </label>
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Creating…" : "Create preset"}
       </button>
     </form>
   );

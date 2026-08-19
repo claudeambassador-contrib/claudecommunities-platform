@@ -1,12 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listEvents } from "@/modules/events/services/eventsService";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
+const loadAttendeeAnalyticsInput = z.object({ citySlug: z.string().min(1) });
+
 const loadAttendeeAnalytics = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadAttendeeAnalyticsInput.parse(input))
   .handler(({ data }) =>
     guarded(data.citySlug, "tools.use", async (page) => {
       const listed = await listEvents(page.store, { includeInactive: true });
@@ -29,7 +33,7 @@ export const Route = createFileRoute("/$citySlug/admin/tools/attendee-analytics"
   component: AttendeeAnalyticsPage,
 });
 
-function AttendeeAnalyticsPage() {
+function AttendeeAnalyticsPage(): ReactElement {
   const data = Route.useLoaderData();
 
   if (!data.allowed) {

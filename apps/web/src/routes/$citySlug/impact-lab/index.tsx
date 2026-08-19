@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import {
   getPublicConfig,
   listSponsors,
@@ -9,9 +10,12 @@ import {
 } from "@/modules/impact-lab/services/impactLabService";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { ItemList, PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadInput = z.object({ citySlug: z.string().min(1) });
 
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -56,8 +60,15 @@ const load = createServerFn({ method: "GET" })
     };
   });
 
+const submitInterestInput = z.object({
+  citySlug: z.string().min(1),
+  email: z.string(),
+  name: z.string(),
+});
+
+// Public interest form — intentionally no auth guard.
 const submitInterest = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; email: string; name: string }) => d)
+  .validator((input: unknown) => submitInterestInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -78,7 +89,7 @@ export const Route = createFileRoute("/$citySlug/impact-lab/")({
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { config, sponsors, statements } = Route.useLoaderData();
 
@@ -100,9 +111,7 @@ function Page() {
       />
       {config?.eventDate ? (
         <div className="card">
-          <p className="muted" style={{ margin: 0 }}>
-            {config.eventDate}
-          </p>
+          <p className="muted m-0">{config.eventDate}</p>
         </div>
       ) : null}
       <ItemList empty="Problem statements will appear here." items={statements} />
@@ -112,51 +121,37 @@ function Page() {
   );
 }
 
-function InterestForm({ citySlug }: { citySlug: string }) {
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const fd = new FormData(form);
-      const result = await submitInterest({
+function InterestForm({ citySlug }: { citySlug: string }): ReactElement {
+  const { error, handleSubmit, pending, success } = useFormSubmit({
+    invalidate: false,
+    resetOnSuccess: true,
+    submit: (fd) =>
+      submitInterest({
         data: {
           citySlug,
-          email: String(fd.get("email") ?? ""),
-          name: String(fd.get("name") ?? ""),
+          email: formString(fd, "email"),
+          name: formString(fd, "name"),
         },
-      });
-      if (result.ok) {
-        form.reset();
-        setStatus("Thanks — we will be in touch.");
-      } else {
-        setStatus(result.error);
-      }
-    },
-    [citySlug],
-  );
+      }),
+    successMessage: "Thanks — we will be in touch.",
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
       <strong>Register interest</strong>
-      <input className="btn" name="name" placeholder="Your name" style={{ width: "100%" }} />
-      <input
-        className="btn"
-        name="email"
-        placeholder="Email"
-        required
-        style={{ width: "100%" }}
-        type="email"
-      />
-      <button className="btn btn-primary" type="submit">
-        Submit
+      <label className="field-label">
+        Your name
+        <input className="field" name="name" placeholder="Your name" />
+      </label>
+      <label className="field-label">
+        Email
+        <input className="field" name="email" placeholder="Email" required type="email" />
+      </label>
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Submitting…" : "Submit"}
       </button>
-      {status ? (
-        <p className="muted" style={{ margin: 0 }}>
-          {status}
-        </p>
-      ) : null}
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
     </form>
   );
 }

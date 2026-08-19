@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { type ChangeEvent, useCallback, useState } from "react";
 import type {
   AudienceSplitBlock,
@@ -33,7 +34,7 @@ export function HomeSectionsEditor({
 }: {
   initialBlocks: Block[];
   onSave: (blocks: Block[]) => Promise<SaveHomeResult>;
-}) {
+}): ReactElement {
   const can = useCan();
   const canEdit = can("pages.edit");
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
@@ -135,7 +136,7 @@ function SectionCard({
   isLast: boolean;
   onMove: (id: string, direction: -1 | 1) => void;
   onReplace: (next: Block) => void;
-}) {
+}): ReactElement {
   const handleEnabled = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       onReplace({ ...block, enabled: event.target.checked });
@@ -151,7 +152,7 @@ function SectionCard({
 
   return (
     <article className="card stack">
-      <div className="row" style={{ justifyContent: "space-between" }}>
+      <div className="row justify-between">
         <strong>{TYPE_LABELS[block.type]}</strong>
         <label className="row" htmlFor={`${block.id}-enabled`}>
           <input
@@ -187,7 +188,7 @@ function BlockFields({
   block: Block;
   disabled: boolean;
   onChange: (next: Block) => void;
-}) {
+}): ReactElement | null {
   switch (block.type) {
     case "hero":
       return <HeroFields block={block} disabled={disabled} onChange={onChange} />;
@@ -218,7 +219,7 @@ function HeroFields({
   block: HeroBlock;
   disabled: boolean;
   onChange: (next: Block) => void;
-}) {
+}): ReactElement {
   const setHeading = useCallback(
     (heading: string) => onChange({ ...block, heading }),
     [block, onChange],
@@ -272,7 +273,7 @@ function RichTextFields({
   block: RichTextBlock;
   disabled: boolean;
   onChange: (next: Block) => void;
-}) {
+}): ReactElement {
   const setHeading = useCallback(
     (heading: string) => onChange({ ...block, heading }),
     [block, onChange],
@@ -307,7 +308,7 @@ function WebinarFields({
   block: WebinarBlock;
   disabled: boolean;
   onChange: (next: Block) => void;
-}) {
+}): ReactElement {
   const setTitle = useCallback((title: string) => onChange({ ...block, title }), [block, onChange]);
   const setDescription = useCallback(
     (description: string) => onChange({ ...block, description }),
@@ -361,7 +362,7 @@ function HeadingOnlyFields({
   block: AudienceSplitBlock | BenefitsBlock;
   disabled: boolean;
   onChange: (next: Block) => void;
-}) {
+}): ReactElement {
   const setHeading = useCallback(
     (heading: string) => onChange({ ...block, heading }),
     [block, onChange],
@@ -385,7 +386,7 @@ function CtaFields({
   block: CtaBlock;
   disabled: boolean;
   onChange: (next: Block) => void;
-}) {
+}): ReactElement {
   const setHeading = useCallback(
     (headingSignedOut: string) => onChange({ ...block, headingSignedOut }),
     [block, onChange],
@@ -434,7 +435,7 @@ function GalleryFields({
   block: GalleryBlock;
   disabled: boolean;
   onChange: (next: Block) => void;
-}) {
+}): ReactElement {
   const setHeading = useCallback(
     (heading: string) => onChange({ ...block, heading }),
     [block, onChange],
@@ -477,7 +478,7 @@ function TextField({
   multiline?: boolean;
   onChange: (value: string) => void;
   value: string;
-}) {
+}): ReactElement {
   const handleChange = useCallback(
     (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       onChange(event.target.value);
@@ -486,25 +487,23 @@ function TextField({
   );
 
   return (
-    <label className="stack" htmlFor={id} style={{ gap: "0.35rem" }}>
+    <label className="stack stack-tight" htmlFor={id}>
       <span className="muted">{label}</span>
       {multiline ? (
         <textarea
-          className="field"
+          className="field w-full"
           disabled={disabled}
           id={id}
           onChange={handleChange}
           rows={4}
-          style={{ width: "100%" }}
           value={value}
         />
       ) : (
         <input
-          className="field"
+          className="field w-full"
           disabled={disabled}
           id={id}
           onChange={handleChange}
-          style={{ width: "100%" }}
           value={value}
         />
       )}

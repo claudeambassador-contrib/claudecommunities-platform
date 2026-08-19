@@ -1,6 +1,7 @@
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/tanstack-react-start";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
 import { listPublicTenants } from "@/modules/tenants/services/publicListService";
 import { isClerkPublishableConfigured } from "@/shared/auth/clerk";
 import { getRegistryDb } from "@/shared/db/env";
@@ -15,20 +16,19 @@ const getDirectory = createServerFn({ method: "GET" }).handler(async () => {
 
 export const Route = createFileRoute("/")({
   loader: () => getDirectory(),
+  staleTime: 60_000,
   component: PlatformHome,
 });
 
-function PlatformHome() {
+function PlatformHome(): ReactElement {
   const { tenants } = Route.useLoaderData();
 
   return (
     <main className="shell stack">
-      <header className="row" style={{ justifyContent: "space-between" }}>
+      <header className="row justify-between">
         <div>
-          <h1 style={{ margin: 0 }}>Claude Communities</h1>
-          <p className="muted" style={{ margin: "0.25rem 0 0" }}>
-            Platform directory — each city runs on its own D1 instance.
-          </p>
+          <h1 className="m-0">Claude Communities</h1>
+          <p className="muted mt-1">Platform directory — each city runs on its own D1 instance.</p>
         </div>
         <div className="row">
           {isClerkPublishableConfigured() ? (
@@ -61,7 +61,7 @@ function PlatformHome() {
       </header>
 
       <section className="stack">
-        <h2 style={{ margin: 0 }}>Cities</h2>
+        <h2 className="m-0">Cities</h2>
         {tenants.length === 0 ? (
           <div className="card muted">
             No cities provisioned yet. Run{" "}
@@ -71,10 +71,9 @@ function PlatformHome() {
           <div className="stack">
             {tenants.map((t) => (
               <Link
-                className="card"
+                className="card block"
                 key={t.slug}
                 params={{ citySlug: t.slug }}
-                style={{ display: "block" }}
                 to="/$citySlug"
               >
                 <strong>{t.name}</strong>

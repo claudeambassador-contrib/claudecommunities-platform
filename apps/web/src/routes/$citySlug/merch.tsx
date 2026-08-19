@@ -1,12 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { getRegionConfig } from "@/shared/region";
 import { EmptyCard, PageHeader } from "@/shared/ui/page";
 import { ShopifyCollection } from "@/shared/ui/shopify-collection";
 
+const loadInput = z.object({ citySlug: z.string().min(1) });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     await loadCityPage(data.citySlug);
     const region = getRegionConfig();
@@ -18,7 +22,7 @@ export const Route = createFileRoute("/$citySlug/merch")({
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { merchEnabled, siteName } = Route.useLoaderData();
 
   return (

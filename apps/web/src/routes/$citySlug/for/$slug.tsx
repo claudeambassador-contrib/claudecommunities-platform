@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getPublishedPage } from "@/modules/pages/services/pagesService";
 import type { PublishedPage } from "@/modules/pages/types";
 import { loadCityPage } from "@/shared/http/cityPage";
@@ -60,8 +62,10 @@ function fallbackIndustry(slug: string): { blurb: string; name: string } {
   };
 }
 
+const loadInput = z.object({ citySlug: z.string().min(1), slug: z.string() });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string; slug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -79,7 +83,7 @@ export const Route = createFileRoute("/$citySlug/for/$slug")({
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { slug } = Route.useParams();
   const { cms } = Route.useLoaderData();
@@ -105,11 +109,11 @@ function Page() {
       />
       {cms?.body ? (
         <div className="card">
-          <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{cms.body}</p>
+          <p className="m-0 whitespace-pre-wrap">{cms.body}</p>
         </div>
       ) : (
         <div className="card">
-          <p style={{ margin: 0 }}>{fallback.blurb}</p>
+          <p className="m-0">{fallback.blurb}</p>
         </div>
       )}
       {cms ? null : (

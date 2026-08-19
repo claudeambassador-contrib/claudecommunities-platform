@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import type { EmailTransport } from "@/modules/email/transport";
-import { listOrgRecipients } from "@/modules/identity/repositories/directoryRepository";
+import { listCampaignRecipients } from "@/modules/identity/services/usersService";
 import type { RegistryStore } from "@/shared/db/registryStore";
 import { first } from "@/shared/db/rows";
 import type { TenantStore } from "@/shared/db/tenantStore";
@@ -49,7 +49,7 @@ export async function sendCampaign(
     return err("not_found", 404, "Campaign not found");
   }
 
-  const recipients = await listOrgRecipients(registry, store.orgId);
+  const recipients = await listCampaignRecipients(registry, store.orgId);
   const already = await store.db
     .select({ toEmail: emailSends.toEmail })
     .from(emailSends)

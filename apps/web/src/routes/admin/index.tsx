@@ -1,10 +1,12 @@
 import { auth } from "@clerk/tanstack-react-start/server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { syncSessionUser } from "@/modules/identity/services/sessionService";
 import { listPublicTenants, provisionCity } from "@/modules/tenants/services/publicListService";
 import { getRegistryDb } from "@/shared/db/env";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
 const loadPlatform = createServerFn({ method: "GET" }).handler(async () => {
   const session = await auth();
@@ -23,8 +25,14 @@ const loadPlatform = createServerFn({ method: "GET" }).handler(async () => {
   };
 });
 
+const provisionInput = z.object({
+  name: z.string(),
+  region: z.enum(["au", "nz"]).optional(),
+  slug: z.string(),
+});
+
 const provision = createServerFn({ method: "POST" })
-  .validator((d: { slug: string; name: string; region?: "au" | "nz" }) => d)
+  .validator((input: unknown) => provisionInput.parse(input))
   .handler(async ({ data }) => {
     const registryDb = getRegistryDb();
     const user = await syncSessionUser(registryDb);
@@ -43,7 +51,7 @@ export const Route = createFileRoute("/admin/")({
   component: PlatformAdmin,
 });
 
-function PlatformAdmin() {
+function PlatformAdmin(): ReactElement {
   const data = Route.useLoaderData();
 
   if (!data.allowed) {
@@ -59,7 +67,7 @@ function PlatformAdmin() {
 
   return (
     <main className="shell stack">
-      <h1 style={{ margin: 0 }}>Platform admin</h1>
+      <h1 className="m-0">Platform admin</h1>
       <p className="muted">
         Provision city instances (registry row). Create D1 + migrate separately.
       </p>
@@ -76,30 +84,31 @@ function PlatformAdmin() {
   );
 }
 
-function ProvisionForm() {
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const slug = String(fd.get("slug") ?? "");
-    const name = String(fd.get("name") ?? "");
-    const result = await provision({ data: { slug, name, region: "au" } });
-    if (result.ok) {
-      window.location.reload();
-    } else {
-      setError(result.error);
-    }
-  }, []);
+function ProvisionForm(): ReactElement {
+  const { error, handleSubmit, pending, success } = useFormSubmit({
+    resetOnSuccess: true,
+    submit: (fd) =>
+      provision({
+        data: { name: formString(fd, "name"), region: "au", slug: formString(fd, "slug") },
+      }),
+    successMessage: "City provisioned.",
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
       <strong>Provision city</strong>
-      <input className="btn" name="slug" placeholder="sydney" required style={{ width: "100%" }} />
-      <input className="btn" name="name" placeholder="Sydney" required style={{ width: "100%" }} />
-      {error ? <p className="muted">{error}</p> : null}
-      <button className="btn btn-primary" type="submit">
-        Create registry row
+      <label className="field-label">
+        Slug
+        <input className="field" name="slug" placeholder="sydney" required />
+      </label>
+      <label className="field-label">
+        Name
+        <input className="field" name="name" placeholder="Sydney" required />
+      </label>
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Creating…" : "Create registry row"}
       </button>
     </form>
   );

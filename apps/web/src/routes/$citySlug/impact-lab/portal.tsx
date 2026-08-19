@@ -1,15 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { useState } from "react";
+import { z } from "zod";
 import {
   checkInParticipant,
   getPublicConfig,
 } from "@/modules/impact-lab/services/impactLabService";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadInput = z.object({ citySlug: z.string().min(1) });
 
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -37,8 +42,16 @@ const load = createServerFn({ method: "GET" })
     };
   });
 
+const checkInInput = z.object({
+  citySlug: z.string().min(1),
+  code: z.string(),
+  email: z.string(),
+  name: z.string(),
+});
+
+// Public check-in — gated by the event access code, not Clerk auth.
 const checkIn = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; code: string; email: string; name: string }) => d)
+  .validator((input: unknown) => checkInInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -65,7 +78,7 @@ export const Route = createFileRoute("/$citySlug/impact-lab/portal")({
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { config } = Route.useLoaderData();
 
@@ -81,12 +94,8 @@ function Page() {
         title={config?.eventName ?? "Participant portal"}
       />
       <div className="card stack">
-        {config?.eventDate ? (
-          <p className="muted" style={{ margin: 0 }}>
-            {config.eventDate}
-          </p>
-        ) : null}
-        <p style={{ margin: 0 }}>
+        {config?.eventDate ? <p className="muted m-0">{config.eventDate}</p> : null}
+        <p className="m-0">
           {config?.checkInOpen
             ? "Check-in is open. Enter the access code from the room screen."
             : "Check-in is closed. Find an organiser if you need help."}
@@ -104,44 +113,36 @@ interface CheckInSession {
   sessionToken: string;
 }
 
-function CheckInForm({ citySlug }: { citySlug: string }) {
-  const [status, setStatus] = useState<string | null>(null);
+function CheckInForm({ citySlug }: { citySlug: string }): ReactElement {
   const [session, setSession] = useState<CheckInSession | null>(null);
 
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const fd = new FormData(event.currentTarget);
-      const result = await checkIn({
+  const { error, handleSubmit, pending } = useFormSubmit<
+    ({ ok: true } & CheckInSession) | { error: string; ok: false }
+  >({
+    invalidate: false,
+    onSuccess: (result) =>
+      setSession({
+        coffeeCode: result.coffeeCode,
+        name: result.name,
+        sessionToken: result.sessionToken,
+      }),
+    submit: (fd) =>
+      checkIn({
         data: {
           citySlug,
-          code: String(fd.get("code") ?? ""),
-          email: String(fd.get("email") ?? ""),
-          name: String(fd.get("name") ?? ""),
+          code: formString(fd, "code"),
+          email: formString(fd, "email"),
+          name: formString(fd, "name"),
         },
-      });
-      if (result.ok) {
-        setSession({
-          coffeeCode: result.coffeeCode,
-          name: result.name,
-          sessionToken: result.sessionToken,
-        });
-        setStatus(null);
-      } else {
-        setStatus(result.error);
-      }
-    },
-    [citySlug],
-  );
+      }),
+  });
 
   if (session) {
     return (
       <div className="card stack">
         <strong>Checked in as {session.name}</strong>
-        <p style={{ margin: 0 }}>Coffee code: {session.coffeeCode}</p>
-        <p className="muted" style={{ margin: 0, wordBreak: "break-all" }}>
-          Session token: {session.sessionToken}
-        </p>
+        <p className="m-0">Coffee code: {session.coffeeCode}</p>
+        <p className="muted m-0 break-all">Session token: {session.sessionToken}</p>
       </div>
     );
   }
@@ -149,36 +150,22 @@ function CheckInForm({ citySlug }: { citySlug: string }) {
   return (
     <form className="card stack" onSubmit={handleSubmit}>
       <strong>Check in</strong>
-      <input
-        className="btn"
-        name="code"
-        placeholder="Access code"
-        required
-        style={{ width: "100%" }}
-      />
-      <input
-        className="btn"
-        name="name"
-        placeholder="Your name"
-        required
-        style={{ width: "100%" }}
-      />
-      <input
-        className="btn"
-        name="email"
-        placeholder="Email"
-        required
-        style={{ width: "100%" }}
-        type="email"
-      />
-      <button className="btn btn-primary" type="submit">
-        Check in
+      <label className="field-label">
+        Access code
+        <input className="field" name="code" placeholder="Access code" required />
+      </label>
+      <label className="field-label">
+        Your name
+        <input className="field" name="name" placeholder="Your name" required />
+      </label>
+      <label className="field-label">
+        Email
+        <input className="field" name="email" placeholder="Email" required type="email" />
+      </label>
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Checking in…" : "Check in"}
       </button>
-      {status ? (
-        <p className="muted" style={{ margin: 0 }}>
-          {status}
-        </p>
-      ) : null}
+      {error ? <p className="form-error">{error}</p> : null}
     </form>
   );
 }

@@ -1,11 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getPublicConfig } from "@/modules/impact-lab/services/impactLabService";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { PageHeader } from "@/shared/ui/page";
 
+const loadInput = z.object({ citySlug: z.string().min(1) });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -30,7 +34,7 @@ export const Route = createFileRoute("/$citySlug/events/claude-impact-lab-melbou
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { config } = Route.useLoaderData();
   const city = { citySlug: tenant.slug };
@@ -55,10 +59,10 @@ function Page() {
         title={config?.eventName ?? "Claude Impact Lab Melbourne"}
       />
       <div className="card stack">
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="muted m-0">
           {config?.eventDate || "Saturday, May 23, 2026"} · Melbourne, VIC
         </p>
-        <p style={{ margin: 0 }}>
+        <p className="m-0">
           Australia&apos;s first Claude Impact Lab. Teams partner with local government and
           nonprofits to build AI tools on real Melbourne civic data — transport, planning, council
           records, and public services.
@@ -66,7 +70,7 @@ function Page() {
       </div>
       <div className="card stack">
         <strong>What participants get</strong>
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="muted m-0">
           API credits, expert judges, a room of builders, and merch. Free to attend.
         </p>
       </div>

@@ -1,17 +1,22 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { insertMembership, insertUser } from "@/modules/identity/repositories/directoryRepository";
 import { findEmailPreferences } from "@/modules/identity/repositories/emailPreferencesRepository";
 import {
+  actorFromClerkUserId,
   getEmailPreferences,
   getOwnProfile,
   importMembers,
   inviteMember,
+  listCampaignRecipients,
   listDirectory,
   listEmailContacts,
   listInvites,
   listPublicAuthors,
   listUsers,
   parseMemberCsv,
+  setMembershipRole,
+  unsubscribeByEmail,
   updateEmailPreferences,
   updateOwnProfile,
 } from "@/modules/identity/services/usersService";
@@ -254,6 +259,100 @@ describe("usersService", () => {
     if (loaded.ok) {
       expect(loaded.preferences).toEqual(updated.preferences);
     }
+  });
+
+  it("lists campaign recipients and drops unsubscribed addresses", async () => {
+    const store = openMemoryRegistry();
+    const ada = await seedMember(store, {
+      clerk: "clk_rcpt",
+      email: "rcpt@example.com",
+      name: "Ada",
+    });
+    const al = await seedMember(store, {
+      clerk: "clk_rcpt2",
+      email: "rcpt2@example.com",
+      name: "Al",
+    });
+
+    const before = await listCampaignRecipients(store, ORG);
+    expect(before.map((row) => row.id).sort()).toEqual([ada.id, al.id].sort());
+
+    const missing = await unsubscribeByEmail(store, "nobody@example.com");
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) {
+      expect(missing.error.status).toBe(404);
+    }
+
+    const unsubscribed = await unsubscribeByEmail(store, "rcpt2@example.com");
+    expect(unsubscribed.ok).toBe(true);
+    if (unsubscribed.ok) {
+      expect(unsubscribed.email).toBe("rcpt2@example.com");
+    }
+    const prefs = await findEmailPreferences(store, al.id);
+    expect(prefs?.weeklyDigest).toBe(false);
+
+    const after = await listCampaignRecipients(store, ORG);
+    expect(after).toEqual([{ email: "rcpt@example.com", id: ada.id }]);
+  });
+
+  it("sets a membership role and 404s unknown users or non-members", async () => {
+    const store = openMemoryRegistry();
+    const ada = await seedMember(store, {
+      clerk: "clk_role",
+      email: "role@example.com",
+      name: "Ada",
+    });
+    const outsider = await insertUser(store, {
+      clerkUserId: "clk_role_out",
+      displayName: "Out",
+      email: "role-out@example.com",
+    });
+
+    const unknown = await setMembershipRole(store, ORG, "usr_missing", "admin");
+    expect(unknown.ok).toBe(false);
+    if (!unknown.ok) {
+      expect(unknown.error.status).toBe(404);
+    }
+
+    const nonMember = await setMembershipRole(store, ORG, outsider.id, "admin");
+    expect(nonMember.ok).toBe(false);
+    if (!nonMember.ok) {
+      expect(nonMember.error.status).toBe(404);
+    }
+
+    const promoted = await setMembershipRole(store, ORG, ada.id, "admin");
+    expect(promoted.ok).toBe(true);
+    if (promoted.ok) {
+      expect(promoted).toMatchObject({ id: ada.id, role: "admin" });
+    }
+    const listed = await listUsers(store, adminActor(), ORG);
+    expect(listed.ok && listed.users.find((u) => u.id === ada.id)?.role).toBe("admin");
+  });
+
+  it("resolves an actor from a clerk user id and refuses banned users", async () => {
+    const store = openMemoryRegistry();
+    const ada = await seedMember(store, {
+      clerk: "clk_actor",
+      email: "actor@example.com",
+      name: "Ada",
+      role: "admin",
+    });
+
+    expect(await actorFromClerkUserId(store.db, "clk_unknown")).toBeNull();
+
+    const actor = await actorFromClerkUserId(store.db, "clk_actor");
+    expect(actor).not.toBeNull();
+    expect(actor?.id).toBe(ada.id);
+    expect(actor?.email).toBe("actor@example.com");
+    expect(actor?.isSuperAdmin).toBe(false);
+    expect(actor?.permissions.has("users.view")).toBe(true);
+    expect(actor?.permissions.has("roles.edit")).toBe(false);
+
+    await store.db
+      .update(store.tables.users)
+      .set({ isBanned: true })
+      .where(eq(store.tables.users.id, ada.id));
+    expect(await actorFromClerkUserId(store.db, "clk_actor")).toBeNull();
   });
 
   it("rejects unauthenticated email preference reads and writes", async () => {

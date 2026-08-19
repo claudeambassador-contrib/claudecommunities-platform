@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listPublished, listPublishedScheduled } from "@/modules/courses/services/coursesService";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { ItemList, PageHeader } from "@/shared/ui/page";
 
+const loadInput = z.object({ citySlug: z.string().min(1) });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -57,10 +61,11 @@ const load = createServerFn({ method: "GET" })
 
 export const Route = createFileRoute("/$citySlug/courses/")({
   loader: ({ params }) => load({ data: { citySlug: params.citySlug } }),
+  staleTime: 30_000,
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { courses, scheduled } = Route.useLoaderData();
 
   return (

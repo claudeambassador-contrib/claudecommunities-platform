@@ -1,12 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listEvents } from "@/modules/events/services/eventsService";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { getRegionConfig } from "@/shared/region";
 import { ItemList, PageHeader } from "@/shared/ui/page";
 
+const loadInput = z.object({ citySlug: z.string().min(1) });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -32,7 +36,7 @@ export const Route = createFileRoute("/$citySlug/cowork")({
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { events } = Route.useLoaderData();
   const { countryName } = getRegionConfig();
@@ -53,7 +57,7 @@ function Page() {
         title="Claude Code co-work"
       />
       <div className="card">
-        <p style={{ margin: 0 }}>
+        <p className="m-0">
           Bring a laptop and a project. Co-work is focused building time — no talks, no agenda —
           just a room of people shipping with Claude Code.
         </p>

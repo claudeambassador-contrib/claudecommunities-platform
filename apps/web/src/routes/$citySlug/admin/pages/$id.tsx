@@ -1,14 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getContentPage } from "@/modules/pages/services/pagesService";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 
+const loadPageInput = z.object({ citySlug: z.string().min(1), id: z.string() });
+
 const loadPage = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string; id: string }) => d)
+  .validator((input: unknown) => loadPageInput.parse(input))
   .handler(({ data }) =>
-    guarded(data.citySlug, null, async (page) => {
+    guarded(data.citySlug, "pages.view", async (page) => {
       const result = await getContentPage(page.store, page.actor, data.id);
       if (!result.ok) {
         return result;
@@ -30,7 +34,7 @@ export const Route = createFileRoute("/$citySlug/admin/pages/$id")({
   component: ContentPageDetail,
 });
 
-function ContentPageDetail() {
+function ContentPageDetail(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -50,9 +54,7 @@ function ContentPageDetail() {
         title={data.page.title}
       />
       <div className="card">
-        <p className="muted" style={{ margin: 0 }}>
-          {data.page.blockCount} sections
-        </p>
+        <p className="muted m-0">{data.page.blockCount} sections</p>
       </div>
     </section>
   );

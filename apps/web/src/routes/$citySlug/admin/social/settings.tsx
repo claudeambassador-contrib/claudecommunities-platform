@@ -1,18 +1,20 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { connectAccount, listAccounts } from "@/modules/social/services/socialService";
-import type { ConnectorId, SocialPlatform } from "@/modules/social/types";
-import { loadCityPage } from "@/shared/http/cityPage";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
+import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadAccountsInput = z.object({ citySlug: z.string().min(1) });
 
 const loadAccounts = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadAccountsInput.parse(input))
   .handler(({ data }) =>
-    guarded(data.citySlug, null, async (page) => {
+    guarded(data.citySlug, "social.view", async (page) => {
       const result = await listAccounts(page.store, page.actor);
       if (!result.ok) {
         return result;
@@ -27,41 +29,35 @@ const loadAccounts = createServerFn({ method: "GET" })
     }),
   );
 
+const submitAccountInput = z.object({
+  accountType: z.enum(["organization", "person"]),
+  citySlug: z.string().min(1),
+  connector: z.enum(["linkedin", "zernio"]),
+  displayName: z.string(),
+  externalId: z.string(),
+  platform: z.enum(["linkedin"]),
+});
+
 const submitAccount = createServerFn({ method: "POST" })
-  .validator(
-    (d: {
-      accountType: "organization" | "person";
-      citySlug: string;
-      connector: ConnectorId;
-      displayName: string;
-      externalId: string;
-      platform: SocialPlatform;
-    }) => d,
-  )
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { error: "unauthenticated", ok: false as const };
-    }
-    const result = await connectAccount(page.store, page.actor, {
-      accountType: data.accountType,
-      connector: data.connector,
-      displayName: data.displayName,
-      externalId: data.externalId,
-      platform: data.platform,
-    });
-    if (!result.ok) {
-      return { error: result.error.message ?? result.error.code, ok: false as const };
-    }
-    return { ok: true as const };
-  });
+  .validator((input: unknown) => submitAccountInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, "social.manage", (page) =>
+      connectAccount(page.store, page.actor, {
+        accountType: data.accountType,
+        connector: data.connector,
+        displayName: data.displayName,
+        externalId: data.externalId,
+        platform: data.platform,
+      }),
+    ),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/social/settings")({
   loader: ({ params }) => loadAccounts({ data: { citySlug: params.citySlug } }),
   component: SocialSettingsPage,
 });
 
-function SocialSettingsPage() {
+function SocialSettingsPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -83,54 +79,57 @@ function SocialSettingsPage() {
   );
 }
 
-function ConnectForm({ citySlug }: { citySlug: string }) {
-  const router = useRouter();
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const fd = new FormData(form);
-      const result = await submitAccount({
+function ConnectForm({ citySlug }: { citySlug: string }): ReactElement {
+  const { error, handleSubmit, pending, success } = useFormSubmit({
+    resetOnSuccess: true,
+    submit: (fd) =>
+      submitAccount({
         data: {
           accountType: fd.get("accountType") === "person" ? "person" : "organization",
           citySlug,
           connector: fd.get("connector") === "zernio" ? "zernio" : "linkedin",
-          displayName: String(fd.get("displayName") ?? ""),
-          externalId: String(fd.get("externalId") ?? ""),
+          displayName: formString(fd, "displayName"),
+          externalId: formString(fd, "externalId"),
           platform: "linkedin",
         },
-      });
-      if (result.ok) {
-        form.reset();
-        setStatus("Account connected.");
-        await router.invalidate();
-        return;
-      }
-      setStatus(result.error);
-    },
-    [citySlug, router],
-  );
+      }),
+    successMessage: "Account connected.",
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
-      <input className="field" name="displayName" placeholder="Display name" required />
-      <select className="field" defaultValue="linkedin" name="platform" required>
-        <option value="linkedin">linkedin</option>
-      </select>
-      <select className="field" defaultValue="linkedin" name="connector" required>
-        <option value="linkedin">linkedin</option>
-        <option value="zernio">zernio</option>
-      </select>
-      <input className="field" name="externalId" placeholder="External ID" required />
-      <select className="field" defaultValue="organization" name="accountType">
-        <option value="organization">organization</option>
-        <option value="person">person</option>
-      </select>
-      {status ? <p className="muted">{status}</p> : null}
-      <button className="btn btn-primary" type="submit">
-        Connect account
+      <label className="field-label">
+        Display name
+        <input className="field" name="displayName" placeholder="Display name" required />
+      </label>
+      <label className="field-label">
+        Platform
+        <select className="field" defaultValue="linkedin" name="platform" required>
+          <option value="linkedin">linkedin</option>
+        </select>
+      </label>
+      <label className="field-label">
+        Connector
+        <select className="field" defaultValue="linkedin" name="connector" required>
+          <option value="linkedin">linkedin</option>
+          <option value="zernio">zernio</option>
+        </select>
+      </label>
+      <label className="field-label">
+        External ID
+        <input className="field" name="externalId" placeholder="External ID" required />
+      </label>
+      <label className="field-label">
+        Account type
+        <select className="field" defaultValue="organization" name="accountType">
+          <option value="organization">organization</option>
+          <option value="person">person</option>
+        </select>
+      </label>
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Connecting…" : "Connect account"}
       </button>
     </form>
   );

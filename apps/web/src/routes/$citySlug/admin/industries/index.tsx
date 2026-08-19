@@ -1,15 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listIndustries } from "@/modules/pages/services/industriesService";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
+const loadIndustriesInput = z.object({ citySlug: z.string().min(1) });
+
 const loadIndustries = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadIndustriesInput.parse(input))
   .handler(({ data }) =>
-    guarded(data.citySlug, null, async (page) => {
+    guarded(data.citySlug, "pages.view", async (page) => {
       const listed = await listIndustries(page.store, page.actor);
       if (!listed.ok) {
         return listed;
@@ -23,7 +27,7 @@ export const Route = createFileRoute("/$citySlug/admin/industries/")({
   component: AdminIndustriesPage,
 });
 
-function AdminIndustriesPage() {
+function AdminIndustriesPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -50,10 +54,9 @@ function AdminIndustriesPage() {
         <div className="stack">
           {data.industries.map((industry) => (
             <a
-              className="card"
+              className="card block"
               href={`/${citySlug}/admin/industries/${industry.slug}`}
               key={industry.slug}
-              style={{ display: "block" }}
             >
               <strong>{industry.title}</strong>
               <div className="muted">

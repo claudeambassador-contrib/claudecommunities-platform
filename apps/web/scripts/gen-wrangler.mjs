@@ -15,14 +15,23 @@ const templatePath = resolve(APP_ROOT, "wrangler.template.jsonc");
 const outPath = resolve(APP_ROOT, "wrangler.jsonc");
 
 function loadEnvFile(path) {
-  if (!existsSync(path)) return {};
+  if (!existsSync(path)) {
+    return {};
+  }
   const out = {};
   for (const line of readFileSync(path, "utf8").split("\n")) {
     const t = line.trim();
-    if (!t || t.startsWith("#")) continue;
+    if (!t || t.startsWith("#")) {
+      continue;
+    }
     const i = t.indexOf("=");
-    if (i === -1) continue;
-    out[t.slice(0, i).trim()] = t.slice(i + 1).trim().replace(/^["']|["']$/g, "");
+    if (i === -1) {
+      continue;
+    }
+    out[t.slice(0, i).trim()] = t
+      .slice(i + 1)
+      .trim()
+      .replace(/^["']|["']$/g, "");
   }
   return out;
 }
@@ -37,7 +46,7 @@ let text = readFileSync(templatePath, "utf8");
 const missing = [];
 text = text.replace(/\$\{([A-Z0-9_]+)\}/g, (_, key) => {
   const v = env[key];
-  if (v == null || v === "") {
+  if (v === null || v === undefined || v === "") {
     missing.push(key);
     return `\${${key}}`;
   }

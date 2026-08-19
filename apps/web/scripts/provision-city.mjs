@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { randomUUID } from "node:crypto";
 /**
  * Provision a city for local/staging:
  * 1. Print wrangler d1 create command (remote) or use local binding name
@@ -10,10 +11,9 @@
 import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
 
 const [slugRaw, nameRaw, regionRaw = "au"] = process.argv.slice(2);
-if (!slugRaw || !nameRaw) {
+if (!(slugRaw && nameRaw)) {
   console.error('Usage: node scripts/provision-city.mjs <slug> "<Name>" [au|nz]');
   process.exit(1);
 }

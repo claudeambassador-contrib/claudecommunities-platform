@@ -79,3 +79,15 @@ src/workflows/       # PublishPost, SlideExport, CampaignSend
 drizzle/registry/    # flattened control-plane SQL
 drizzle/tenant/      # flattened city SQL (applied to every city D1)
 ```
+
+## Module boundaries
+
+A module's repositories are private to that module. Anything outside a module
+(other modules' services, routes) must go through that module's `services/`
+layer — e.g. import from `@/modules/identity/services/usersService`, never
+`@/modules/identity/repositories/*`. If the operation you need isn't exposed,
+add a narrow service function rather than reaching into the repository.
+
+Biome enforces this via per-module `noRestrictedImports` overrides in
+`biome.jsonc` (each module bans `@/modules/*/repositories/**` except its own).
+When adding a new module with a `services/` dir, add a matching override block.

@@ -1,14 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getPermissionCatalog, listRoles } from "@/modules/roles/services/rolesService";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, ItemList, PageHeader } from "@/shared/ui/page";
 
+const loadRolesInput = z.object({ citySlug: z.string().min(1) });
+
 const loadRoles = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadRolesInput.parse(input))
   .handler(({ data }) =>
-    guarded(data.citySlug, null, async (page) => {
+    guarded(data.citySlug, "roles.view", async (page) => {
       const result = await listRoles(page.store, page.actor);
       if (!result.ok) {
         return result;
@@ -33,7 +37,7 @@ export const Route = createFileRoute("/$citySlug/admin/roles")({
   component: AdminRolesPage,
 });
 
-function AdminRolesPage() {
+function AdminRolesPage(): ReactElement {
   const data = Route.useLoaderData();
 
   if (!data.allowed) {

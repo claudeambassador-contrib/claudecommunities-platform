@@ -1,6 +1,6 @@
 import { ClerkProvider } from "@clerk/tanstack-react-start";
 import { createRootRoute, HeadContent, Outlet, Scripts, useRouter } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useCallback } from "react";
 import { isClerkPublishableConfigured } from "@/shared/auth/clerk";
 import appCss from "../styles.css?url";
@@ -21,11 +21,11 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 });
 
-function RootComponent() {
+function RootComponent(): ReactElement {
   return <Outlet />;
 }
 
-function RootError({ error }: { error: Error }) {
+function RootError({ error }: { error: Error }): ReactElement {
   const router = useRouter();
   const message = error.message || "Something went wrong";
   const authOutage = AUTH_OUTAGE.test(message);
@@ -41,10 +41,8 @@ function RootError({ error }: { error: Error }) {
   return (
     <main className="shell stack">
       <div className="card stack">
-        <h1 style={{ margin: 0 }}>{title}</h1>
-        <p className="muted" style={{ margin: 0 }}>
-          {detail}
-        </p>
+        <h1 className="m-0">{title}</h1>
+        <p className="muted m-0">{detail}</p>
         <div className="row">
           <button className="btn btn-primary" onClick={handleRetry} type="button">
             Retry
@@ -58,7 +56,7 @@ function RootError({ error }: { error: Error }) {
   );
 }
 
-function RootDocument({ children }: { children: ReactNode }) {
+function RootDocument({ children }: { children: ReactNode }): ReactElement {
   if (isClerkPublishableConfigured()) {
     return (
       <html lang="en">

@@ -34,15 +34,15 @@ loadEnvFile(new URL("./.env.local", import.meta.url).pathname);
 process.env.CLERK_PUBLISHABLE_KEY ||= process.env.VITE_CLERK_PUBLISHABLE_KEY ?? "";
 
 export default defineConfig({
+  expect: { timeout: 15_000 },
+  fullyParallel: false,
   testDir: "./e2e",
   testMatch: "**/*.spec.ts",
   timeout: 180_000,
-  expect: { timeout: 15_000 },
-  fullyParallel: false,
   use: {
     baseURL: process.env.BASE_URL ?? "http://localhost:3001",
-    video: "on",
-    viewport: { width: 1280, height: 720 },
     ignoreHTTPSErrors: true,
+    video: "on",
+    viewport: { height: 720, width: 1280 },
   },
 });

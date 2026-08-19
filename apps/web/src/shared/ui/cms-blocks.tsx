@@ -73,8 +73,8 @@ function renderCmsBlock({
       return (
         <div className="card stack" key={block.id}>
           {block.badge ? <p className="muted">{block.badge}</p> : null}
-          <h2 style={{ margin: 0 }}>{block.heading ?? `Welcome to ${region.siteName}`}</h2>
-          {block.body ? <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{block.body}</p> : null}
+          <h2 className="m-0">{block.heading ?? `Welcome to ${region.siteName}`}</h2>
+          {block.body ? <p className="m-0 whitespace-pre-wrap">{block.body}</p> : null}
           <div className="row">
             <Link className="btn btn-primary" params={city} to="/$citySlug/events">
               {block.primaryCtaLabel ?? "Browse events"}
@@ -92,9 +92,7 @@ function renderCmsBlock({
           {block.cards.map((card) => (
             <div key={card.title}>
               <strong>{card.title}</strong>
-              <p className="muted" style={{ margin: "0.25rem 0 0" }}>
-                {card.desc}
-              </p>
+              <p className="muted mt-1">{card.desc}</p>
             </div>
           ))}
         </div>
@@ -110,9 +108,7 @@ function renderCmsBlock({
               key={card.title}
             >
               <strong>{card.title}</strong>
-              <p className="muted" style={{ margin: "0.25rem 0 0" }}>
-                {card.desc}
-              </p>
+              <p className="muted mt-1">{card.desc}</p>
               <span>{card.ctaLabel ?? "Learn more"}</span>
             </a>
           ))}
@@ -123,9 +119,7 @@ function renderCmsBlock({
         <div className="card stack" key={block.id}>
           <strong>Upcoming events</strong>
           {events.length === 0 ? (
-            <p className="muted" style={{ margin: 0 }}>
-              No events yet.
-            </p>
+            <p className="muted m-0">No events yet.</p>
           ) : (
             events.map((event) => (
               <Link
@@ -146,9 +140,7 @@ function renderCmsBlock({
       return (
         <div className="card stack" key={block.id}>
           <strong>Discord</strong>
-          <p className="muted" style={{ margin: 0 }}>
-            Chat lives on Discord for {region.siteName}.
-          </p>
+          <p className="muted m-0">Chat lives on Discord for {region.siteName}.</p>
           <a className="btn btn-primary" href={region.discordInvite} rel="noreferrer">
             Join Discord
           </a>
@@ -160,11 +152,9 @@ function renderCmsBlock({
           <strong>{block.heading ?? "From recent meetups"}</strong>
           {block.subheading ? <p className="muted">{block.subheading}</p> : null}
           {region.galleryImages.length === 0 ? (
-            <p className="muted" style={{ margin: 0 }}>
-              Photos land here after the next meetup.
-            </p>
+            <p className="muted m-0">Photos land here after the next meetup.</p>
           ) : (
-            <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
+            <ul className="m-0 pl-5">
               {region.galleryImages.map((image) => (
                 <li key={image.src}>{image.alt}</li>
               ))}
@@ -178,7 +168,7 @@ function renderCmsBlock({
           <strong>
             {signedIn ? "You're in" : (block.headingSignedOut ?? "Join the community")}
           </strong>
-          <p style={{ margin: 0 }}>
+          <p className="m-0">
             {signedIn
               ? "Browse events, courses, and the member feed."
               : (block.bodySignedOut ?? "Sign in to RSVP, post, and follow along.")}
@@ -198,16 +188,14 @@ function renderCmsBlock({
       return (
         <div className="card stack" key={block.id}>
           {block.heading ? <strong>{block.heading}</strong> : null}
-          <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{block.body}</p>
+          <p className="m-0 whitespace-pre-wrap">{block.body}</p>
         </div>
       );
     case "webinar":
       return (
         <a className="card stack" href={block.href} key={block.id} rel="noreferrer">
           <strong>{block.title}</strong>
-          <p className="muted" style={{ margin: 0 }}>
-            {block.description}
-          </p>
+          <p className="muted m-0">{block.description}</p>
         </a>
       );
     default:

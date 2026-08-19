@@ -127,7 +127,7 @@ export function CityHeader({
               <Link params={city} to="/$citySlug/community/profile">
                 <Avatar
                   className="size-9 rounded-full"
-                  fallbackClassName="bg-[#D4836A] text-white text-sm font-semibold"
+                  fallbackClassName="bg-accent text-white text-sm font-semibold"
                   name={viewer.name}
                   src={viewer.imageUrl}
                 />

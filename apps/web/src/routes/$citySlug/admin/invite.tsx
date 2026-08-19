@@ -1,15 +1,18 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { inviteMember, listInvites } from "@/modules/identity/services/usersService";
 import type { InviteRecord } from "@/modules/identity/types";
-import { loadCityPage } from "@/shared/http/cityPage";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
+import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadInviteInput = z.object({ citySlug: z.string().min(1) });
 
 const loadInvite = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInviteInput.parse(input))
   .handler(({ data }) =>
     guarded(data.citySlug, "users.invite", async (page) => {
       const listed = await listInvites(page.registry, page.actor, page.tenant.orgId);
@@ -19,29 +22,29 @@ const loadInvite = createServerFn({ method: "GET" })
     }),
   );
 
+const submitInviteInput = z.object({
+  citySlug: z.string().min(1),
+  displayName: z.string(),
+  email: z.string(),
+});
+
 const submitInvite = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; displayName: string; email: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { error: "unauthenticated", ok: false as const };
-    }
-    const result = await inviteMember(page.registry, page.actor, page.tenant.orgId, {
-      displayName: data.displayName,
-      email: data.email,
-    });
-    if (!result.ok) {
-      return { error: result.error.message ?? result.error.code, ok: false as const };
-    }
-    return { ok: true as const };
-  });
+  .validator((input: unknown) => submitInviteInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, "users.invite", (page) =>
+      inviteMember(page.registry, page.actor, page.tenant.orgId, {
+        displayName: data.displayName,
+        email: data.email,
+      }),
+    ),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/invite")({
   loader: ({ params }) => loadInvite({ data: { citySlug: params.citySlug } }),
   component: InvitePage,
 });
 
-function InvitePage() {
+function InvitePage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -75,40 +78,34 @@ function InvitePage() {
   );
 }
 
-function InviteForm({ citySlug }: { citySlug: string }) {
-  const router = useRouter();
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const fd = new FormData(form);
-      const result = await submitInvite({
+function InviteForm({ citySlug }: { citySlug: string }): ReactElement {
+  const { error, handleSubmit, pending, success } = useFormSubmit({
+    resetOnSuccess: true,
+    submit: (fd) =>
+      submitInvite({
         data: {
           citySlug,
-          displayName: String(fd.get("displayName") ?? ""),
-          email: String(fd.get("email") ?? ""),
+          displayName: formString(fd, "displayName"),
+          email: formString(fd, "email"),
         },
-      });
-      if (result.ok) {
-        form.reset();
-        setStatus("Invite recorded.");
-        await router.invalidate();
-        return;
-      }
-      setStatus(result.error);
-    },
-    [citySlug, router],
-  );
+      }),
+    successMessage: "Invite recorded.",
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
-      <input className="field" name="email" placeholder="Email" required type="email" />
-      <input className="field" name="displayName" placeholder="Name (optional)" />
-      {status ? <p className="muted">{status}</p> : null}
-      <button className="btn btn-primary" type="submit">
-        Invite
+      <label className="field-label">
+        Email
+        <input className="field" name="email" placeholder="Email" required type="email" />
+      </label>
+      <label className="field-label">
+        Name (optional)
+        <input className="field" name="displayName" placeholder="Name (optional)" />
+      </label>
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Inviting…" : "Invite"}
       </button>
     </form>
   );

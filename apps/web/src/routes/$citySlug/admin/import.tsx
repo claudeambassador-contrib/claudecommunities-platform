@@ -1,38 +1,41 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { importMembers, parseMemberCsv } from "@/modules/identity/services/usersService";
 import type { ImportMemberResult } from "@/modules/identity/types";
-import { loadCityPage } from "@/shared/http/cityPage";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
+import { guarded, guardedMutation, type Mutated } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadImportInput = z.object({ citySlug: z.string().min(1) });
 
 const loadImport = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadImportInput.parse(input))
   .handler(({ data }) => guarded(data.citySlug, "users.import", () => Promise.resolve(ok({}))));
 
+const submitImportInput = z.object({ citySlug: z.string().min(1), csv: z.string() });
+
 const submitImport = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; csv: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { error: "unauthenticated", ok: false as const };
-    }
-    const rows = parseMemberCsv(data.csv);
-    const result = await importMembers(page.registry, page.actor, page.tenant.orgId, rows);
-    if (!result.ok) {
-      return { error: result.error.message ?? result.error.code, ok: false as const };
-    }
-    return { ok: true as const, result };
-  });
+  .validator((input: unknown) => submitImportInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, "users.import", async (page) => {
+      const rows = parseMemberCsv(data.csv);
+      const result = await importMembers(page.registry, page.actor, page.tenant.orgId, rows);
+      if (!result.ok) {
+        return result;
+      }
+      return ok({ result });
+    }),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/import")({
   loader: ({ params }) => loadImport({ data: { citySlug: params.citySlug } }),
   component: ImportPage,
 });
 
-function ImportPage() {
+function ImportPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -51,47 +54,35 @@ function ImportPage() {
   );
 }
 
-function ImportForm({ citySlug }: { citySlug: string }) {
-  const [status, setStatus] = useState<string | null>(null);
-  const [result, setResult] = useState<ImportMemberResult | null>(null);
+function importSummary(result: ImportMemberResult): string {
+  const errors = result.errors.length > 0 ? `, ${result.errors.length} errors` : "";
+  return `Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}${errors}.`;
+}
 
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const fd = new FormData(event.currentTarget);
-      const response = await submitImport({
-        data: { citySlug, csv: String(fd.get("csv") ?? "") },
-      });
-      if (response.ok) {
-        setStatus(null);
-        setResult(response.result);
-        return;
-      }
-      setResult(null);
-      setStatus(response.error);
-    },
-    [citySlug],
-  );
+function ImportForm({ citySlug }: { citySlug: string }): ReactElement {
+  const { error, handleSubmit, pending, success } = useFormSubmit<
+    Mutated<{ result: ImportMemberResult }>
+  >({
+    submit: (fd) => submitImport({ data: { citySlug, csv: formString(fd, "csv") } }),
+    successMessage: (okResult) => importSummary(okResult.result),
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
-      <textarea
-        className="field"
-        name="csv"
-        placeholder={"email,name\nada@example.com,Ada Lovelace"}
-        required
-        rows={10}
-        style={{ width: "100%" }}
-      />
-      {status ? <p className="muted">{status}</p> : null}
-      {result ? (
-        <p className="muted">
-          Created {result.created}, updated {result.updated}, skipped {result.skipped}
-          {result.errors.length > 0 ? `, ${result.errors.length} errors` : ""}.
-        </p>
-      ) : null}
-      <button className="btn btn-primary" type="submit">
-        Import
+      <label className="field-label">
+        Members CSV
+        <textarea
+          className="field w-full"
+          name="csv"
+          placeholder={"email,name\nada@example.com,Ada Lovelace"}
+          required
+          rows={10}
+        />
+      </label>
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Importing…" : "Import"}
       </button>
     </form>
   );

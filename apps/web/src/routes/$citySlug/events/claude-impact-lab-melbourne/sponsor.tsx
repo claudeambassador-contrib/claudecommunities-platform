@@ -1,19 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { registerInterest } from "@/modules/impact-lab/services/impactLabService";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadInput = z.object({ citySlug: z.string().min(1) });
 
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     await loadCityPage(data.citySlug);
     return {};
   });
 
+const submitInterestInput = z.object({
+  citySlug: z.string().min(1),
+  email: z.string(),
+  name: z.string(),
+});
+
+// Public sponsor-interest form — intentionally no auth guard.
 const submitInterest = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; email: string; name: string }) => d)
+  .validator((input: unknown) => submitInterestInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -34,7 +45,7 @@ export const Route = createFileRoute("/$citySlug/events/claude-impact-lab-melbou
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
 
   return (
@@ -49,7 +60,7 @@ function Page() {
         title="Sponsor Claude Impact Lab Melbourne"
       />
       <div className="card">
-        <p style={{ margin: 0 }}>
+        <p className="m-0">
           Help put on Australia&apos;s first Claude Impact Lab. Tell us how you&apos;d like to be
           involved and we&apos;ll follow up within a few days.
         </p>
@@ -59,57 +70,37 @@ function Page() {
   );
 }
 
-function SponsorForm({ citySlug }: { citySlug: string }) {
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const fd = new FormData(form);
-      const result = await submitInterest({
+function SponsorForm({ citySlug }: { citySlug: string }): ReactElement {
+  const { error, handleSubmit, pending, success } = useFormSubmit({
+    invalidate: false,
+    resetOnSuccess: true,
+    submit: (fd) =>
+      submitInterest({
         data: {
           citySlug,
-          email: String(fd.get("email") ?? ""),
-          name: String(fd.get("name") ?? ""),
+          email: formString(fd, "email"),
+          name: formString(fd, "name"),
         },
-      });
-      if (result.ok) {
-        form.reset();
-        setStatus("Thanks — we will be in touch.");
-      } else {
-        setStatus(result.error);
-      }
-    },
-    [citySlug],
-  );
+      }),
+    successMessage: "Thanks — we will be in touch.",
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
       <strong>Sponsorship interest</strong>
-      <input
-        className="btn"
-        name="name"
-        placeholder="Name or organisation"
-        required
-        style={{ width: "100%" }}
-      />
-      <input
-        className="btn"
-        name="email"
-        placeholder="Email"
-        required
-        style={{ width: "100%" }}
-        type="email"
-      />
-      <button className="btn btn-primary" type="submit">
-        Submit
+      <label className="field-label">
+        Name or organisation
+        <input className="field" name="name" placeholder="Name or organisation" required />
+      </label>
+      <label className="field-label">
+        Email
+        <input className="field" name="email" placeholder="Email" required type="email" />
+      </label>
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Submitting…" : "Submit"}
       </button>
-      {status ? (
-        <p className="muted" style={{ margin: 0 }}>
-          {status}
-        </p>
-      ) : null}
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
     </form>
   );
 }

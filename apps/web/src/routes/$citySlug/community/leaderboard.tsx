@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listActivity } from "@/modules/activity/services/activityService";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { ItemList, PageHeader } from "@/shared/ui/page";
 
+const loadInput = z.object({ citySlug: z.string().min(1) });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -28,7 +32,7 @@ export const Route = createFileRoute("/$citySlug/community/leaderboard")({
   component: LeaderboardPage,
 });
 
-function LeaderboardPage() {
+function LeaderboardPage(): ReactElement {
   const { rows } = Route.useLoaderData();
 
   return (

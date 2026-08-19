@@ -15,12 +15,6 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    server: {
-      port: 3001,
-      watch: {
-        ignored: ["**/e2e/**/artifacts/**", "**/test-results/**", "**/playwright-report/**"],
-      },
-    },
     plugins: [
       cloudflare({ viteEnvironment: { name: "ssr" } }),
       tsconfigPaths(),
@@ -28,5 +22,11 @@ export default defineConfig(({ mode }) => {
       tanstackStart(),
       viteReact(),
     ],
+    server: {
+      port: 3001,
+      watch: {
+        ignored: ["**/e2e/**/artifacts/**", "**/test-results/**", "**/playwright-report/**"],
+      },
+    },
   };
 });

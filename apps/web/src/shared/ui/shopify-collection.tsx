@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 
 declare global {
@@ -16,7 +17,7 @@ declare global {
 const SCRIPT_URL = "https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js";
 let shopifyStarted = false;
 
-export function ShopifyCollection() {
+export function ShopifyCollection(): ReactElement {
   const nodeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

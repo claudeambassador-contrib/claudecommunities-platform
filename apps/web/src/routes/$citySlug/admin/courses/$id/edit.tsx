@@ -1,14 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getCourse } from "@/modules/courses/services/coursesService";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 
+const loadCourseInput = z.object({ citySlug: z.string().min(1), id: z.string() });
+
 const loadCourse = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string; id: string }) => d)
+  .validator((input: unknown) => loadCourseInput.parse(input))
   .handler(({ data }) =>
-    guarded(data.citySlug, null, async (page) => {
+    guarded(data.citySlug, "courses.view", async (page) => {
       const result = await getCourse(page.store, data.id, page.actor);
       if (!result.ok) {
         return result;
@@ -31,7 +35,7 @@ export const Route = createFileRoute("/$citySlug/admin/courses/$id/edit")({
   component: EditCoursePage,
 });
 
-function EditCoursePage() {
+function EditCoursePage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -51,7 +55,7 @@ function EditCoursePage() {
         title={data.course.title}
       />
       <div className="card stack">
-        <p style={{ whiteSpace: "pre-wrap" }}>{data.course.description ?? "No description yet."}</p>
+        <p className="whitespace-pre-wrap">{data.course.description ?? "No description yet."}</p>
         <p className="muted">{data.course.lessonCount} lessons</p>
       </div>
     </section>

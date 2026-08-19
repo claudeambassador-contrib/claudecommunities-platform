@@ -207,6 +207,28 @@ export function validateHomeBlocks(blocks: unknown): Result<{ blocks: Block[] }>
   return ok({ blocks: blocks as Block[] });
 }
 
+function validateContentBlock(raw: unknown, where: string): Result<Empty> {
+  if (!isObj(raw)) {
+    return bad(`${where}: not an object`);
+  }
+  if (typeof raw.id !== "string" || raw.id.length === 0) {
+    return bad(`${where}: missing id`);
+  }
+  if (typeof raw.enabled !== "boolean") {
+    return bad(`${where}: enabled must be a boolean`);
+  }
+  if (raw.type !== "richText") {
+    return bad(`${where}: only text sections are allowed on content pages`);
+  }
+  if (typeof raw.body !== "string") {
+    return bad(`${where}: body must be a string`);
+  }
+  if (!isOptStr(raw.heading)) {
+    return bad(`${where}: invalid heading`);
+  }
+  return ok({});
+}
+
 export function validateContentBlocks(blocks: unknown): Result<{ blocks: Block[] }> {
   if (!Array.isArray(blocks)) {
     return bad("blocks must be an array");
@@ -215,25 +237,33 @@ export function validateContentBlocks(blocks: unknown): Result<{ blocks: Block[]
     return bad(`too many sections (max ${MAX_BLOCKS})`);
   }
   for (const [i, raw] of blocks.entries()) {
-    const where = `section ${i}`;
-    if (!isObj(raw)) {
-      return bad(`${where}: not an object`);
-    }
-    if (typeof raw.id !== "string" || raw.id.length === 0) {
-      return bad(`${where}: missing id`);
-    }
-    if (typeof raw.enabled !== "boolean") {
-      return bad(`${where}: enabled must be a boolean`);
-    }
-    if (raw.type !== "richText") {
-      return bad(`${where}: only text sections are allowed on content pages`);
-    }
-    if (typeof raw.body !== "string") {
-      return bad(`${where}: body must be a string`);
-    }
-    if (!isOptStr(raw.heading)) {
-      return bad(`${where}: invalid heading`);
+    const checked = validateContentBlock(raw, `section ${i}`);
+    if (!checked.ok) {
+      return checked;
     }
   }
   return ok({ blocks: blocks as Block[] });
+}
+
+/**
+ * Validate a single already-persisted home block. Legacy rows missing the
+ * `cards` array on benefits/audienceSplit are normalized to `cards: []`;
+ * anything else invalid is dropped (returns null) so rendering degrades
+ * instead of trusting a blind cast.
+ */
+export function parseStoredHomeBlock(raw: unknown): Block | null {
+  if (!isObj(raw)) {
+    return null;
+  }
+  const needsCards =
+    (raw.type === "benefits" || raw.type === "audienceSplit") && !Array.isArray(raw.cards);
+  const candidate: Raw = needsCards ? { ...raw, cards: [] } : raw;
+  const checked = validateHomeBlock(candidate, 0);
+  return checked.ok ? (candidate as unknown as Block) : null;
+}
+
+/** Validate a single already-persisted content (richText) block, or null when invalid. */
+export function parseStoredContentBlock(raw: unknown): Block | null {
+  const checked = validateContentBlock(raw, "section");
+  return checked.ok ? (raw as unknown as Block) : null;
 }

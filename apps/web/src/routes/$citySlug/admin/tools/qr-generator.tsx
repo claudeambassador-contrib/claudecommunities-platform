@@ -1,13 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
 import { type FormEvent, useCallback, useState } from "react";
+import { z } from "zod";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 import { RemoteImage } from "@/shared/ui/remote-image";
 
+const loadQrInput = z.object({ citySlug: z.string().min(1) });
+
 const loadQr = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadQrInput.parse(input))
   .handler(({ data }) => guarded(data.citySlug, "tools.use", () => Promise.resolve(ok({}))));
 
 export const Route = createFileRoute("/$citySlug/admin/tools/qr-generator")({
@@ -15,7 +19,7 @@ export const Route = createFileRoute("/$citySlug/admin/tools/qr-generator")({
   component: QrGeneratorPage,
 });
 
-function QrGeneratorPage() {
+function QrGeneratorPage(): ReactElement {
   const data = Route.useLoaderData();
 
   if (!data.allowed) {
@@ -30,7 +34,7 @@ function QrGeneratorPage() {
   );
 }
 
-function QrForm() {
+function QrForm(): ReactElement {
   const [value, setValue] = useState("");
   const [src, setSrc] = useState<string | null>(null);
 
@@ -48,7 +52,16 @@ function QrForm() {
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
-      <input className="field" defaultValue={value} name="value" placeholder="https://…" required />
+      <label className="field-label">
+        URL
+        <input
+          className="field"
+          defaultValue={value}
+          name="value"
+          placeholder="https://…"
+          required
+        />
+      </label>
       <button className="btn btn-primary" type="submit">
         Generate
       </button>

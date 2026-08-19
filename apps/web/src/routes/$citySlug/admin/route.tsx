@@ -1,5 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { hasAnyAdminPermission } from "@/modules/identity/services/sessionService";
 import type { Permission } from "@/shared/auth/permissions";
 import { loadCityPage } from "@/shared/http/cityPage";
@@ -7,8 +9,10 @@ import { AdminShell } from "@/shared/ui/admin-shell";
 import { type AdminNavItem, cityAdminHref, filterAdminNav } from "@/shared/ui/adminNav";
 import { DeniedCard } from "@/shared/ui/page";
 
+const loadAdminNavInput = z.object({ citySlug: z.string().min(1) });
+
 const loadAdminNav = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadAdminNavInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -44,7 +48,7 @@ export const Route = createFileRoute("/$citySlug/admin")({
   component: AdminLayout,
 });
 
-function AdminLayout() {
+function AdminLayout(): ReactElement {
   const { citySlug } = Route.useParams();
   const { allowed, cityName, links, permissions } = Route.useRouteContext();
 

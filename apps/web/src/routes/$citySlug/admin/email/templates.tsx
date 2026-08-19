@@ -1,14 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listTemplates } from "@/modules/email/services/emailCampaignsService";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
+const loadTemplatesInput = z.object({ citySlug: z.string().min(1) });
+
 const loadTemplates = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadTemplatesInput.parse(input))
   .handler(({ data }) =>
-    guarded(data.citySlug, null, async (page) => {
+    guarded(data.citySlug, "email.view", async (page) => {
       const result = await listTemplates(page.store, page.actor);
       if (!result.ok) {
         return result;
@@ -28,7 +32,7 @@ export const Route = createFileRoute("/$citySlug/admin/email/templates")({
   component: EmailTemplatesPage,
 });
 
-function EmailTemplatesPage() {
+function EmailTemplatesPage(): ReactElement {
   const data = Route.useLoaderData();
 
   if (!data.allowed) {

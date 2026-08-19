@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getEventBySlugOrId, listPublicAgenda } from "@/modules/events/services/eventsService";
 import type { AgendaItemType } from "@/modules/events/types";
 import { loadCityPage } from "@/shared/http/cityPage";
@@ -14,8 +16,10 @@ interface AgendaRow {
   type: AgendaItemType;
 }
 
+const getEventPageInput = z.object({ citySlug: z.string().min(1), slug: z.string() });
+
 const getEventPage = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string; slug: string }) => d)
+  .validator((input: unknown) => getEventPageInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -65,7 +69,7 @@ function formatSlot(start: string | null, end: string | null): string {
   return `${from} – ${new Date(end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 }
 
-function EventDetailPage() {
+function EventDetailPage(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { event, agenda } = Route.useLoaderData();
   const city = { citySlug: tenant.slug };
@@ -96,15 +100,13 @@ function EventDetailPage() {
       />
       <div className="card stack">
         {event.location ? <p className="muted">{event.location}</p> : null}
-        <p style={{ whiteSpace: "pre-wrap" }}>{event.description ?? "No description yet."}</p>
+        <p className="whitespace-pre-wrap">{event.description ?? "No description yet."}</p>
         <p className="muted">{event.rsvpCount} RSVPs</p>
       </div>
       <div className="card stack">
         <strong>Agenda</strong>
         {agenda.length === 0 ? (
-          <p className="muted" style={{ margin: 0 }}>
-            Agenda has not been published for this event yet.
-          </p>
+          <p className="muted m-0">Agenda has not been published for this event yet.</p>
         ) : (
           agenda.map((item) => (
             <div key={item.id}>
@@ -112,11 +114,7 @@ function EventDetailPage() {
                 {formatSlot(item.startTime, item.endTime)} · {item.type}
               </div>
               <strong>{item.title}</strong>
-              {item.description ? (
-                <p className="muted" style={{ margin: "0.25rem 0 0" }}>
-                  {item.description}
-                </p>
-              ) : null}
+              {item.description ? <p className="muted mt-1">{item.description}</p> : null}
             </div>
           ))
         )}

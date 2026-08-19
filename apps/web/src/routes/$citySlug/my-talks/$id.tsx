@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getTalk } from "@/modules/talks/services/talksService";
 import { requireCityActor } from "@/shared/http/cityPage";
 import { DeniedCard, EmptyCard, PageHeader, SignInCard } from "@/shared/ui/page";
@@ -16,8 +18,10 @@ interface TalkView {
   title: string;
 }
 
+const loadInput = z.object({ citySlug: z.string().min(1), id: z.string() });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string; id: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await requireCityActor(data.citySlug);
     if (!page.ok) {
@@ -55,7 +59,7 @@ export const Route = createFileRoute("/$citySlug/my-talks/$id")({
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const data = Route.useLoaderData();
 
@@ -83,26 +87,18 @@ function Page() {
         title={talk.title}
       />
       <div className="card stack">
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="muted m-0">
           {talk.email}
           {talk.city ? ` · ${talk.city}` : ""}
         </p>
-        <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-          {talk.description ?? "No description yet."}
-        </p>
-        {talk.bio ? (
-          <p className="muted" style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-            {talk.bio}
-          </p>
-        ) : null}
+        <p className="m-0 whitespace-pre-wrap">{talk.description ?? "No description yet."}</p>
+        {talk.bio ? <p className="muted m-0 whitespace-pre-wrap">{talk.bio}</p> : null}
         {talk.slidesUrl ? (
           <a href={talk.slidesUrl} rel="noreferrer">
             Slides
           </a>
         ) : (
-          <p className="muted" style={{ margin: 0 }}>
-            No slides uploaded.
-          </p>
+          <p className="muted m-0">No slides uploaded.</p>
         )}
       </div>
     </section>

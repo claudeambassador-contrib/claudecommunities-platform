@@ -1,19 +1,13 @@
 import { verifyToken } from "@clerk/backend";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import {
-  findByClerkId,
-  listMembershipsForUser,
-} from "@/modules/identity/repositories/usersRepository";
-import { actorFromAuth } from "@/modules/identity/services/sessionService";
+import { actorFromClerkUserId } from "@/modules/identity/services/usersService";
 import { callMcpTool, listMcpTools } from "@/modules/system/services/mcpService";
 import type { McpArgs, McpDispatchContext } from "@/modules/system/types";
 import { resolveCityContext } from "@/modules/tenants/services/publicListService";
 import type { Actor } from "@/shared/auth/actor";
 import { clerkKeysFromRecord } from "@/shared/auth/clerk";
-import { permissionsForRole } from "@/shared/auth/permissions";
 import { getRegistryDb, getRegistryStore, openTenantStore, workerEnv } from "@/shared/db/env";
-import type { AuthContext } from "@/shared/http/routeContext";
 
 export function publicOrigin(request: Request): string {
   const forwardedHost = request.headers.get("x-forwarded-host");
@@ -36,19 +30,6 @@ function bearerToken(request: Request): string | null {
   return token;
 }
 
-function bestRole(roles: Array<string | null | undefined>): "owner" | "admin" | "member" | null {
-  if (roles.includes("owner")) {
-    return "owner";
-  }
-  if (roles.includes("admin")) {
-    return "admin";
-  }
-  if (roles.includes("member")) {
-    return "member";
-  }
-  return null;
-}
-
 export async function actorFromBearer(
   request: Request,
   env: Record<string, unknown>,
@@ -67,22 +48,7 @@ export async function actorFromBearer(
     if (!clerkUserId) {
       return null;
     }
-    const registryDb = getRegistryDb();
-    const user = await findByClerkId(registryDb, clerkUserId);
-    if (!user || user.isBanned) {
-      return null;
-    }
-    const memberships = await listMembershipsForUser(registryDb, user.id);
-    const role = user.isSuperAdmin ? "owner" : bestRole(memberships.map((row) => row.role));
-    const authCtx: AuthContext = {
-      clerkUserId: user.clerkUserId,
-      email: user.email,
-      isSuperAdmin: user.isSuperAdmin,
-      permissions: permissionsForRole(role),
-      role,
-      userId: user.id,
-    };
-    return actorFromAuth(authCtx);
+    return await actorFromClerkUserId(getRegistryDb(), clerkUserId);
   } catch {
     return null;
   }

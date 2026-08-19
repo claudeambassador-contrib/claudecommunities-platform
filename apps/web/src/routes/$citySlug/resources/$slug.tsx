@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getPublishedPage } from "@/modules/pages/services/pagesService";
 import type { PublishedPage } from "@/modules/pages/types";
 import { loadCityPage } from "@/shared/http/cityPage";
@@ -23,8 +25,10 @@ function cmsCopy(page: PublishedPage): { body: string; title: string } {
   return { body: parts.join("\n\n"), title: page.title };
 }
 
+const loadInput = z.object({ citySlug: z.string().min(1), slug: z.string() });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string; slug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -44,7 +48,7 @@ export const Route = createFileRoute("/$citySlug/resources/$slug")({
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { cms } = Route.useLoaderData();
 
@@ -74,7 +78,7 @@ function Page() {
       />
       {cms.body ? (
         <div className="card">
-          <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{cms.body}</p>
+          <p className="m-0 whitespace-pre-wrap">{cms.body}</p>
         </div>
       ) : (
         <EmptyCard>This page has no hero or rich-text content yet.</EmptyCard>

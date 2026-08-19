@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { test } from "@playwright/test";
 import {
   captureStep,
   createPresentationContext,
@@ -21,15 +21,25 @@ const STORIES = [
   "Record unfinished / stub / broken pages as the finish-off issue list",
 ];
 
-type Finding = {
+interface Finding {
+  detail: string;
   severity: "blocker" | "high" | "medium" | "low";
   title: string;
-  detail: string;
   url: string;
-};
+}
 
 const STUB_RE =
   /coming soon|not ported|not available|not been ported|will return here|Next\.js|empty card|no published|no posts yet|no events yet|page not found|admin access required|unauthenticated|forbidden|something went wrong|internal server|undefined is not|cannot read/i;
+const SERVER_ERROR_RE = /HTTPError|"status":500/i;
+const SYDNEY_RE = /sydney/i;
+const SEEDED_CITY_HEADING_RE = /welcome to the seeded city/i;
+const SEEDED_MEETUP_RE = /claude code meetup/i;
+const SEEDED_POST_RE = /welcome to the community/i;
+const EMAIL_FIELD_RE = /email|identifier/i;
+const CONTINUE_BTN_RE = /continue|sign in/i;
+const SIGNED_IN_URL_RE = /\/(sydney|login\/sso-callback)?/;
+const HIGH_SEVERITY_RE =
+  /admin access|unauthenticated|forbidden|internal server|undefined is not|cannot read|page not found/i;
 
 test.describe.configure({ mode: "serial" });
 
@@ -63,15 +73,20 @@ test.describe(`${SLUG} presentation`, () => {
 
     const visit = async (path: string, id: string, label: string) => {
       await artifacts.context.clearCookies();
-      const response = await page.goto(path, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      const response = await page.goto(path, { timeout: 30_000, waitUntil: "domcontentloaded" });
       await page.waitForTimeout(400);
       const status = response?.status() ?? 0;
-      const body = ((await page.locator("body").innerText().catch(() => "")) ?? "").slice(0, 2000);
-      if (status >= 500 || /HTTPError|"status":500/i.test(body)) {
+      const body = (
+        (await page
+          .locator("body")
+          .innerText()
+          .catch(() => "")) ?? ""
+      ).slice(0, 2000);
+      if (status >= 500 || SERVER_ERROR_RE.test(body)) {
         findings.push({
+          detail: body.replace(/\s+/g, " ").slice(0, 280) || "Empty 5xx body",
           severity: "blocker",
           title: `${label} returned ${status || 500}`,
-          detail: body.replace(/\s+/g, " ").slice(0, 280) || "Empty 5xx body",
           url: page.url(),
         });
       }
@@ -81,33 +96,33 @@ test.describe(`${SLUG} presentation`, () => {
 
     try {
       const home = await visit("/", "platform-home", "Platform directory");
-      if (!/sydney/i.test(home)) {
+      if (!SYDNEY_RE.test(home)) {
         findings.push({
+          detail: home.replace(/\s+/g, " ").slice(0, 280) || "Directory empty or page crashed.",
           severity: "blocker",
           title: "Sydney not listed on platform home",
-          detail: home.replace(/\s+/g, " ").slice(0, 280) || "Directory empty or page crashed.",
           url: page.url(),
         });
       }
 
       const cityHome = await visit(`/${CITY}`, "city-home", "Sydney city home");
-      if (!/welcome to the seeded city/i.test(cityHome)) {
+      if (!SEEDED_CITY_HEADING_RE.test(cityHome)) {
         findings.push({
-          severity: "high",
-          title: "City home does not render seeded CMS heading",
           detail:
             "Seed writes pages.home heading 'Welcome to the seeded city', but /$citySlug shows a hardcoded Welcome card instead of CMS home.",
+          severity: "high",
+          title: "City home does not render seeded CMS heading",
           url: page.url(),
         });
       }
 
       await visit(`/${CITY}/p/home`, "cms-home", "CMS home page /p/home");
       const events = await visit(`/${CITY}/events`, "events", "Events list");
-      if (!/claude code meetup/i.test(events)) {
+      if (!SEEDED_MEETUP_RE.test(events)) {
         findings.push({
+          detail: events.replace(/\s+/g, " ").slice(0, 280),
           severity: "high",
           title: "Seeded meetup missing from events list",
-          detail: events.replace(/\s+/g, " ").slice(0, 280),
           url: page.url(),
         });
       }
@@ -126,11 +141,11 @@ test.describe(`${SLUG} presentation`, () => {
       await visit("/remotion", "remotion", "Remotion");
 
       const feed = await visit(`/${CITY}/community`, "community-feed", "Community feed");
-      if (!/welcome to the community/i.test(feed)) {
+      if (!SEEDED_POST_RE.test(feed)) {
         findings.push({
+          detail: "Expected 'Welcome to the community' from city seed.",
           severity: "high",
           title: "Seeded announcement post missing from feed",
-          detail: "Expected 'Welcome to the community' from city seed.",
           url: page.url(),
         });
       }
@@ -146,10 +161,10 @@ test.describe(`${SLUG} presentation`, () => {
       await snap("login-result", signedIn ? "Signed in" : "Login did not complete");
       if (!signedIn) {
         findings.push({
-          severity: "blocker",
-          title: "Clerk sign-in did not complete",
           detail:
             "Local apps/web is in Clerk keyless mode (no .env.local keys). Handshake cookies then 500 the next request. Set VITE_CLERK_PUBLISHABLE_KEY + CLERK_SECRET_KEY and allow http://localhost:3001.",
+          severity: "blocker",
+          title: "Clerk sign-in did not complete",
           url: page.url(),
         });
       }
@@ -163,6 +178,7 @@ test.describe(`${SLUG} presentation`, () => {
         ["community/settings/notifications", "Notification settings"],
       ] as const;
       for (const [path, label] of memberOnly) {
+        // biome-ignore lint/performance/noAwaitInLoops: page navigation must run sequentially on one browser page
         await visit(`/${CITY}/${path}`, path.replaceAll("/", "-"), label);
       }
 
@@ -199,14 +215,15 @@ test.describe(`${SLUG} presentation`, () => {
         ["admin/analytics", "Analytics"],
       ] as const;
       for (const [path, label] of adminPages) {
+        // biome-ignore lint/performance/noAwaitInLoops: page navigation must run sequentially on one browser page
         await visit(`/${CITY}/${path}`, path.replaceAll("/", "-"), label);
       }
 
       if (consoleErrors.length > 0) {
         findings.push({
+          detail: unique(consoleErrors).slice(0, 12).join(" | "),
           severity: "medium",
           title: "Browser console errors during walkthrough",
-          detail: unique(consoleErrors).slice(0, 12).join(" | "),
           url: page.url(),
         });
       }
@@ -223,16 +240,16 @@ test.describe(`${SLUG} presentation`, () => {
     } finally {
       await writeFile(
         join(artifacts.rootDir, "issues.json"),
-        JSON.stringify({ signedIn, findings }, null, 2),
+        JSON.stringify({ findings, signedIn }, null, 2),
         "utf8",
       );
       await page.close();
       const result = await finalizePresentation(artifacts, {
-        title: SLUG,
+        error: testError,
+        passed: passed && !testError,
         persona: PERSONA,
         stories: STORIES,
-        passed: passed && !testError,
-        error: testError,
+        title: SLUG,
       });
       console.log(`Open presentation: file://${result.htmlPath}`);
       console.log(`Issues: ${findings.length} signedIn=${signedIn}`);
@@ -246,23 +263,21 @@ async function tryClerkSignIn(page: Page, email: string, password: string): Prom
   }
   try {
     const emailBox = page
-      .getByRole("textbox", { name: /email|identifier/i })
+      .getByRole("textbox", { name: EMAIL_FIELD_RE })
       .or(page.locator('input[name="identifier"], input[type="email"]'))
       .first();
     await emailBox.waitFor({ state: "visible", timeout: 12_000 });
     await emailBox.fill(email);
-    const continueBtn = page.getByRole("button", { name: /continue|sign in/i }).first();
+    const continueBtn = page.getByRole("button", { name: CONTINUE_BTN_RE }).first();
     if (await continueBtn.isVisible()) {
       await continueBtn.click();
     }
-    const passwordBox = page
-      .locator('input[type="password"], input[name="password"]')
-      .first();
+    const passwordBox = page.locator('input[type="password"], input[name="password"]').first();
     await passwordBox.waitFor({ state: "visible", timeout: 12_000 });
     await passwordBox.fill(password);
-    await page.getByRole("button", { name: /continue|sign in/i }).first().click();
+    await page.getByRole("button", { name: CONTINUE_BTN_RE }).first().click();
     await page.waitForTimeout(2500);
-    return /\/(sydney|login\/sso-callback)?/.test(page.url()) && !page.url().includes("/login");
+    return SIGNED_IN_URL_RE.test(page.url()) && !page.url().includes("/login");
   } catch {
     return false;
   }
@@ -270,17 +285,18 @@ async function tryClerkSignIn(page: Page, email: string, password: string): Prom
 
 async function notePage(page: Page, findings: Finding[], label: string): Promise<void> {
   const url = page.url();
-  const body = ((await page.locator("body").innerText().catch(() => "")) ?? "").slice(0, 4000);
+  const body = (
+    (await page
+      .locator("body")
+      .innerText()
+      .catch(() => "")) ?? ""
+  ).slice(0, 4000);
   const match = body.match(STUB_RE);
   if (match) {
     findings.push({
-      severity: /admin access|unauthenticated|forbidden|internal server|undefined is not|cannot read|page not found/i.test(
-        match[0],
-      )
-        ? "high"
-        : "medium",
-      title: `${label}: ${match[0]}`,
       detail: body.replace(/\s+/g, " ").slice(0, 280),
+      severity: HIGH_SEVERITY_RE.test(match[0]) ? "high" : "medium",
+      title: `${label}: ${match[0]}`,
       url,
     });
   }

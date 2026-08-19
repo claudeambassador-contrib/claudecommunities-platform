@@ -1,44 +1,43 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { useState } from "react";
+import { z } from "zod";
 import { heuristicEvaluator, parseCandidateCsv } from "@/modules/attendance/heuristic";
 import { evaluateCandidates } from "@/modules/attendance/services/attendanceEvaluatorService";
 import type { Evaluation } from "@/modules/attendance/types";
-import { ensurePermission } from "@/shared/auth/actor";
-import { loadCityPage } from "@/shared/http/cityPage";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
+import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadPlannerInput = z.object({ citySlug: z.string().min(1) });
 
 const loadPlanner = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadPlannerInput.parse(input))
   .handler(({ data }) => guarded(data.citySlug, "tools.use", () => Promise.resolve(ok({}))));
 
+const runPlannerInput = z.object({
+  candidates: z.string(),
+  citySlug: z.string().min(1),
+  prompt: z.string(),
+});
+
 const runPlanner = createServerFn({ method: "POST" })
-  .validator((d: { candidates: string; citySlug: string; prompt: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { error: "unauthenticated", ok: false as const };
-    }
-    const perm = ensurePermission(page.actor, "tools.use");
-    if (!perm.ok) {
-      return { error: perm.error.code, ok: false as const };
-    }
-    const candidates = parseCandidateCsv(data.candidates);
-    const result = await evaluateCandidates(data.prompt, candidates, heuristicEvaluator);
-    if (!result.ok) {
-      return { error: result.error.message ?? result.error.code, ok: false as const };
-    }
-    return { evaluations: result.evaluations, ok: true as const };
-  });
+  .validator((input: unknown) => runPlannerInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, "tools.use", () => {
+      const candidates = parseCandidateCsv(data.candidates);
+      return evaluateCandidates(data.prompt, candidates, heuristicEvaluator);
+    }),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/tools/attendance-planner")({
   loader: ({ params }) => loadPlanner({ data: { citySlug: params.citySlug } }),
   component: AttendancePlannerPage,
 });
 
-function AttendancePlannerPage() {
+function AttendancePlannerPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -57,54 +56,49 @@ function AttendancePlannerPage() {
   );
 }
 
-function PlannerForm({ citySlug }: { citySlug: string }) {
-  const [error, setError] = useState<string | null>(null);
+function PlannerForm({ citySlug }: { citySlug: string }): ReactElement {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const fd = new FormData(event.currentTarget);
+  const { error, handleSubmit, pending } = useFormSubmit({
+    invalidate: false,
+    submit: async (fd) => {
       const result = await runPlanner({
         data: {
-          candidates: String(fd.get("candidates") ?? ""),
+          candidates: formString(fd, "candidates"),
           citySlug,
-          prompt: String(fd.get("prompt") ?? ""),
+          prompt: formString(fd, "prompt"),
         },
       });
-      if (result.ok) {
-        setError(null);
-        setEvaluations(result.evaluations);
-        return;
-      }
-      setEvaluations([]);
-      setError(result.error);
+      setEvaluations(result.ok ? result.evaluations : []);
+      return result;
     },
-    [citySlug],
-  );
+  });
 
   return (
     <div className="stack">
       <form className="card stack" onSubmit={handleSubmit}>
-        <textarea
-          className="field"
-          name="prompt"
-          placeholder="Audience: AI engineers in Melbourne building with Claude Code"
-          required
-          rows={3}
-          style={{ width: "100%" }}
-        />
-        <textarea
-          className="field"
-          name="candidates"
-          placeholder={"name,email,role,company,interests,experience"}
-          required
-          rows={8}
-          style={{ width: "100%" }}
-        />
-        {error ? <p className="muted">{error}</p> : null}
-        <button className="btn btn-primary" type="submit">
-          Rank candidates
+        <label className="field-label">
+          Audience description
+          <textarea
+            className="field w-full"
+            name="prompt"
+            placeholder="Audience: AI engineers in Melbourne building with Claude Code"
+            required
+            rows={3}
+          />
+        </label>
+        <label className="field-label">
+          Candidates CSV
+          <textarea
+            className="field w-full"
+            name="candidates"
+            placeholder={"name,email,role,company,interests,experience"}
+            required
+            rows={8}
+          />
+        </label>
+        {error ? <p className="form-error">{error}</p> : null}
+        <button className="btn btn-primary" disabled={pending} type="submit">
+          {pending ? "Ranking…" : "Rank candidates"}
         </button>
       </form>
       {evaluations.length === 0 ? (

@@ -1,12 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listDirectory } from "@/modules/identity/services/usersService";
 import { requireCityActor } from "@/shared/http/cityPage";
 import { Avatar } from "@/shared/ui/avatar";
 import { EmptyCard, PageHeader, SignInCard } from "@/shared/ui/page";
 
+const loadInput = z.object({ citySlug: z.string().min(1) });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await requireCityActor(data.citySlug);
     if (!page.ok) {
@@ -31,7 +35,7 @@ export const Route = createFileRoute("/$citySlug/community/members")({
   component: MembersPage,
 });
 
-function MembersPage() {
+function MembersPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -51,12 +55,11 @@ function MembersPage() {
               className="card row"
               key={member.id}
               params={{ citySlug, id: member.id }}
-              style={{ display: "flex" }}
               to="/$citySlug/community/profile/$id"
             >
               <Avatar
                 className="size-10 rounded-full"
-                fallbackClassName="bg-[#D4836A] text-white font-semibold"
+                fallbackClassName="bg-accent text-white font-semibold"
                 name={member.name}
                 src={member.imageUrl}
               />

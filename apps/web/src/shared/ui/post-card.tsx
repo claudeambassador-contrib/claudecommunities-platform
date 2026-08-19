@@ -33,7 +33,7 @@ export function PostCard({ citySlug, post }: PostCardProps): ReactElement {
         <Link params={profile} to="/$citySlug/community/profile/$id">
           <Avatar
             className="size-10 rounded-full"
-            fallbackClassName="bg-gradient-to-br from-[#D4836A] to-[#B66B54] text-white font-bold"
+            fallbackClassName="bg-gradient-to-br from-accent to-accent-deep text-white font-bold"
             name={post.author.name}
             src={post.author.imageUrl}
           />

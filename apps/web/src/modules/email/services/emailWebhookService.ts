@@ -3,8 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 const WHSEC_PREFIX = /^whsec_/;
 
 import { eq } from "drizzle-orm";
-import { findUserByEmail } from "@/modules/identity/repositories/directoryRepository";
-import { upsertEmailPreferences } from "@/modules/identity/repositories/emailPreferencesRepository";
+import { unsubscribeByEmail } from "@/modules/identity/services/usersService";
 import type { RegistryStore } from "@/shared/db/registryStore";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
@@ -116,10 +115,5 @@ export async function unsubscribeEmail(
   registry: RegistryStore,
   email: string,
 ): Promise<Result<{ email: string }>> {
-  const user = await findUserByEmail(registry, email);
-  if (!user) {
-    return err("not_found", 404, "Email not found");
-  }
-  await upsertEmailPreferences(registry, user.id, { weeklyDigest: false });
-  return ok({ email: user.email });
+  return await unsubscribeByEmail(registry, email);
 }

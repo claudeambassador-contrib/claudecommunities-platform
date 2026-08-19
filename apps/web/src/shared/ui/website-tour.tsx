@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
 import {
   AbsoluteFill,
   interpolate,
@@ -33,7 +33,7 @@ function useEnter(delay = 0) {
   };
 }
 
-function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+function Card({ children, style }: { children: ReactNode; style?: CSSProperties }): ReactElement {
   return (
     <div
       style={{
@@ -49,7 +49,7 @@ function Card({ children, style }: { children: ReactNode; style?: CSSProperties 
   );
 }
 
-function TitleCard({ subtitle, title }: { subtitle: string; title: string }) {
+function TitleCard({ subtitle, title }: { subtitle: string; title: string }): ReactElement {
   const enter = useEnter();
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", padding: 80 }}>
@@ -64,7 +64,7 @@ function TitleCard({ subtitle, title }: { subtitle: string; title: string }) {
   );
 }
 
-function FeatureCard({ body, heading }: { body: string; heading: string }) {
+function FeatureCard({ body, heading }: { body: string; heading: string }): ReactElement {
   const enter = useEnter(6);
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", padding: 80 }}>
@@ -78,7 +78,7 @@ function FeatureCard({ body, heading }: { body: string; heading: string }) {
   );
 }
 
-export function WebsiteTour() {
+export function WebsiteTour(): ReactElement {
   const { communitySuperlative, countryName, senderDomain, siteName } = getRegionConfig();
   return (
     <AbsoluteFill style={{ backgroundColor: DARK }}>

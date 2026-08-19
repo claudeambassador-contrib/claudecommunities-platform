@@ -1,5 +1,4 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
-import * as directoryRepo from "@/modules/identity/repositories/directoryRepository";
+import { setMembershipRole } from "@/modules/identity/services/usersService";
 import type { MembershipRole } from "@/modules/identity/types";
 // biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
 import * as rolesRepo from "@/modules/roles/repositories/rolesRepository";
@@ -192,13 +191,5 @@ export async function assignRoleToUser(
   if (actor.id === targetUserId && !permissionsForRole(role).has("users.assign_role")) {
     return err("bad_request", 400, "You can't remove your own role-assignment permission");
   }
-  const user = await directoryRepo.findUserById(registry, targetUserId);
-  if (!user) {
-    return err("not_found", 404, "User not found");
-  }
-  const updated = await directoryRepo.updateMembershipRole(registry, orgId, targetUserId, role);
-  if (!updated) {
-    return err("not_found", 404, "User is not a member of this community");
-  }
-  return ok({ id: targetUserId, role });
+  return await setMembershipRole(registry, orgId, targetUserId, role);
 }

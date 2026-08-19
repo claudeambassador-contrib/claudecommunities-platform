@@ -1,12 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listEvents } from "@/modules/events/services/eventsService";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
+const loadEventsInput = z.object({ citySlug: z.string().min(1) });
+
 const loadEvents = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadEventsInput.parse(input))
   .handler(({ data }) =>
     guarded(data.citySlug, "events.view", async (page) => {
       const result = await listEvents(page.store, { includeInactive: true });
@@ -34,7 +38,7 @@ export const Route = createFileRoute("/$citySlug/admin/events/")({
   component: AdminEventsPage,
 });
 
-function AdminEventsPage() {
+function AdminEventsPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 

@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getPublishedBySlug } from "@/modules/courses/services/coursesService";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { EmptyCard, PageHeader } from "@/shared/ui/page";
 
+const loadInput = z.object({ citySlug: z.string().min(1), lesson: z.string(), slug: z.string() });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string; lesson: string; slug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -40,7 +44,7 @@ export const Route = createFileRoute("/$citySlug/community/learn/$slug/$lesson")
   component: LessonPage,
 });
 
-function LessonPage() {
+function LessonPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const { course, lesson } = Route.useLoaderData();
 
@@ -69,9 +73,7 @@ function LessonPage() {
         title={lesson.title}
       />
       <div className="card">
-        <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-          {lesson.content ?? "No lesson content yet."}
-        </p>
+        <p className="m-0 whitespace-pre-wrap">{lesson.content ?? "No lesson content yet."}</p>
       </div>
     </section>
   );

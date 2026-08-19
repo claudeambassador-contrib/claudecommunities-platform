@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 
+const loadSettingsInput = z.object({ citySlug: z.string().min(1) });
+
 const loadSettings = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadSettingsInput.parse(input))
   .handler(({ data }) =>
     guarded(data.citySlug, "tenant.settings", (page) =>
       Promise.resolve(
@@ -26,7 +30,7 @@ export const Route = createFileRoute("/$citySlug/admin/settings")({
   component: SettingsPage,
 });
 
-function SettingsPage() {
+function SettingsPage(): ReactElement {
   const data = Route.useLoaderData();
 
   if (!data.allowed) {

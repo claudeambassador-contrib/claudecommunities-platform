@@ -1,17 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getIndustry, saveIndustry } from "@/modules/pages/services/industriesService";
-import { loadCityPage } from "@/shared/http/cityPage";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
+import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadIndustryInput = z.object({ citySlug: z.string().min(1), slug: z.string() });
 
 const loadIndustry = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string; slug: string }) => d)
+  .validator((input: unknown) => loadIndustryInput.parse(input))
   .handler(({ data }) =>
-    guarded(data.citySlug, null, async (page) => {
+    guarded(data.citySlug, "pages.view", async (page) => {
       const found = await getIndustry(page.store, page.actor, data.slug);
       if (!found.ok) {
         return found;
@@ -20,31 +23,32 @@ const loadIndustry = createServerFn({ method: "GET" })
     }),
   );
 
+const submitIndustryInput = z.object({
+  body: z.string(),
+  citySlug: z.string().min(1),
+  slug: z.string(),
+  title: z.string(),
+});
+
 const submitIndustry = createServerFn({ method: "POST" })
-  .validator((d: { body: string; citySlug: string; slug: string; title: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { error: "unauthenticated", ok: false as const };
-    }
-    const result = await saveIndustry(page.store, page.actor, {
-      body: data.body,
-      slug: data.slug,
-      status: "published",
-      title: data.title,
-    });
-    if (!result.ok) {
-      return { error: result.error.message ?? result.error.code, ok: false as const };
-    }
-    return { ok: true as const };
-  });
+  .validator((input: unknown) => submitIndustryInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, "pages.edit", (page) =>
+      saveIndustry(page.store, page.actor, {
+        body: data.body,
+        slug: data.slug,
+        status: "published",
+        title: data.title,
+      }),
+    ),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/industries/$slug")({
   loader: ({ params }) => loadIndustry({ data: { citySlug: params.citySlug, slug: params.slug } }),
   component: IndustryDetailPage,
 });
 
-function IndustryDetailPage() {
+function IndustryDetailPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -88,39 +92,34 @@ function EditIndustryForm({
   citySlug: string;
   slug: string;
   title: string;
-}) {
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const fd = new FormData(event.currentTarget);
-      const result = await submitIndustry({
+}): ReactElement {
+  const { error, handleSubmit, pending, success } = useFormSubmit({
+    submit: (fd) =>
+      submitIndustry({
         data: {
-          body: String(fd.get("body") ?? ""),
+          body: formString(fd, "body"),
           citySlug,
           slug,
-          title: String(fd.get("title") ?? ""),
+          title: formString(fd, "title"),
         },
-      });
-      setStatus(result.ok ? "Saved." : result.error);
-    },
-    [citySlug, slug],
-  );
+      }),
+    successMessage: "Saved.",
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
-      <input className="field" defaultValue={title} name="title" required />
-      <textarea
-        className="field"
-        defaultValue={body}
-        name="body"
-        rows={8}
-        style={{ width: "100%" }}
-      />
-      {status ? <p className="muted">{status}</p> : null}
-      <button className="btn btn-primary" type="submit">
-        Save
+      <label className="field-label">
+        Title
+        <input className="field" defaultValue={title} name="title" required />
+      </label>
+      <label className="field-label">
+        Landing page copy
+        <textarea className="field w-full" defaultValue={body} name="body" rows={8} />
+      </label>
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Saving…" : "Save"}
       </button>
     </form>
   );

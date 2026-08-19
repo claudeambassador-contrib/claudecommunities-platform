@@ -1,12 +1,17 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getOwnProfile, updateOwnProfile } from "@/modules/identity/services/usersService";
 import { requireCityActor } from "@/shared/http/cityPage";
+import { guardedMutation } from "@/shared/http/guarded";
 import { EmptyCard, PageHeader, SignInCard } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadInput = z.object({ citySlug: z.string().min(1) });
 
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await requireCityActor(data.citySlug);
     if (!page.ok) {
@@ -27,28 +32,25 @@ const load = createServerFn({ method: "GET" })
     };
   });
 
+const submitProfileInput = z.object({
+  citySlug: z.string().min(1),
+  displayName: z.string(),
+});
+
 const submitProfile = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; displayName: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await requireCityActor(data.citySlug);
-    if (!page.ok) {
-      return { error: "unauthenticated", ok: false as const };
-    }
-    const result = await updateOwnProfile(page.registry, page.actor, {
-      displayName: data.displayName,
-    });
-    if (!result.ok) {
-      return { error: result.error.message ?? result.error.code, ok: false as const };
-    }
-    return { ok: true as const };
-  });
+  .validator((input: unknown) => submitProfileInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, null, (page) =>
+      updateOwnProfile(page.registry, page.actor, { displayName: data.displayName }),
+    ),
+  );
 
 export const Route = createFileRoute("/$citySlug/community/settings/profile")({
   loader: ({ params }) => load({ data: { citySlug: params.citySlug } }),
   component: ProfileSettingsPage,
 });
 
-function ProfileSettingsPage() {
+function ProfileSettingsPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -68,29 +70,23 @@ function ProfileSettingsPage() {
   );
 }
 
-function ProfileForm({ citySlug, displayName }: { citySlug: string; displayName: string }) {
-  const router = useRouter();
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const fd = new FormData(event.currentTarget);
-      const result = await submitProfile({
+function ProfileForm({
+  citySlug,
+  displayName,
+}: {
+  citySlug: string;
+  displayName: string;
+}): ReactElement {
+  const { error, handleSubmit, pending, success } = useFormSubmit({
+    submit: (fd) =>
+      submitProfile({
         data: {
           citySlug,
-          displayName: String(fd.get("displayName") ?? ""),
+          displayName: formString(fd, "displayName"),
         },
-      });
-      if (result.ok) {
-        setStatus("Saved.");
-        await router.invalidate();
-        return;
-      }
-      setStatus(result.error);
-    },
-    [citySlug, router],
-  );
+      }),
+    successMessage: "Saved.",
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
@@ -104,9 +100,10 @@ function ProfileForm({ citySlug, displayName }: { citySlug: string; displayName:
           required
         />
       </label>
-      {status ? <p className="muted">{status}</p> : null}
-      <button className="btn btn-primary" type="submit">
-        Save
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Saving…" : "Save"}
       </button>
     </form>
   );

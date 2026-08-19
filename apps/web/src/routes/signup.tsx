@@ -1,5 +1,6 @@
 import { SignUp } from "@clerk/tanstack-react-start";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import type { ReactElement } from "react";
 import { isClerkPublishableConfigured } from "@/shared/auth/clerk";
 
 export const Route = createFileRoute("/signup")({
@@ -9,18 +10,18 @@ export const Route = createFileRoute("/signup")({
   }),
 });
 
-function SignupPage() {
+function SignupPage(): ReactElement {
   return (
-    <main className="shell stack" style={{ maxWidth: "28rem", paddingTop: "4rem" }}>
+    <main className="shell shell-narrow stack">
       <div>
-        <h1 style={{ margin: 0 }}>Join the community</h1>
+        <h1 className="m-0">Join the community</h1>
         <p className="muted">Create your account to get started</p>
       </div>
       {isClerkPublishableConfigured() ? (
         <SignUp fallbackRedirectUrl="/" />
       ) : (
         <div className="card">
-          <p style={{ margin: 0 }}>
+          <p className="m-0">
             Clerk keys are not configured. Add <code>VITE_CLERK_PUBLISHABLE_KEY</code> and{" "}
             <code>CLERK_SECRET_KEY</code> to <code>apps/web/.env.local</code>, allow{" "}
             <code>http://localhost:3001</code>, then reload.

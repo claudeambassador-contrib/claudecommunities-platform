@@ -16,11 +16,23 @@
     "noUncheckedIndexedAccess": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@web/*": ["./src/*"]
+      "@/*": ["./src/*"]
     },
     "types": ["vite/client", "@cloudflare/workers-types"]
   },
-  "include": ["src", "scripts", "test", "vite.config.ts", "vitest.config.ts", "worker-configuration.d.ts"],
-  "exclude": ["node_modules", ".wrangler", "dist", "vite.config.ts", "vitest.config.ts"]
+  "include": [
+    "src",
+    "scripts",
+    "test",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "worker-configuration.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".wrangler",
+    "dist",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
 }

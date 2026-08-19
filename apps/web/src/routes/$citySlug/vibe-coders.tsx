@@ -1,11 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { getRegionConfig } from "@/shared/region";
 import { PageHeader } from "@/shared/ui/page";
 
+const loadInput = z.object({ citySlug: z.string().min(1) });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     await loadCityPage(data.citySlug);
     return {};
@@ -16,7 +20,7 @@ export const Route = createFileRoute("/$citySlug/vibe-coders")({
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { countryName } = getRegionConfig();
 
@@ -41,7 +45,7 @@ function Page() {
         title="Vibe coders"
       />
       <div className="card">
-        <p style={{ margin: 0 }}>
+        <p className="m-0">
           No computer-science degree required. Describe what you want to build and work with Claude
           Code — websites, automations, prototypes, and side projects. Come as you are.
         </p>

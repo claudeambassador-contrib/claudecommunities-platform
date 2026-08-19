@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { ok } from "@/shared/http/errors";
 import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
+const loadToolsInput = z.object({ citySlug: z.string().min(1) });
+
 const loadTools = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadToolsInput.parse(input))
   .handler(({ data }) =>
     guarded(data.citySlug, "tools.use", (page) => {
       const base = `/${page.tenant.slug}/admin/tools`;
@@ -47,7 +51,7 @@ export const Route = createFileRoute("/$citySlug/admin/tools/")({
   component: AdminToolsPage,
 });
 
-function AdminToolsPage() {
+function AdminToolsPage(): ReactElement {
   const data = Route.useLoaderData();
 
   if (!data.allowed) {

@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { useState } from "react";
+import { z } from "zod";
 import {
   getCoffeePoolStatus,
   getConfig,
@@ -9,6 +11,7 @@ import {
 } from "@/modules/impact-lab/services/impactLabService";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
 interface AdminSummary {
   accessCode: string;
@@ -22,8 +25,10 @@ interface AdminSummary {
   votingOpen: boolean;
 }
 
+const loadInput = z.object({ citySlug: z.string().min(1) });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -39,8 +44,11 @@ const load = createServerFn({ method: "GET" })
     };
   });
 
+const loginInput = z.object({ citySlug: z.string().min(1), password: z.string() });
+
+// Impact Lab organiser login uses its own password check, not Clerk auth.
 const login = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; password: string }) => d)
+  .validator((input: unknown) => loginInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -76,7 +84,7 @@ export const Route = createFileRoute("/$citySlug/impact-lab/admin")({
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { config } = Route.useLoaderData();
 
@@ -96,47 +104,33 @@ function Page() {
   );
 }
 
-function AdminLogin({ citySlug }: { citySlug: string }) {
-  const [status, setStatus] = useState<string | null>(null);
+function AdminLogin({ citySlug }: { citySlug: string }): ReactElement {
   const [summary, setSummary] = useState<AdminSummary | null>(null);
 
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const fd = new FormData(event.currentTarget);
-      const result = await login({
-        data: { citySlug, password: String(fd.get("password") ?? "") },
-      });
-      if (result.ok) {
-        setSummary(result.summary);
-        setStatus(null);
-      } else {
-        setStatus(result.error);
-      }
-    },
-    [citySlug],
-  );
+  const { error, handleSubmit, pending } = useFormSubmit<
+    { ok: true; summary: AdminSummary } | { error: string; ok: false }
+  >({
+    invalidate: false,
+    onSuccess: (result) => setSummary(result.summary),
+    submit: (fd) => login({ data: { citySlug, password: formString(fd, "password") } }),
+  });
 
   if (summary) {
     return (
       <div className="card stack">
         <strong>Settings</strong>
-        <p style={{ margin: 0 }}>{summary.eventName}</p>
-        <p className="muted" style={{ margin: 0 }}>
-          {summary.eventTagline}
-        </p>
-        <p className="muted" style={{ margin: 0 }}>
-          {summary.eventDate}
-        </p>
-        <p style={{ margin: 0 }}>Access code: {summary.accessCode}</p>
-        <p style={{ margin: 0 }}>
+        <p className="m-0">{summary.eventName}</p>
+        <p className="muted m-0">{summary.eventTagline}</p>
+        <p className="muted m-0">{summary.eventDate}</p>
+        <p className="m-0">Access code: {summary.accessCode}</p>
+        <p className="m-0">
           Check-in {summary.checkInOpen ? "open" : "closed"} · Voting{" "}
           {summary.votingOpen ? "open" : "closed"} · People&apos;s choice{" "}
           {summary.peoplesChoiceOpen ? "open" : "closed"}
         </p>
         {summary.coffeeNote ? <p className="muted">{summary.coffeeNote}</p> : null}
         {summary.coffeePool ? (
-          <p className="muted" style={{ margin: 0 }}>
+          <p className="muted m-0">
             Coffee pool: {summary.coffeePool.assigned} assigned · {summary.coffeePool.redeemed}{" "}
             redeemed · {summary.coffeePool.unassigned} left of {summary.coffeePool.total}
           </p>
@@ -148,22 +142,20 @@ function AdminLogin({ citySlug }: { citySlug: string }) {
   return (
     <form className="card stack" onSubmit={handleSubmit}>
       <strong>Organiser login</strong>
-      <input
-        className="btn"
-        name="password"
-        placeholder="Admin password"
-        required
-        style={{ width: "100%" }}
-        type="password"
-      />
-      <button className="btn btn-primary" type="submit">
-        Sign in
+      <label className="field-label">
+        Admin password
+        <input
+          className="field"
+          name="password"
+          placeholder="Admin password"
+          required
+          type="password"
+        />
+      </label>
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Signing in…" : "Sign in"}
       </button>
-      {status ? (
-        <p className="muted" style={{ margin: 0 }}>
-          {status}
-        </p>
-      ) : null}
+      {error ? <p className="form-error">{error}</p> : null}
     </form>
   );
 }

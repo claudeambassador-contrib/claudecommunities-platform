@@ -1,13 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { useState } from "react";
+import { z } from "zod";
 import {
   enrollInCourse,
   getPublishedBySlug,
   getScheduledCourse,
 } from "@/modules/courses/services/coursesService";
-import { loadCityPage, requireCityActor } from "@/shared/http/cityPage";
+import { loadCityPage } from "@/shared/http/cityPage";
+import { guardedMutation } from "@/shared/http/guarded";
 import { EmptyCard, ItemList, PageHeader, SignInCard } from "@/shared/ui/page";
+import { useFormSubmit } from "@/shared/ui/use-form-submit";
 
 interface LessonItem {
   content: string | null;
@@ -45,8 +49,10 @@ type CourseView =
     }
   | { kind: "missing" };
 
+const loadInput = z.object({ citySlug: z.string().min(1), slug: z.string() });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string; slug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }): Promise<CourseView> => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -92,26 +98,22 @@ const load = createServerFn({ method: "GET" })
     return { kind: "missing" };
   });
 
+const enrollInput = z.object({ citySlug: z.string().min(1), courseId: z.string() });
+
 const enroll = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; courseId: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await requireCityActor(data.citySlug);
-    if (!page.ok) {
-      return { ok: false as const, error: page.error.message ?? "Sign in required" };
-    }
-    const result = await enrollInCourse(page.store, page.actor, data.courseId);
-    if (!result.ok) {
-      return { ok: false as const, error: result.error.message ?? result.error.code };
-    }
-    return { ok: true as const };
-  });
+  .validator((input: unknown) => enrollInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, null, (page) =>
+      enrollInCourse(page.store, page.actor, data.courseId),
+    ),
+  );
 
 export const Route = createFileRoute("/$citySlug/courses/$slug")({
   loader: ({ params }) => load({ data: { citySlug: params.citySlug, slug: params.slug } }),
   component: Page,
 });
 
-function Page() {
+function Page(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const data = Route.useLoaderData();
 
@@ -138,21 +140,17 @@ function Page() {
           title={course.title}
         />
         <div className="card stack">
-          <p className="muted" style={{ margin: 0 }}>
+          <p className="muted m-0">
             {course.isOnline ? "Online" : (course.location ?? "Location TBA")}
             {course.instructor ? ` · ${course.instructor}` : ""}
           </p>
-          <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-            {course.description ?? "No description yet."}
-          </p>
+          <p className="m-0 whitespace-pre-wrap">{course.description ?? "No description yet."}</p>
           {course.registrationUrl ? (
             <a className="btn btn-primary" href={course.registrationUrl} rel="noreferrer">
               Register
             </a>
           ) : (
-            <p className="muted" style={{ margin: 0 }}>
-              Registration details coming soon.
-            </p>
+            <p className="muted m-0">Registration details coming soon.</p>
           )}
         </div>
       </section>
@@ -168,39 +166,27 @@ function SelfPacedCourse({
 }: {
   citySlug: string;
   view: Extract<CourseView, { kind: "course" }>;
-}) {
+}): ReactElement {
   const { course, signedIn } = view;
   const [enrolled, setEnrolled] = useState(course.enrolled);
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleEnroll = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const result = await enroll({ data: { citySlug, courseId: course.id } });
-      if (result.ok) {
-        setEnrolled(true);
-        setStatus(null);
-      } else {
-        setStatus(result.error);
-      }
+  const { error, handleSubmit, pending } = useFormSubmit({
+    invalidate: false,
+    onSuccess: () => {
+      setEnrolled(true);
     },
-    [citySlug, course.id],
-  );
+    submit: () => enroll({ data: { citySlug, courseId: course.id } }),
+  });
 
   let enrollAction = <SignInCard href="/login" />;
   if (enrolled) {
-    enrollAction = (
-      <p className="muted" style={{ margin: 0 }}>
-        You are enrolled.
-      </p>
-    );
+    enrollAction = <p className="muted m-0">You are enrolled.</p>;
   } else if (signedIn) {
     enrollAction = (
-      <form onSubmit={handleEnroll}>
-        <button className="btn btn-primary" type="submit">
-          Enroll
+      <form onSubmit={handleSubmit}>
+        <button className="btn btn-primary" disabled={pending} type="submit">
+          {pending ? "Enrolling…" : "Enroll"}
         </button>
-        {status ? <p className="muted">{status}</p> : null}
+        {error ? <p className="form-error">{error}</p> : null}
       </form>
     );
   }
@@ -217,9 +203,7 @@ function SelfPacedCourse({
         title={course.title}
       />
       <div className="card stack">
-        <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-          {course.description ?? "No description yet."}
-        </p>
+        <p className="m-0 whitespace-pre-wrap">{course.description ?? "No description yet."}</p>
         {enrollAction}
       </div>
       <ItemList

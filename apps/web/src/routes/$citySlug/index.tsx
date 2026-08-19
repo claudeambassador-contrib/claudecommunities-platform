@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listEvents } from "@/modules/events/services/eventsService";
 import { getHomeSections } from "@/modules/pages/services/pagesService";
 import type { Block } from "@/modules/pages/types";
@@ -7,8 +9,10 @@ import { loadCityPage } from "@/shared/http/cityPage";
 import { getRegionConfig } from "@/shared/region";
 import { CmsBlocks, type HomeEventCard } from "@/shared/ui/cms-blocks";
 
+const loadHomeInput = z.object({ citySlug: z.string().min(1) });
+
 const loadHome = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadHomeInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -35,10 +39,11 @@ const loadHome = createServerFn({ method: "GET" })
 
 export const Route = createFileRoute("/$citySlug/")({
   loader: ({ params }) => loadHome({ data: { citySlug: params.citySlug } }),
+  staleTime: 60_000,
   component: CityHome,
 });
 
-function CityHome() {
+function CityHome(): ReactElement {
   const { tenant } = Route.useRouteContext();
   const { blocks, events, signedIn } = Route.useLoaderData();
 

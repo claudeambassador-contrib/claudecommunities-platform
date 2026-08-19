@@ -1,15 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import type { FormEvent } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import {
   listNotifications,
   markAllRead,
 } from "@/modules/notifications/services/notificationsService";
 import { requireCityActor } from "@/shared/http/cityPage";
+import { guardedMutation } from "@/shared/http/guarded";
 import { ItemList, PageHeader, SignInCard } from "@/shared/ui/page";
+import { useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadInput = z.object({ citySlug: z.string().min(1) });
 
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await requireCityActor(data.citySlug);
     if (!page.ok) {
@@ -31,22 +36,27 @@ const load = createServerFn({ method: "GET" })
     };
   });
 
+const markReadInput = z.object({ citySlug: z.string().min(1) });
+
 const markRead = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await requireCityActor(data.citySlug);
-    if (!page.ok) {
-      return { ok: false as const };
-    }
-    await markAllRead(page.store, page.actor);
-    return { ok: true as const };
+  .validator((input: unknown) => markReadInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, null, (page) => markAllRead(page.store, page.actor)),
+  );
+
+function MarkAllReadForm({ citySlug }: { citySlug: string }): ReactElement {
+  const { error, handleSubmit, pending } = useFormSubmit({
+    submit: () => markRead({ data: { citySlug } }),
   });
 
-async function handleMarkRead(event: FormEvent<HTMLFormElement>) {
-  event.preventDefault();
-  const citySlug = String(new FormData(event.currentTarget).get("citySlug") ?? "");
-  await markRead({ data: { citySlug } });
-  window.location.reload();
+  return (
+    <form onSubmit={handleSubmit}>
+      <button className="btn" disabled={pending} type="submit">
+        {pending ? "Saving…" : "Mark all read"}
+      </button>
+      {error ? <p className="form-error">{error}</p> : null}
+    </form>
+  );
 }
 
 export const Route = createFileRoute("/$citySlug/community/notifications")({
@@ -54,7 +64,7 @@ export const Route = createFileRoute("/$citySlug/community/notifications")({
   component: NotificationsPage,
 });
 
-function NotificationsPage() {
+function NotificationsPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -65,16 +75,7 @@ function NotificationsPage() {
   return (
     <section className="stack">
       <PageHeader
-        actions={
-          data.unreadCount > 0 ? (
-            <form onSubmit={handleMarkRead}>
-              <input name="citySlug" type="hidden" value={citySlug} />
-              <button className="btn" type="submit">
-                Mark all read
-              </button>
-            </form>
-          ) : null
-        }
+        actions={data.unreadCount > 0 ? <MarkAllReadForm citySlug={citySlug} /> : null}
         subtitle={data.unreadCount > 0 ? `${data.unreadCount} unread` : "You're all caught up"}
         title="Notifications"
       />

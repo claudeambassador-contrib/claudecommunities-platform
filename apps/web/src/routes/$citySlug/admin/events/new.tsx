@@ -1,40 +1,48 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { createEvent } from "@/modules/events/services/eventsService";
-import { loadCityPage } from "@/shared/http/cityPage";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
+import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
+import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
+
+const loadNewEventInput = z.object({ citySlug: z.string().min(1) });
 
 const loadNewEvent = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadNewEventInput.parse(input))
   .handler(({ data }) => guarded(data.citySlug, "events.edit", async () => ok({})));
 
+const submitEventInput = z.object({
+  citySlug: z.string().min(1),
+  location: z.string(),
+  startTime: z.string(),
+  title: z.string(),
+});
+
 const submitEvent = createServerFn({ method: "POST" })
-  .validator((d: { citySlug: string; location: string; startTime: string; title: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { ok: false as const, error: "unauthenticated" };
-    }
-    const result = await createEvent(page.store, page.actor, {
-      location: data.location || null,
-      startTime: data.startTime,
-      title: data.title,
-    });
-    if (!result.ok) {
-      return { ok: false as const, error: result.error.code };
-    }
-    return { ok: true as const, slug: result.event.slug };
-  });
+  .validator((input: unknown) => submitEventInput.parse(input))
+  .handler(({ data }) =>
+    guardedMutation(data.citySlug, "events.edit", async (page) => {
+      const result = await createEvent(page.store, page.actor, {
+        location: data.location || null,
+        startTime: data.startTime,
+        title: data.title,
+      });
+      if (!result.ok) {
+        return result;
+      }
+      return ok({ slug: result.event.slug });
+    }),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/events/new")({
   loader: ({ params }) => loadNewEvent({ data: { citySlug: params.citySlug } }),
   component: NewEventPage,
 });
 
-function NewEventPage() {
+function NewEventPage(): ReactElement {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
@@ -57,44 +65,41 @@ function NewEventPage() {
   );
 }
 
-function EventForm({ citySlug }: { citySlug: string }) {
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const fd = new FormData(event.currentTarget);
-      const result = await submitEvent({
+function EventForm({ citySlug }: { citySlug: string }): ReactElement {
+  const navigate = useNavigate();
+  const { error, handleSubmit, pending, success } = useFormSubmit({
+    onSuccess: async () => {
+      await navigate({ params: { citySlug }, to: "/$citySlug/admin/events" });
+    },
+    submit: (fd) =>
+      submitEvent({
         data: {
           citySlug,
-          location: String(fd.get("location") ?? ""),
-          startTime: String(fd.get("startTime") ?? ""),
-          title: String(fd.get("title") ?? ""),
+          location: formString(fd, "location"),
+          startTime: formString(fd, "startTime"),
+          title: formString(fd, "title"),
         },
-      });
-      if (result.ok) {
-        window.location.href = `/${citySlug}/admin/events`;
-      } else {
-        setStatus(result.error);
-      }
-    },
-    [citySlug],
-  );
+      }),
+  });
 
   return (
     <form className="card stack" onSubmit={handleSubmit}>
-      <input className="btn" name="title" placeholder="Title" required style={{ width: "100%" }} />
-      <input
-        className="btn"
-        name="startTime"
-        required
-        style={{ width: "100%" }}
-        type="datetime-local"
-      />
-      <input className="btn" name="location" placeholder="Location" style={{ width: "100%" }} />
-      {status ? <p className="muted">{status}</p> : null}
-      <button className="btn btn-primary" type="submit">
-        Create event
+      <label className="field-label">
+        Title
+        <input className="field" name="title" required />
+      </label>
+      <label className="field-label">
+        Start time
+        <input className="field" name="startTime" required type="datetime-local" />
+      </label>
+      <label className="field-label">
+        Location
+        <input className="field" name="location" />
+      </label>
+      {error ? <p className="form-error">{error}</p> : null}
+      {success ? <p className="form-success">{success}</p> : null}
+      <button className="btn btn-primary" disabled={pending} type="submit">
+        {pending ? "Creating…" : "Create event"}
       </button>
     </form>
   );

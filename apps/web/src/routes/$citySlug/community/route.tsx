@@ -1,10 +1,14 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { listSpaces } from "@/modules/community/services/communityService";
 import { loadCityPage } from "@/shared/http/cityPage";
 
+const loadCommunityInput = z.object({ citySlug: z.string().min(1) });
+
 const loadCommunity = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string }) => d)
+  .validator((input: unknown) => loadCommunityInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -22,7 +26,7 @@ export const Route = createFileRoute("/$citySlug/community")({
   component: CommunityLayout,
 });
 
-function CommunityLayout() {
+function CommunityLayout(): ReactElement {
   const { citySlug } = Route.useParams();
   const { signedIn, spaces } = Route.useRouteContext();
   const city = { citySlug };

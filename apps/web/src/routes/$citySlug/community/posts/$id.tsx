@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import type { ReactElement } from "react";
+import { z } from "zod";
 import { getPost, listComments } from "@/modules/community/services/communityService";
 import type { CommentNode } from "@/modules/community/types";
 import { loadCityPage } from "@/shared/http/cityPage";
@@ -12,8 +14,10 @@ interface CommentJson {
   replies: CommentJson[];
 }
 
+const loadInput = z.object({ citySlug: z.string().min(1), id: z.string() });
+
 const load = createServerFn({ method: "GET" })
-  .validator((d: { citySlug: string; id: string }) => d)
+  .validator((input: unknown) => loadInput.parse(input))
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
@@ -46,7 +50,7 @@ export const Route = createFileRoute("/$citySlug/community/posts/$id")({
   component: PostPage,
 });
 
-function CommentList({ comments }: { comments: CommentJson[] }) {
+function CommentList({ comments }: { comments: CommentJson[] }): ReactElement {
   if (comments.length === 0) {
     return <EmptyCard>No comments yet.</EmptyCard>;
   }
@@ -54,7 +58,7 @@ function CommentList({ comments }: { comments: CommentJson[] }) {
     <div className="stack">
       {comments.map((comment) => (
         <article className="card stack" key={comment.id}>
-          <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{comment.content}</p>
+          <p className="m-0 whitespace-pre-wrap">{comment.content}</p>
           <div className="muted">{new Date(comment.createdAt).toLocaleString()}</div>
           {comment.replies.length > 0 ? <CommentList comments={comment.replies} /> : null}
         </article>
@@ -63,7 +67,7 @@ function CommentList({ comments }: { comments: CommentJson[] }) {
   );
 }
 
-function PostPage() {
+function PostPage(): ReactElement {
   const { comments, post } = Route.useLoaderData();
 
   if (!post) {
@@ -77,9 +81,9 @@ function PostPage() {
         title={post.title?.trim() || "Post"}
       />
       <div className="card">
-        <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{post.content}</p>
+        <p className="m-0 whitespace-pre-wrap">{post.content}</p>
       </div>
-      <h3 style={{ margin: 0 }}>Comments</h3>
+      <h3 className="m-0">Comments</h3>
       <CommentList comments={comments} />
     </section>
   );

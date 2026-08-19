@@ -8,12 +8,14 @@
  */
 const args = Object.fromEntries(
   process.argv.slice(2).flatMap((a, i, arr) => {
-    if (a.startsWith("--")) return [[a.slice(2), arr[i + 1] && !arr[i + 1].startsWith("--") ? arr[i + 1] : true]];
+    if (a.startsWith("--")) {
+      return [[a.slice(2), arr[i + 1] && !arr[i + 1].startsWith("--") ? arr[i + 1] : true]];
+    }
     return [];
   }),
 );
 
-const tenant = args.tenant;
+const { tenant } = args;
 if (!tenant || tenant === true) {
   console.error("Required: --tenant <slug>");
   process.exit(1);

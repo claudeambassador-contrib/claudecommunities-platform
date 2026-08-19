@@ -114,14 +114,18 @@ export async function buildCityRouteContext(
   citySlug: string,
 ): Promise<Result<{ ctx: RouteContext }>> {
   const registryDb = getRegistryDb();
-  const resolvedTenant = await resolveTenant(registryDb, citySlug);
+  // Tenant resolution and session sync are independent — run them in parallel
+  // to cut one sequential round-trip per server fn.
+  const [resolvedTenant, session] = await Promise.all([
+    resolveTenant(registryDb, citySlug),
+    syncSessionUser(registryDb),
+  ]);
   if (!resolvedTenant.ok) {
     return resolvedTenant;
   }
   const { tenant } = resolvedTenant;
 
   const store = openTenantStore(tenant);
-  const session = await syncSessionUser(registryDb);
   let authCtx: AuthContext | null = null;
 
   if (session.ok) {

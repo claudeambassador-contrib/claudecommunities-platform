@@ -3,13 +3,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 
-export type Persona = {
-  key: string;
+export interface Persona {
   email: string;
+  key: string;
   password: string;
   role?: string;
   tenant?: string;
-};
+}
 
 export const SEEDED_USERS: Record<string, Persona> = {
   ada: {
@@ -47,22 +47,22 @@ export async function renameSessionVideo(videoDir: string): Promise<string | nul
   return target;
 }
 
-export type PresentationArtifacts = {
-  slug: string;
+export interface PresentationArtifacts {
+  context: BrowserContext;
   rootDir: string;
   screenshotsDir: string;
-  videoDir: string;
-  context: BrowserContext;
+  slug: string;
   steps: { id: string; label: string; file: string }[];
-};
+  videoDir: string;
+}
 
-export type FinalizeInput = {
-  title: string;
+export interface FinalizeInput {
+  error?: string;
+  passed: boolean;
   persona: Persona;
   stories: string[];
-  passed: boolean;
-  error?: string;
-};
+  title: string;
+}
 
 function e2eRootFromMeta(metaUrl: string): string {
   return join(dirname(fileURLToPath(metaUrl)), "..");
@@ -83,11 +83,11 @@ export async function createPresentationContext(
 
   const context = await browser.newContext({
     baseURL: options?.baseURL ?? process.env.BASE_URL ?? "http://localhost:3001",
-    recordVideo: { dir: videoDir, size: { width: 1280, height: 720 } },
-    viewport: { width: 1280, height: 720 },
+    recordVideo: { dir: videoDir, size: { height: 720, width: 1280 } },
+    viewport: { height: 720, width: 1280 },
   });
 
-  return { slug, rootDir, screenshotsDir, videoDir, context, steps: [] };
+  return { context, rootDir, screenshotsDir, slug, steps: [], videoDir };
 }
 
 export async function captureStep(
@@ -98,10 +98,10 @@ export async function captureStep(
 ): Promise<void> {
   const file = `${id}.png`;
   await page.screenshot({
-    path: join(artifacts.screenshotsDir, file),
     fullPage: true,
+    path: join(artifacts.screenshotsDir, file),
   });
-  artifacts.steps.push({ id, label, file });
+  artifacts.steps.push({ file, id, label });
 }
 
 export async function finalizePresentation(
@@ -112,20 +112,20 @@ export async function finalizePresentation(
   await renameSessionVideo(artifacts.videoDir);
 
   const results = {
-    title: input.title,
-    slug: artifacts.slug,
+    createdAt: new Date().toISOString(),
+    error: input.error ?? null,
+    passed: input.passed,
     persona: {
-      key: input.persona.key,
       email: input.persona.email,
+      key: input.persona.key,
       role: input.persona.role,
       tenant: input.persona.tenant,
     },
-    stories: input.stories,
-    passed: input.passed,
-    error: input.error ?? null,
+    slug: artifacts.slug,
     steps: artifacts.steps,
+    stories: input.stories,
+    title: input.title,
     video: "video/session.webm",
-    createdAt: new Date().toISOString(),
   };
 
   const resultsPath = join(artifacts.rootDir, "results.json");
