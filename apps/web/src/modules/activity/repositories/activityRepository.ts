@@ -4,8 +4,13 @@ import type {
   ListActivityOptions,
   RecordActivityInput,
 } from "@/modules/activity/types";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { newId } from "@/shared/ids";
+
+/** The only tables this repository may touch. */
+type ActivityTables = Pick<TenantTables, "activities">;
+const tables = (store: TenantStore): ActivityTables => store.tables;
 
 function parseData(raw: string | null): unknown {
   if (!raw) {
@@ -22,7 +27,7 @@ export async function insertActivity(
   store: TenantStore,
   input: RecordActivityInput,
 ): Promise<ActivityItem> {
-  const { activities } = store.tables;
+  const { activities } = tables(store);
   const now = new Date();
   const id = newId("act");
   const dataJson = input.data ? JSON.stringify(input.data) : null;
@@ -47,7 +52,7 @@ export async function listActivities(
   store: TenantStore,
   options: ListActivityOptions = {},
 ): Promise<ActivityItem[]> {
-  const { activities } = store.tables;
+  const { activities } = tables(store);
   const limit = Math.min(100, Math.max(1, options.limit ?? 20));
   const offset = Math.max(0, options.offset ?? 0);
   const filters = [eq(activities.orgId, store.orgId)];

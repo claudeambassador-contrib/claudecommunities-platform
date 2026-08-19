@@ -7,19 +7,23 @@ import type {
   ScheduledCourseDetail,
   ScheduledCourseWrite,
 } from "@/modules/courses/types";
+import { first, iso } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
+/** The only tables this repository may touch. */
+type CoursesTables = Pick<
+  TenantTables,
+  "courseEnrollments" | "courses" | "lessons" | "scheduledCourses"
+>;
+const tables = (store: TenantStore): CoursesTables => store.tables;
+
 const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
-
 async function lessonCount(store: TenantStore, courseId: string): Promise<number> {
-  const { lessons } = store.tables;
+  const { lessons } = tables(store);
   const rows = await store.db
     .select({ n: sql<number>`count(*)` })
     .from(lessons)
@@ -28,7 +32,7 @@ async function lessonCount(store: TenantStore, courseId: string): Promise<number
 }
 
 async function enrollmentCount(store: TenantStore, courseId: string): Promise<number> {
-  const { courseEnrollments } = store.tables;
+  const { courseEnrollments } = tables(store);
   const rows = await store.db
     .select({ n: sql<number>`count(*)` })
     .from(courseEnrollments)
@@ -41,7 +45,7 @@ export async function isEnrolled(
   courseId: string,
   userId: string,
 ): Promise<boolean> {
-  const { courseEnrollments } = store.tables;
+  const { courseEnrollments } = tables(store);
   const rows = await store.db
     .select()
     .from(courseEnrollments)
@@ -57,7 +61,7 @@ export async function isEnrolled(
 }
 
 async function listLessons(store: TenantStore, courseId: string): Promise<LessonDetail[]> {
-  const { lessons } = store.tables;
+  const { lessons } = tables(store);
   const rows = await store.db
     .select()
     .from(lessons)
@@ -72,7 +76,7 @@ async function listLessons(store: TenantStore, courseId: string): Promise<Lesson
 }
 
 export async function findBySlug(store: TenantStore, slug: string, ignoreId?: string) {
-  const { courses } = store.tables;
+  const { courses } = tables(store);
   const rows = await store.db
     .select()
     .from(courses)
@@ -89,7 +93,7 @@ export async function listCourses(
   store: TenantStore,
   options: { publishedOnly?: boolean } = {},
 ): Promise<CourseListItem[]> {
-  const { courses } = store.tables;
+  const { courses } = tables(store);
   const rows = await store.db
     .select()
     .from(courses)
@@ -116,7 +120,7 @@ export async function getById(
   id: string,
   viewerId?: string,
 ): Promise<Result<{ course: CourseDetail }>> {
-  const { courses } = store.tables;
+  const { courses } = tables(store);
   const rows = await store.db
     .select()
     .from(courses)
@@ -150,7 +154,7 @@ export async function insertCourse(
     title: string;
   },
 ): Promise<CourseDetail> {
-  const { courses } = store.tables;
+  const { courses } = tables(store);
   const now = new Date();
   const id = newId("crs");
   await store.db.insert(courses).values({
@@ -188,7 +192,7 @@ export async function updateCourse(
   if (!existing.ok) {
     return existing;
   }
-  const { courses } = store.tables;
+  const { courses } = tables(store);
   const set: Record<string, unknown> = { updatedAt: new Date() };
   if (patch.title !== undefined) {
     set.title = patch.title;
@@ -220,7 +224,7 @@ export async function deleteCourse(
   if (!existing.ok) {
     return existing;
   }
-  const { courses } = store.tables;
+  const { courses } = tables(store);
   await store.db.delete(courses).where(and(eq(courses.orgId, store.orgId), eq(courses.id, id)));
   return ok({ success: true });
 }
@@ -230,7 +234,7 @@ export async function replaceLessons(
   courseId: string,
   incoming: LessonInput[],
 ): Promise<void> {
-  const { lessons } = store.tables;
+  const { lessons } = tables(store);
   await store.db
     .delete(lessons)
     .where(and(eq(lessons.orgId, store.orgId), eq(lessons.courseId, courseId)));
@@ -248,10 +252,6 @@ export async function replaceLessons(
       }),
     ),
   );
-}
-
-function iso(value: Date | null | undefined): string | null {
-  return value ? value.toISOString() : null;
 }
 
 function toScheduled(
@@ -284,7 +284,7 @@ export async function findScheduledBySlug(
   slug: string,
   ignoreId?: string,
 ): Promise<ScheduledCourseDetail | null> {
-  const { scheduledCourses } = store.tables;
+  const { scheduledCourses } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -302,7 +302,7 @@ export async function listScheduled(
   store: TenantStore,
   options: { publishedOnly?: boolean; upcoming?: boolean } = {},
 ): Promise<ScheduledCourseDetail[]> {
-  const { scheduledCourses } = store.tables;
+  const { scheduledCourses } = tables(store);
   const filters = [eq(scheduledCourses.orgId, store.orgId)];
   if (options.publishedOnly) {
     filters.push(eq(scheduledCourses.isPublished, true));
@@ -322,7 +322,7 @@ export async function getScheduledByIdOrSlug(
   store: TenantStore,
   idOrSlug: string,
 ): Promise<Result<{ course: ScheduledCourseDetail }>> {
-  const { scheduledCourses } = store.tables;
+  const { scheduledCourses } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -345,7 +345,7 @@ export async function insertScheduled(
   store: TenantStore,
   write: ScheduledCourseWrite,
 ): Promise<Result<{ course: ScheduledCourseDetail }>> {
-  const { scheduledCourses } = store.tables;
+  const { scheduledCourses } = tables(store);
   const now = new Date();
   const id = newId("sc");
   try {
@@ -414,7 +414,7 @@ export async function updateScheduled(
   if (!existing.ok) {
     return existing;
   }
-  const { scheduledCourses } = store.tables;
+  const { scheduledCourses } = tables(store);
   try {
     await store.db
       .update(scheduledCourses)
@@ -438,7 +438,7 @@ export async function deleteScheduled(
   if (!existing.ok) {
     return existing;
   }
-  const { scheduledCourses } = store.tables;
+  const { scheduledCourses } = tables(store);
   await store.db
     .delete(scheduledCourses)
     .where(
@@ -455,7 +455,7 @@ export async function insertEnrollment(
   if (await isEnrolled(store, courseId, userId)) {
     return;
   }
-  const { courseEnrollments } = store.tables;
+  const { courseEnrollments } = tables(store);
   await store.db.insert(courseEnrollments).values({
     courseId,
     createdAt: new Date(),

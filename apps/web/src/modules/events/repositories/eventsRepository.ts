@@ -10,18 +10,18 @@ import type {
   RsvpRow,
   StoredRsvpStatus,
 } from "@/modules/events/types";
+import { first, iso } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
-
-function iso(value: Date | null | undefined): string | null {
-  return value ? value.toISOString() : null;
-}
+/** The only tables this repository may touch. */
+type EventsTables = Pick<
+  TenantTables,
+  "eventAgendaItems" | "eventLumaInterests" | "eventResources" | "eventRsvps" | "events"
+>;
+const tables = (store: TenantStore): EventsTables => store.tables;
 
 function eventUpdateSet(patch: Partial<EventWrite>) {
   const set: Record<string, unknown> = { updatedAt: new Date() };
@@ -79,7 +79,7 @@ function toAgenda(row: EventAgendaRow): AgendaItemDetail {
 }
 
 async function rsvpCountFor(store: TenantStore, eventId: string): Promise<number> {
-  const { eventRsvps } = store.tables;
+  const { eventRsvps } = tables(store);
   const rows = await store.db
     .select({ n: sql<number>`count(*)` })
     .from(eventRsvps)
@@ -92,7 +92,7 @@ export async function listEvents(
   store: TenantStore,
   options: { includeInactive?: boolean } = {},
 ): Promise<EventDetail[]> {
-  const { eventRsvps, events } = store.tables;
+  const { eventRsvps, events } = tables(store);
   const rows = await store.db
     .select()
     .from(events)
@@ -115,7 +115,7 @@ export async function getById(
   store: TenantStore,
   id: string,
 ): Promise<Result<{ event: EventDetail }>> {
-  const { events } = store.tables;
+  const { events } = tables(store);
   const rows = await store.db
     .select()
     .from(events)
@@ -129,7 +129,7 @@ export async function getById(
 }
 
 export async function findBySlug(store: TenantStore, slug: string): Promise<EventDetail | null> {
-  const { events } = store.tables;
+  const { events } = tables(store);
   const rows = await store.db
     .select()
     .from(events)
@@ -150,7 +150,7 @@ export async function insert(
   store: TenantStore,
   input: EventWrite,
 ): Promise<Result<{ event: EventDetail }>> {
-  const { events } = store.tables;
+  const { events } = tables(store);
   const now = new Date();
   const id = newId("evt");
   try {
@@ -198,7 +198,7 @@ export async function updateById(
   if (!existing.ok) {
     return existing;
   }
-  const { events } = store.tables;
+  const { events } = tables(store);
   await store.db
     .update(events)
     .set(eventUpdateSet(patch))
@@ -214,13 +214,13 @@ export async function deleteById(
   if (!existing.ok) {
     return existing;
   }
-  const { events } = store.tables;
+  const { events } = tables(store);
   await store.db.delete(events).where(and(eq(events.orgId, store.orgId), eq(events.id, id)));
   return ok({ success: true });
 }
 
 export async function listRsvps(store: TenantStore, eventId: string): Promise<RsvpRow[]> {
-  const { eventRsvps } = store.tables;
+  const { eventRsvps } = tables(store);
   const rows = await store.db
     .select()
     .from(eventRsvps)
@@ -238,7 +238,7 @@ export async function findRsvp(
   eventId: string,
   userId: string,
 ): Promise<StoredRsvpStatus | null> {
-  const { eventRsvps } = store.tables;
+  const { eventRsvps } = tables(store);
   const rows = await store.db
     .select()
     .from(eventRsvps)
@@ -260,7 +260,7 @@ export async function upsertRsvp(
   userId: string,
   status: StoredRsvpStatus,
 ): Promise<void> {
-  const { eventRsvps } = store.tables;
+  const { eventRsvps } = tables(store);
   const existing = await store.db
     .select()
     .from(eventRsvps)
@@ -295,7 +295,7 @@ export async function deleteRsvpRow(
   eventId: string,
   userId: string,
 ): Promise<void> {
-  const { eventRsvps } = store.tables;
+  const { eventRsvps } = tables(store);
   await store.db
     .delete(eventRsvps)
     .where(
@@ -308,7 +308,7 @@ export async function deleteRsvpRow(
 }
 
 export async function listGoingUserIds(store: TenantStore, eventId: string): Promise<string[]> {
-  const { eventRsvps } = store.tables;
+  const { eventRsvps } = tables(store);
   const rows = await store.db
     .select()
     .from(eventRsvps)
@@ -327,7 +327,7 @@ export async function listAgendaItems(
   store: TenantStore,
   eventId: string,
 ): Promise<AgendaItemDetail[]> {
-  const { eventAgendaItems } = store.tables;
+  const { eventAgendaItems } = tables(store);
   const rows = await store.db
     .select()
     .from(eventAgendaItems)
@@ -349,7 +349,7 @@ export async function insertAgendaItem(
     sortOrder: number;
   },
 ): Promise<Result<{ item: AgendaItemDetail }>> {
-  const { eventAgendaItems } = store.tables;
+  const { eventAgendaItems } = tables(store);
   const now = new Date();
   const id = newId("agi");
   await store.db.insert(eventAgendaItems).values({
@@ -392,7 +392,7 @@ export async function updateAgendaItem(
     sortOrder?: number;
   },
 ): Promise<Result<{ item: AgendaItemDetail }>> {
-  const { eventAgendaItems } = store.tables;
+  const { eventAgendaItems } = tables(store);
   const existing = await store.db
     .select()
     .from(eventAgendaItems)
@@ -430,7 +430,7 @@ export async function deleteAgendaItem(
   store: TenantStore,
   itemId: string,
 ): Promise<Result<{ success: true }>> {
-  const { eventAgendaItems } = store.tables;
+  const { eventAgendaItems } = tables(store);
   const existing = await store.db
     .select()
     .from(eventAgendaItems)
@@ -450,7 +450,7 @@ export async function findLumaInterest(
   eventId: string,
   userId: string,
 ): Promise<boolean> {
-  const { eventLumaInterests } = store.tables;
+  const { eventLumaInterests } = tables(store);
   const rows = await store.db
     .select()
     .from(eventLumaInterests)
@@ -466,7 +466,7 @@ export async function findLumaInterest(
 }
 
 export async function countLumaInterests(store: TenantStore, eventId: string): Promise<number> {
-  const { eventLumaInterests } = store.tables;
+  const { eventLumaInterests } = tables(store);
   const rows = await store.db
     .select({ n: sql<number>`count(*)` })
     .from(eventLumaInterests)
@@ -483,7 +483,7 @@ export async function upsertLumaInterest(
   if (await findLumaInterest(store, eventId, userId)) {
     return;
   }
-  const { eventLumaInterests } = store.tables;
+  const { eventLumaInterests } = tables(store);
   await store.db.insert(eventLumaInterests).values({
     createdAt: new Date(),
     eventId,
@@ -498,7 +498,7 @@ export async function listPendingLumaInterests(
   store: TenantStore,
   eventId: string,
 ): Promise<{ id: string; userId: string }[]> {
-  const { eventLumaInterests } = store.tables;
+  const { eventLumaInterests } = tables(store);
   const rows = await store.db
     .select({ id: eventLumaInterests.id, userId: eventLumaInterests.userId })
     .from(eventLumaInterests)
@@ -513,7 +513,7 @@ export async function listPendingLumaInterests(
 }
 
 export async function stampLumaNotified(store: TenantStore, interestId: string): Promise<void> {
-  const { eventLumaInterests } = store.tables;
+  const { eventLumaInterests } = tables(store);
   await store.db
     .update(eventLumaInterests)
     .set({ notifiedAt: new Date() })
@@ -525,7 +525,7 @@ export async function listActiveLumaInterestsForUser(
   userId: string,
   now: Date,
 ): Promise<EventDetail[]> {
-  const { eventLumaInterests, events } = store.tables;
+  const { eventLumaInterests, events } = tables(store);
   const rows = await store.db
     .select({ event: events })
     .from(eventLumaInterests)
@@ -546,7 +546,7 @@ export async function listActiveLumaInterestsForUser(
 export async function listSitemapEntries(
   store: TenantStore,
 ): Promise<{ id: string; slug: string; updatedAt: string }[]> {
-  const { events } = store.tables;
+  const { events } = tables(store);
   const rows = await store.db
     .select()
     .from(events)
@@ -577,7 +577,7 @@ export async function listResources(
   store: TenantStore,
   eventId: string,
 ): Promise<EventResourceDetail[]> {
-  const { eventResources } = store.tables;
+  const { eventResources } = tables(store);
   const rows = await store.db
     .select()
     .from(eventResources)
@@ -592,7 +592,7 @@ export async function insertResource(
   input: EventResourceInput,
   uploadedBy: string | null,
 ): Promise<EventResourceDetail> {
-  const { eventResources } = store.tables;
+  const { eventResources } = tables(store);
   const id = newId("ers");
   const now = new Date();
   await store.db.insert(eventResources).values({
@@ -626,7 +626,7 @@ export async function deleteLumaInterest(
   eventId: string,
   userId: string,
 ): Promise<void> {
-  const { eventLumaInterests } = store.tables;
+  const { eventLumaInterests } = tables(store);
   await store.db
     .delete(eventLumaInterests)
     .where(

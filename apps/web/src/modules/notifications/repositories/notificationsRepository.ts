@@ -4,13 +4,14 @@ import type {
   NotificationPayload,
   NotificationWrite,
 } from "@/modules/notifications/types";
+import { first } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { newId } from "@/shared/ids";
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
+/** The only tables this repository may touch. */
+type NotificationsTables = Pick<TenantTables, "notifications">;
+const tables = (store: TenantStore): NotificationsTables => store.tables;
 
 function parsePayload(raw: string): NotificationPayload {
   try {
@@ -52,7 +53,7 @@ export async function listForUser(
   userId: string,
   options: { limit: number; unreadOnly: boolean },
 ): Promise<NotificationItem[]> {
-  const { notifications } = store.tables;
+  const { notifications } = tables(store);
   const filters = [eq(notifications.orgId, store.orgId), eq(notifications.userId, userId)];
   if (options.unreadOnly) {
     filters.push(isNull(notifications.readAt));
@@ -67,7 +68,7 @@ export async function listForUser(
 }
 
 export async function countUnread(store: TenantStore, userId: string): Promise<number> {
-  const { notifications } = store.tables;
+  const { notifications } = tables(store);
   const rows = await store.db
     .select({ n: sql<number>`count(*)` })
     .from(notifications)
@@ -85,7 +86,7 @@ export async function insertNotification(
   store: TenantStore,
   write: NotificationWrite,
 ): Promise<NotificationItem> {
-  const { notifications } = store.tables;
+  const { notifications } = tables(store);
   const now = new Date();
   const id = newId("ntf");
   await store.db.insert(notifications).values({
@@ -108,7 +109,7 @@ export async function insertNotification(
 }
 
 export async function markAllRead(store: TenantStore, userId: string): Promise<void> {
-  const { notifications } = store.tables;
+  const { notifications } = tables(store);
   const now = new Date();
   await store.db
     .update(notifications)

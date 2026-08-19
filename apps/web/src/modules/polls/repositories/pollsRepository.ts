@@ -1,15 +1,16 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import type { PollDetail } from "@/modules/polls/types";
+import { first } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
-const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
+/** The only tables this repository may touch. */
+type PollsTables = Pick<TenantTables, "pollOptions" | "pollVotes" | "polls">;
+const tables = (store: TenantStore): PollsTables => store.tables;
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
+const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
 
 function isUniqueConstraint(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -21,7 +22,7 @@ export async function getPoll(
   pollId: string,
   viewerId?: string,
 ): Promise<Result<{ poll: PollDetail }>> {
-  const { pollOptions, pollVotes, polls } = store.tables;
+  const { pollOptions, pollVotes, polls } = tables(store);
   const poll = first(
     await store.db
       .select()
@@ -86,7 +87,7 @@ export async function insertPoll(
   store: TenantStore,
   input: { endsAt: Date | null; options: string[]; postId: string | null; question: string },
 ): Promise<Result<{ poll: PollDetail }>> {
-  const { pollOptions, polls } = store.tables;
+  const { pollOptions, polls } = tables(store);
   const now = new Date();
   const id = newId("pol");
   try {
@@ -123,7 +124,7 @@ export async function optionBelongsToPoll(
   pollId: string,
   optionId: string,
 ): Promise<boolean> {
-  const { pollOptions } = store.tables;
+  const { pollOptions } = tables(store);
   const row = first(
     await store.db
       .select({ id: pollOptions.id })
@@ -146,7 +147,7 @@ export async function upsertVote(
   optionId: string,
   userId: string,
 ): Promise<Result<{ success: true }>> {
-  const { pollVotes } = store.tables;
+  const { pollVotes } = tables(store);
   const now = new Date();
   const existing = first(
     await store.db

@@ -6,17 +6,21 @@ import type {
   ReactionSummary,
   SpaceDetail,
 } from "@/modules/community/types";
+import { first } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
+/** The only tables this repository may touch. */
+type CommunityTables = Pick<
+  TenantTables,
+  "bookmarks" | "comments" | "likes" | "posts" | "reactions" | "spaces" | "spaceViews"
+>;
+const tables = (store: TenantStore): CommunityTables => store.tables;
 
 async function spaceById(store: TenantStore, id: string): Promise<SpaceRow | null> {
-  const { spaces } = store.tables;
+  const { spaces } = tables(store);
   const rows = await store.db
     .select()
     .from(spaces)
@@ -26,7 +30,7 @@ async function spaceById(store: TenantStore, id: string): Promise<SpaceRow | nul
 }
 
 async function commentCount(store: TenantStore, postId: string): Promise<number> {
-  const { comments } = store.tables;
+  const { comments } = tables(store);
   const rows = await store.db
     .select({ n: sql<number>`count(*)` })
     .from(comments)
@@ -36,7 +40,7 @@ async function commentCount(store: TenantStore, postId: string): Promise<number>
 }
 
 async function reactionCount(store: TenantStore, postId: string): Promise<number> {
-  const { reactions } = store.tables;
+  const { reactions } = tables(store);
   const rows = await store.db
     .select({ n: sql<number>`count(*)` })
     .from(reactions)
@@ -49,7 +53,7 @@ async function isBookmarked(store: TenantStore, postId: string, userId?: string)
   if (!userId) {
     return false;
   }
-  const { bookmarks } = store.tables;
+  const { bookmarks } = tables(store);
   const rows = await store.db
     .select()
     .from(bookmarks)
@@ -90,7 +94,7 @@ async function toPostDetail(
 }
 
 export async function listSpaces(store: TenantStore): Promise<SpaceDetail[]> {
-  const { spaces, posts } = store.tables;
+  const { spaces, posts } = tables(store);
   const rows = await store.db
     .select()
     .from(spaces)
@@ -128,7 +132,7 @@ export async function insertSpace(
     slug: string;
   },
 ): Promise<SpaceDetail> {
-  const { spaces } = store.tables;
+  const { spaces } = tables(store);
   const id = newId("spc");
   await store.db.insert(spaces).values({
     color: input.color ?? null,
@@ -151,7 +155,7 @@ export async function insertSpace(
 }
 
 export async function findSpaceBySlug(store: TenantStore, slug: string): Promise<SpaceRow | null> {
-  const { spaces } = store.tables;
+  const { spaces } = tables(store);
   const rows = await store.db
     .select()
     .from(spaces)
@@ -168,7 +172,7 @@ export async function listPosts(
   store: TenantStore,
   options: { spaceSlug?: string | null; viewerId?: string } = {},
 ): Promise<PostDetail[]> {
-  const { posts } = store.tables;
+  const { posts } = tables(store);
   let spaceId: string | undefined;
   if (options.spaceSlug) {
     const space = await findSpaceBySlug(store, options.spaceSlug);
@@ -194,7 +198,7 @@ export async function getPost(
   id: string,
   viewerId?: string,
 ): Promise<Result<{ post: PostDetail }>> {
-  const { posts } = store.tables;
+  const { posts } = tables(store);
   const rows = await store.db
     .select()
     .from(posts)
@@ -218,7 +222,7 @@ export async function insertPost(
     title?: string | null;
   },
 ): Promise<PostDetail> {
-  const { posts } = store.tables;
+  const { posts } = tables(store);
   const now = new Date();
   const id = newId("post");
   await store.db.insert(posts).values({
@@ -258,7 +262,7 @@ export async function updatePost(
   if (!existing.ok) {
     return existing;
   }
-  const { posts } = store.tables;
+  const { posts } = tables(store);
   const set: Record<string, unknown> = { updatedAt: new Date() };
   for (const [key, value] of Object.entries(patch)) {
     if (value !== undefined) {
@@ -280,13 +284,13 @@ export async function deletePost(
   if (!existing.ok) {
     return existing;
   }
-  const { posts } = store.tables;
+  const { posts } = tables(store);
   await store.db.delete(posts).where(and(eq(posts.orgId, store.orgId), eq(posts.id, id)));
   return ok({ success: true });
 }
 
 export async function listComments(store: TenantStore, postId: string): Promise<CommentNode[]> {
-  const { comments } = store.tables;
+  const { comments } = tables(store);
   const rows = await store.db
     .select()
     .from(comments)
@@ -320,7 +324,7 @@ export async function listComments(store: TenantStore, postId: string): Promise<
 }
 
 export async function getComment(store: TenantStore, id: string): Promise<CommentRow | null> {
-  const { comments } = store.tables;
+  const { comments } = tables(store);
   const rows = await store.db
     .select()
     .from(comments)
@@ -333,7 +337,7 @@ export async function insertComment(
   store: TenantStore,
   input: { authorUserId: string; body: string; parentId?: string | null; postId: string },
 ): Promise<CommentNode> {
-  const { comments } = store.tables;
+  const { comments } = tables(store);
   const now = new Date();
   const id = newId("cmt");
   await store.db.insert(comments).values({
@@ -365,7 +369,7 @@ export async function updateComment(
   if (!existing) {
     return err("not_found", 404, "Comment not found");
   }
-  const { comments } = store.tables;
+  const { comments } = tables(store);
   await store.db
     .update(comments)
     .set({ body, updatedAt: new Date() })
@@ -390,7 +394,7 @@ export async function deleteComment(
   if (!existing) {
     return err("not_found", 404, "Comment not found");
   }
-  const { comments } = store.tables;
+  const { comments } = tables(store);
   await store.db.delete(comments).where(and(eq(comments.orgId, store.orgId), eq(comments.id, id)));
   return ok({ success: true });
 }
@@ -471,7 +475,7 @@ export async function toggleLike(
   postId: string,
   userId: string,
 ): Promise<boolean> {
-  const { likes } = store.tables;
+  const { likes } = tables(store);
   const rows = await store.db
     .select()
     .from(likes)
@@ -499,7 +503,7 @@ export async function toggleBookmark(
   postId: string,
   userId: string,
 ): Promise<boolean> {
-  const { bookmarks } = store.tables;
+  const { bookmarks } = tables(store);
   const rows = await store.db
     .select()
     .from(bookmarks)
@@ -534,7 +538,7 @@ export async function unreadCountForSpace(
   userId: string,
   since: Date,
 ): Promise<number> {
-  const { posts } = store.tables;
+  const { posts } = tables(store);
   const rows = await store.db
     .select({ n: sql<number>`count(*)` })
     .from(posts)
@@ -555,7 +559,7 @@ export async function getSpaceViewedAt(
   spaceId: string,
   userId: string,
 ): Promise<Date | null> {
-  const { spaceViews } = store.tables;
+  const { spaceViews } = tables(store);
   const rows = await store.db
     .select()
     .from(spaceViews)
@@ -576,7 +580,7 @@ export async function upsertSpaceView(
   userId: string,
   viewedAt: Date,
 ): Promise<void> {
-  const { spaceViews } = store.tables;
+  const { spaceViews } = tables(store);
   const existing = await getSpaceViewedAt(store, spaceId, userId);
   if (existing) {
     await store.db

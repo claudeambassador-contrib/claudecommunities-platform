@@ -4,8 +4,14 @@ import {
   type EmailPreferences,
   type EmailPreferencesInput,
 } from "@/modules/identity/types";
+import type { RegistryTables } from "@/shared/db/registrySchema";
 import type { RegistryStore } from "@/shared/db/registryStore";
+import { first } from "@/shared/db/rows";
 import { newId } from "@/shared/ids";
+
+/** The only tables this repository may touch. */
+type EmailPreferencesTables = Pick<RegistryTables, "emailPreferences">;
+const tables = (store: RegistryStore): EmailPreferencesTables => store.tables;
 
 const PREF_KEYS = [
   "mentions",
@@ -15,11 +21,6 @@ const PREF_KEYS = [
   "weeklyDigest",
   "eventReminders",
 ] as const;
-
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
 
 function toPrefs(row: EmailPreferences): EmailPreferences {
   return {
@@ -47,7 +48,7 @@ export async function findEmailPreferences(
   store: RegistryStore,
   userId: string,
 ): Promise<EmailPreferences | null> {
-  const { emailPreferences } = store.tables;
+  const { emailPreferences } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -63,7 +64,7 @@ export async function upsertEmailPreferences(
   userId: string,
   input: EmailPreferencesInput,
 ): Promise<EmailPreferences> {
-  const { emailPreferences } = store.tables;
+  const { emailPreferences } = tables(store);
   const existing = first(
     await store.db
       .select()

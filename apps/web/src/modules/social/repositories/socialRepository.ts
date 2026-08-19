@@ -11,18 +11,15 @@ import type {
   SocialPostSummary,
   SocialPostWrite,
 } from "@/modules/social/types";
+import { first, iso } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
-
-function iso(value: Date | null | undefined): string | null {
-  return value ? value.toISOString() : null;
-}
+/** The only tables this repository may touch. */
+type SocialTables = Pick<TenantTables, "socialAccounts" | "socialPosts">;
+const tables = (store: TenantStore): SocialTables => store.tables;
 
 function parseMedia(raw: string): string[] {
   try {
@@ -76,7 +73,7 @@ export async function insertAccount(
   store: TenantStore,
   input: SocialAccountWrite,
 ): Promise<Result<{ account: SocialAccountSummary }>> {
-  const { socialAccounts } = store.tables;
+  const { socialAccounts } = tables(store);
   const existing = await store.db
     .select()
     .from(socialAccounts)
@@ -120,7 +117,7 @@ export async function insertAccount(
 }
 
 export async function listAccounts(store: TenantStore): Promise<SocialAccountSummary[]> {
-  const { socialAccounts } = store.tables;
+  const { socialAccounts } = tables(store);
   const rows = await store.db
     .select()
     .from(socialAccounts)
@@ -133,7 +130,7 @@ export async function getAccountById(
   store: TenantStore,
   id: string,
 ): Promise<Result<{ account: SocialAccountSummary }>> {
-  const { socialAccounts } = store.tables;
+  const { socialAccounts } = tables(store);
   const rows = await store.db
     .select()
     .from(socialAccounts)
@@ -154,7 +151,7 @@ export async function deleteAccount(
   if (!existing.ok) {
     return existing;
   }
-  const { socialAccounts } = store.tables;
+  const { socialAccounts } = tables(store);
   await store.db
     .delete(socialAccounts)
     .where(and(eq(socialAccounts.orgId, store.orgId), eq(socialAccounts.id, id)));
@@ -165,7 +162,7 @@ export async function insertPost(
   store: TenantStore,
   input: SocialPostWrite,
 ): Promise<Result<{ post: SocialPostSummary }>> {
-  const { socialPosts } = store.tables;
+  const { socialPosts } = tables(store);
   const now = new Date();
   const id = newId("spt");
   await store.db.insert(socialPosts).values({
@@ -197,7 +194,7 @@ async function accountRowById(
   if (!accountId) {
     return null;
   }
-  const { socialAccounts } = store.tables;
+  const { socialAccounts } = tables(store);
   const rows = await store.db
     .select()
     .from(socialAccounts)
@@ -210,7 +207,7 @@ export async function getPostById(
   store: TenantStore,
   id: string,
 ): Promise<Result<{ post: SocialPostSummary }>> {
-  const { socialPosts } = store.tables;
+  const { socialPosts } = tables(store);
   const rows = await store.db
     .select()
     .from(socialPosts)
@@ -227,7 +224,7 @@ export async function listPosts(
   store: TenantStore,
   options: SocialPostListOptions = {},
 ): Promise<SocialPostSummary[]> {
-  const { socialPosts } = store.tables;
+  const { socialPosts } = tables(store);
   const now = new Date();
   const filters = [eq(socialPosts.orgId, store.orgId)];
   if (options.status?.length) {
@@ -282,7 +279,7 @@ export async function updatePostById(
   if (!existing.ok) {
     return existing;
   }
-  const { socialPosts } = store.tables;
+  const { socialPosts } = tables(store);
   await store.db
     .update(socialPosts)
     .set({
@@ -306,7 +303,7 @@ export async function claimForPublish(
   store: TenantStore,
   id: string,
 ): Promise<Result<{ post: SocialPostSummary; claimed: boolean; attempt: number }>> {
-  const { socialPosts } = store.tables;
+  const { socialPosts } = tables(store);
   const claimedRows = await store.db
     .update(socialPosts)
     .set({
@@ -336,7 +333,7 @@ export async function claimForPublish(
 }
 
 export async function countByStatus(store: TenantStore, status: SocialPostStatus): Promise<number> {
-  const { socialPosts } = store.tables;
+  const { socialPosts } = tables(store);
   const rows = await store.db
     .select({ n: sql<number>`count(*)` })
     .from(socialPosts)
@@ -352,7 +349,7 @@ export async function deletePost(
   if (!existing.ok) {
     return existing;
   }
-  const { socialPosts } = store.tables;
+  const { socialPosts } = tables(store);
   await store.db
     .delete(socialPosts)
     .where(and(eq(socialPosts.orgId, store.orgId), eq(socialPosts.id, id)));
@@ -363,7 +360,7 @@ export async function listDueScheduled(
   store: TenantStore,
   now: Date,
 ): Promise<SocialPostSummary[]> {
-  const { socialPosts } = store.tables;
+  const { socialPosts } = tables(store);
   const rows = await store.db
     .select()
     .from(socialPosts)
@@ -385,7 +382,7 @@ export async function listDueDelegated(
   store: TenantStore,
   now: Date,
 ): Promise<SocialPostSummary[]> {
-  const { socialPosts } = store.tables;
+  const { socialPosts } = tables(store);
   const rows = await store.db
     .select()
     .from(socialPosts)
@@ -404,7 +401,7 @@ export async function listDueDelegated(
 }
 
 export async function resetStuckPublishing(store: TenantStore, cutoff: Date): Promise<number> {
-  const { socialPosts } = store.tables;
+  const { socialPosts } = tables(store);
   const stuck = await store.db
     .select({ id: socialPosts.id })
     .from(socialPosts)

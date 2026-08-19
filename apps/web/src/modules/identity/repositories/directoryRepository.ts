@@ -6,13 +6,14 @@ import type {
   UserSummary,
   UserWrite,
 } from "@/modules/identity/types";
+import type { RegistryTables } from "@/shared/db/registrySchema";
 import type { RegistryStore } from "@/shared/db/registryStore";
+import { first } from "@/shared/db/rows";
 import { newId } from "@/shared/ids";
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
+/** The only tables this repository may touch. */
+type DirectoryTables = Pick<RegistryTables, "emailPreferences" | "userMemberships" | "users">;
+const tables = (store: RegistryStore): DirectoryTables => store.tables;
 
 function asRole(value: string): MembershipRole {
   if (value === "owner" || value === "admin" || value === "member") {
@@ -22,7 +23,7 @@ function asRole(value: string): MembershipRole {
 }
 
 export async function insertUser(store: RegistryStore, write: UserWrite): Promise<UserProfile> {
-  const { users } = store.tables;
+  const { users } = tables(store);
   const now = new Date();
   const id = write.id ?? newId("usr");
   await store.db.insert(users).values({
@@ -47,7 +48,7 @@ export async function insertMembership(
   store: RegistryStore,
   write: MembershipWrite,
 ): Promise<void> {
-  const { userMemberships } = store.tables;
+  const { userMemberships } = tables(store);
   const now = new Date();
   await store.db.insert(userMemberships).values({
     createdAt: now,
@@ -81,7 +82,7 @@ function toProfile(row: {
 }
 
 export async function findUserById(store: RegistryStore, id: string): Promise<UserProfile | null> {
-  const { users } = store.tables;
+  const { users } = tables(store);
   const row = first(await store.db.select().from(users).where(eq(users.id, id)).limit(1));
   if (!row) {
     return null;
@@ -93,7 +94,7 @@ export async function findUserByEmail(
   store: RegistryStore,
   email: string,
 ): Promise<UserProfile | null> {
-  const { users } = store.tables;
+  const { users } = tables(store);
   const row = first(
     await store.db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1),
   );
@@ -108,7 +109,7 @@ export async function updateUserProfile(
   id: string,
   patch: { displayName: string },
 ): Promise<UserProfile | null> {
-  const { users } = store.tables;
+  const { users } = tables(store);
   await store.db
     .update(users)
     .set({ displayName: patch.displayName, updatedAt: new Date() })
@@ -128,7 +129,7 @@ export async function listInvitedMembers(
     id: string;
   }>
 > {
-  const { userMemberships, users } = store.tables;
+  const { userMemberships, users } = tables(store);
   const rows = await store.db
     .select({
       clerkUserId: users.clerkUserId,
@@ -158,7 +159,7 @@ export async function findUsersByIds(
   if (unique.length === 0) {
     return [];
   }
-  const { users } = store.tables;
+  const { users } = tables(store);
   const rows = await store.db.select().from(users).where(inArray(users.id, unique));
   return rows.map(toProfile);
 }
@@ -168,7 +169,7 @@ export async function findMembership(
   userId: string,
   orgId: string,
 ): Promise<{ role: MembershipRole; userId: string } | null> {
-  const { userMemberships } = store.tables;
+  const { userMemberships } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -188,7 +189,7 @@ export async function updateMembershipRole(
   userId: string,
   role: MembershipRole,
 ): Promise<boolean> {
-  const { userMemberships } = store.tables;
+  const { userMemberships } = tables(store);
   const result = await store.db
     .update(userMemberships)
     .set({ role, updatedAt: new Date() })
@@ -202,7 +203,7 @@ export async function listOrgMembers(
   orgId: string,
   options: { limit: number; offset: number; search?: string },
 ): Promise<UserSummary[]> {
-  const { userMemberships, users } = store.tables;
+  const { userMemberships, users } = tables(store);
   const filters = [eq(userMemberships.orgId, orgId)];
   if (options.search?.trim()) {
     const q = `%${options.search.trim()}%`;
@@ -241,7 +242,7 @@ export async function listOrgRecipients(
   store: RegistryStore,
   orgId: string,
 ): Promise<Array<{ email: string; id: string }>> {
-  const { emailPreferences, userMemberships, users } = store.tables;
+  const { emailPreferences, userMemberships, users } = tables(store);
   const rows = await store.db
     .select({
       email: users.email,

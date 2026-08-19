@@ -6,16 +6,17 @@ import type {
   BadgeSummary,
   BadgeWrite,
 } from "@/modules/badges/types";
+import { first } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
-const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
+/** The only tables this repository may touch. */
+type BadgesTables = Pick<TenantTables, "badges" | "userBadges">;
+const tables = (store: TenantStore): BadgesTables => store.tables;
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
+const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
 
 function isUniqueConstraint(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -43,7 +44,7 @@ function toSummary(
 }
 
 export async function listBadges(store: TenantStore): Promise<BadgeSummary[]> {
-  const { badges, userBadges } = store.tables;
+  const { badges, userBadges } = tables(store);
   const rows = await store.db
     .select({
       createdAt: badges.createdAt,
@@ -62,7 +63,7 @@ export async function listBadges(store: TenantStore): Promise<BadgeSummary[]> {
 }
 
 export async function findBadge(store: TenantStore, id: string): Promise<BadgeDetail | null> {
-  const { badges, userBadges } = store.tables;
+  const { badges, userBadges } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -89,7 +90,7 @@ export async function insertBadge(
   store: TenantStore,
   write: BadgeWrite,
 ): Promise<Result<{ badge: BadgeSummary }>> {
-  const { badges } = store.tables;
+  const { badges } = tables(store);
   const now = new Date();
   const id = newId("bdg");
   try {
@@ -128,7 +129,7 @@ export async function updateBadge(
   if (!existing) {
     return err("not_found", 404, "Badge not found");
   }
-  const { badges } = store.tables;
+  const { badges } = tables(store);
   try {
     await store.db
       .update(badges)
@@ -155,7 +156,7 @@ export async function deleteBadge(
   if (!existing) {
     return err("not_found", 404, "Badge not found");
   }
-  const { badges } = store.tables;
+  const { badges } = tables(store);
   await store.db.delete(badges).where(and(eq(badges.orgId, store.orgId), eq(badges.id, id)));
   return ok({ success: true });
 }
@@ -169,7 +170,7 @@ export async function awardBadge(
   if (!badge) {
     return err("not_found", 404, "Badge not found");
   }
-  const { userBadges } = store.tables;
+  const { userBadges } = tables(store);
   const now = new Date();
   const id = newId("ubg");
   try {
@@ -196,7 +197,7 @@ export async function revokeBadge(
   badgeId: string,
   userId: string,
 ): Promise<Result<{ success: true }>> {
-  const { userBadges } = store.tables;
+  const { userBadges } = tables(store);
   const row = first(
     await store.db
       .select()

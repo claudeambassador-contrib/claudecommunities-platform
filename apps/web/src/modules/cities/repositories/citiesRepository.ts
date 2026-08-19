@@ -1,15 +1,16 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import type { AdminCity, CityWrite } from "@/modules/cities/types";
+import { first } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
-const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
+/** The only tables this repository may touch. */
+type CitiesTables = Pick<TenantTables, "cities">;
+const tables = (store: TenantStore): CitiesTables => store.tables;
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
+const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
 
 function isUniqueConstraint(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -55,7 +56,7 @@ function toAdmin(row: {
 }
 
 export async function listCities(store: TenantStore): Promise<AdminCity[]> {
-  const { cities } = store.tables;
+  const { cities } = tables(store);
   const rows = await store.db
     .select()
     .from(cities)
@@ -65,7 +66,7 @@ export async function listCities(store: TenantStore): Promise<AdminCity[]> {
 }
 
 export async function findBySlug(store: TenantStore, slug: string): Promise<AdminCity | null> {
-  const { cities } = store.tables;
+  const { cities } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -77,7 +78,7 @@ export async function findBySlug(store: TenantStore, slug: string): Promise<Admi
 }
 
 export async function nextPosition(store: TenantStore): Promise<number> {
-  const { cities } = store.tables;
+  const { cities } = tables(store);
   const row = first(
     await store.db
       .select({ position: sql<number>`max(${cities.position})` })
@@ -95,7 +96,7 @@ export async function insertCity(
   write: CityWrite,
   position: number,
 ): Promise<Result<{ city: AdminCity }>> {
-  const { cities } = store.tables;
+  const { cities } = tables(store);
   const now = new Date();
   const id = newId("cty");
   try {
@@ -141,7 +142,7 @@ export async function updateCityBySlug(
   currentSlug: string,
   write: CityWrite,
 ): Promise<Result<{ city: AdminCity }>> {
-  const { cities } = store.tables;
+  const { cities } = tables(store);
   try {
     await store.db
       .update(cities)
@@ -174,7 +175,7 @@ export async function deleteCityBySlug(
   store: TenantStore,
   slug: string,
 ): Promise<Result<{ success: true }>> {
-  const { cities } = store.tables;
+  const { cities } = tables(store);
   await store.db.delete(cities).where(and(eq(cities.orgId, store.orgId), eq(cities.slug, slug)));
   return ok({ success: true });
 }
@@ -184,7 +185,7 @@ export async function setPosition(
   slug: string,
   position: number,
 ): Promise<void> {
-  const { cities } = store.tables;
+  const { cities } = tables(store);
   await store.db
     .update(cities)
     .set({ position, updatedAt: new Date() })

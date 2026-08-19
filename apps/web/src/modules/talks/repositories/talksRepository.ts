@@ -9,18 +9,15 @@ import type {
   TalkPatch,
   TalkSubmissionInput,
 } from "@/modules/talks/types";
+import { first, iso } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
-
-function iso(value: Date | null | undefined): string | null {
-  return value ? value.toISOString() : null;
-}
+/** The only tables this repository may touch. */
+type TalksTables = Pick<TenantTables, "events" | "speakers" | "talkComments" | "talkSubmissions">;
+const tables = (store: TenantStore): TalksTables => store.tables;
 
 function toTalk(row: TalkSubmissionRow): TalkDetail {
   return {
@@ -79,7 +76,7 @@ function patchSet(patch: Record<string, unknown>): Record<string, unknown> {
 }
 
 export async function eventExists(store: TenantStore, eventId: string): Promise<boolean> {
-  const { events } = store.tables;
+  const { events } = tables(store);
   const rows = await store.db
     .select({ id: events.id })
     .from(events)
@@ -92,7 +89,7 @@ export async function insertTalk(
   store: TenantStore,
   input: TalkSubmissionInput & { email: string; name: string; title: string; userId: string },
 ): Promise<Result<{ talk: TalkDetail }>> {
-  const { talkSubmissions } = store.tables;
+  const { talkSubmissions } = tables(store);
   const now = new Date();
   const id = newId("talk");
   await store.db.insert(talkSubmissions).values({
@@ -119,7 +116,7 @@ export async function getTalkById(
   store: TenantStore,
   id: string,
 ): Promise<Result<{ talk: TalkDetail }>> {
-  const { talkSubmissions } = store.tables;
+  const { talkSubmissions } = tables(store);
   const rows = await store.db
     .select()
     .from(talkSubmissions)
@@ -136,7 +133,7 @@ export async function listTalks(
   store: TenantStore,
   options: TalkListOptions = {},
 ): Promise<TalkDetail[]> {
-  const { talkSubmissions } = store.tables;
+  const { talkSubmissions } = tables(store);
   const filters = [eq(talkSubmissions.orgId, store.orgId)];
   if (options.status) {
     filters.push(eq(talkSubmissions.status, options.status));
@@ -153,7 +150,7 @@ export async function listTalks(
 }
 
 export async function listTalksForUser(store: TenantStore, userId: string): Promise<TalkDetail[]> {
-  const { talkSubmissions } = store.tables;
+  const { talkSubmissions } = tables(store);
   const rows = await store.db
     .select()
     .from(talkSubmissions)
@@ -172,7 +169,7 @@ export async function updateTalkById(
     return existing;
   }
   const { deleted, ...rest } = patch;
-  const { talkSubmissions } = store.tables;
+  const { talkSubmissions } = tables(store);
   await store.db
     .update(talkSubmissions)
     .set(
@@ -193,7 +190,7 @@ export async function deleteTalkById(
   if (!existing.ok) {
     return existing;
   }
-  const { talkSubmissions } = store.tables;
+  const { talkSubmissions } = tables(store);
   await store.db
     .delete(talkSubmissions)
     .where(and(eq(talkSubmissions.orgId, store.orgId), eq(talkSubmissions.id, id)));
@@ -205,7 +202,7 @@ export async function insertSpeaker(
   eventId: string,
   input: SpeakerInput & { name: string; submissionId?: string | null },
 ): Promise<Result<{ speaker: SpeakerDetail }>> {
-  const { speakers } = store.tables;
+  const { speakers } = tables(store);
   const now = new Date();
   const id = newId("spk");
   await store.db.insert(speakers).values({
@@ -236,7 +233,7 @@ export async function getSpeakerById(
   store: TenantStore,
   id: string,
 ): Promise<Result<{ speaker: SpeakerDetail }>> {
-  const { speakers } = store.tables;
+  const { speakers } = tables(store);
   const rows = await store.db
     .select()
     .from(speakers)
@@ -253,7 +250,7 @@ export async function listSpeakersForEvent(
   store: TenantStore,
   eventId: string,
 ): Promise<SpeakerDetail[]> {
-  const { speakers } = store.tables;
+  const { speakers } = tables(store);
   const rows = await store.db
     .select()
     .from(speakers)
@@ -263,7 +260,7 @@ export async function listSpeakersForEvent(
 }
 
 export async function nextSpeakerOrder(store: TenantStore, eventId: string): Promise<number> {
-  const { speakers } = store.tables;
+  const { speakers } = tables(store);
   const rows = await store.db
     .select({ sortOrder: speakers.sortOrder })
     .from(speakers)
@@ -282,7 +279,7 @@ export async function updateSpeakerById(
   if (!existing.ok) {
     return existing;
   }
-  const { speakers } = store.tables;
+  const { speakers } = tables(store);
   const { headshotUrl, ...rest } = patch;
   await store.db
     .update(speakers)
@@ -304,7 +301,7 @@ export async function deleteSpeakerById(
   if (!existing.ok) {
     return existing;
   }
-  const { speakers } = store.tables;
+  const { speakers } = tables(store);
   await store.db.delete(speakers).where(and(eq(speakers.orgId, store.orgId), eq(speakers.id, id)));
   return ok({ success: true });
 }
@@ -331,7 +328,7 @@ export async function listTalkComments(
   store: TenantStore,
   submissionId: string,
 ): Promise<TalkComment[]> {
-  const { talkComments } = store.tables;
+  const { talkComments } = tables(store);
   const rows = await store.db
     .select()
     .from(talkComments)
@@ -344,7 +341,7 @@ export async function insertTalkComment(
   store: TenantStore,
   input: { authorId: string; content: string; submissionId: string },
 ): Promise<TalkComment> {
-  const { talkComments } = store.tables;
+  const { talkComments } = tables(store);
   const now = new Date();
   const id = newId("tcm");
   await store.db.insert(talkComments).values({
@@ -370,7 +367,7 @@ export async function getTalkCommentById(
   store: TenantStore,
   id: string,
 ): Promise<Result<{ comment: TalkComment }>> {
-  const { talkComments } = store.tables;
+  const { talkComments } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -392,7 +389,7 @@ export async function deleteTalkCommentById(
   if (!existing.ok) {
     return existing;
   }
-  const { talkComments } = store.tables;
+  const { talkComments } = tables(store);
   await store.db
     .delete(talkComments)
     .where(and(eq(talkComments.orgId, store.orgId), eq(talkComments.id, id)));

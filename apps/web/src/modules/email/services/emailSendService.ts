@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import type { EmailTransport } from "@/modules/email/transport";
 import { listOrgRecipients } from "@/modules/identity/repositories/directoryRepository";
 import type { RegistryStore } from "@/shared/db/registryStore";
+import { first } from "@/shared/db/rows";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
@@ -11,11 +12,6 @@ export interface CampaignSendSummary {
   failed: number;
   sent: number;
   skipped: number;
-}
-
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
 }
 
 async function senderFrom(store: TenantStore): Promise<string> {

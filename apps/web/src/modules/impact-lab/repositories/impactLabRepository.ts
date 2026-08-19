@@ -12,19 +12,30 @@ import type {
   TeamDetail,
   TeamInput,
 } from "@/modules/impact-lab/types";
+import type { RegistryTables } from "@/shared/db/registrySchema";
 import type { RegistryStore } from "@/shared/db/registryStore";
+import { first, iso } from "@/shared/db/rows";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
 export const CONFIG_ID = "config";
 
+/** The only tables this repository may touch. */
+type ImpactLabTables = Pick<
+  RegistryTables,
+  | "impactLabCoffeeCodes"
+  | "impactLabConfig"
+  | "impactLabInterests"
+  | "impactLabParticipants"
+  | "impactLabSponsors"
+  | "impactLabStatements"
+  | "impactLabTeams"
+  | "impactLabVotes"
+>;
+const tables = (store: RegistryStore): ImpactLabTables => store.tables;
+
 const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
 const PARTICIPANT_UNIQUE_COLUMN = /impact_lab_participants\.(\w+)/;
-
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
 
 function isUniqueConstraint(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -42,7 +53,7 @@ type PoolClaim =
   | { kind: "lost" };
 
 async function claimPoolRow(store: RegistryStore, participantId: string): Promise<PoolClaim> {
-  const { impactLabCoffeeCodes } = store.tables;
+  const { impactLabCoffeeCodes } = tables(store);
   const entry = await findNextUnassignedCoffee(store);
   if (!entry) {
     return { kind: "empty" };
@@ -58,15 +69,11 @@ async function claimPoolRow(store: RegistryStore, participantId: string): Promis
 }
 
 async function unclaimPoolRow(store: RegistryStore, claimedId: string): Promise<void> {
-  const { impactLabCoffeeCodes } = store.tables;
+  const { impactLabCoffeeCodes } = tables(store);
   await store.db
     .update(impactLabCoffeeCodes)
     .set({ participantId: null })
     .where(eq(impactLabCoffeeCodes.id, claimedId));
-}
-
-function iso(value: Date | null | undefined): string | null {
-  return value ? value.toISOString() : null;
 }
 
 type ConfigRecord = RegistryStore["tables"]["impactLabConfig"]["$inferSelect"];
@@ -137,7 +144,7 @@ function toStatement(row: StatementRecord): StatementDetail {
 }
 
 export async function findConfig(store: RegistryStore): Promise<ConfigRow | null> {
-  const { impactLabConfig } = store.tables;
+  const { impactLabConfig } = tables(store);
   const row = first(
     await store.db.select().from(impactLabConfig).where(eq(impactLabConfig.id, CONFIG_ID)).limit(1),
   );
@@ -147,7 +154,7 @@ export async function findConfig(store: RegistryStore): Promise<ConfigRow | null
 export async function insertDefaultConfig(
   store: RegistryStore,
 ): Promise<Result<{ config: ConfigRow }>> {
-  const { impactLabConfig } = store.tables;
+  const { impactLabConfig } = tables(store);
   const now = new Date();
   try {
     await store.db.insert(impactLabConfig).values({
@@ -171,7 +178,7 @@ export async function updateConfig(
   store: RegistryStore,
   patch: ConfigWrite,
 ): Promise<ConfigRow | null> {
-  const { impactLabConfig } = store.tables;
+  const { impactLabConfig } = tables(store);
   await store.db
     .update(impactLabConfig)
     .set({ ...patch, updatedAt: new Date() })
@@ -180,7 +187,7 @@ export async function updateConfig(
 }
 
 export async function listSponsors(store: RegistryStore): Promise<SponsorSummary[]> {
-  const { impactLabSponsors } = store.tables;
+  const { impactLabSponsors } = tables(store);
   const rows = await store.db.select().from(impactLabSponsors);
   return rows.map((r) => ({ id: r.id, name: r.name, website: r.website }));
 }
@@ -189,7 +196,7 @@ export async function insertInterest(
   store: RegistryStore,
   input: { email: string; name?: string },
 ): Promise<{ id: string }> {
-  const { impactLabInterests } = store.tables;
+  const { impactLabInterests } = tables(store);
   const id = newId("ili");
   await store.db.insert(impactLabInterests).values({
     createdAt: new Date(),
@@ -202,13 +209,13 @@ export async function insertInterest(
 }
 
 export async function countInterests(store: RegistryStore): Promise<number> {
-  const { impactLabInterests } = store.tables;
+  const { impactLabInterests } = tables(store);
   const row = first(await store.db.select({ value: count() }).from(impactLabInterests));
   return row?.value ?? 0;
 }
 
 export async function countStatements(store: RegistryStore): Promise<number> {
-  const { impactLabStatements } = store.tables;
+  const { impactLabStatements } = tables(store);
   const row = first(await store.db.select({ value: count() }).from(impactLabStatements));
   return row?.value ?? 0;
 }
@@ -217,7 +224,7 @@ export async function insertStatements(
   store: RegistryStore,
   items: { description: string; sortOrder: number; summary: string; title: string }[],
 ): Promise<void> {
-  const { impactLabStatements } = store.tables;
+  const { impactLabStatements } = tables(store);
   const now = new Date();
   if (items.length === 0) {
     return;
@@ -235,7 +242,7 @@ export async function insertStatements(
 }
 
 export async function listStatements(store: RegistryStore): Promise<StatementDetail[]> {
-  const { impactLabStatements } = store.tables;
+  const { impactLabStatements } = tables(store);
   const rows = await store.db
     .select()
     .from(impactLabStatements)
@@ -247,7 +254,7 @@ export async function findStatement(
   store: RegistryStore,
   id: string,
 ): Promise<StatementDetail | null> {
-  const { impactLabStatements } = store.tables;
+  const { impactLabStatements } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -262,7 +269,7 @@ export async function findParticipantByEmail(
   store: RegistryStore,
   email: string,
 ): Promise<ParticipantDetail | null> {
-  const { impactLabParticipants } = store.tables;
+  const { impactLabParticipants } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -277,7 +284,7 @@ export async function findParticipantBySession(
   store: RegistryStore,
   token: string,
 ): Promise<ParticipantDetail | null> {
-  const { impactLabParticipants } = store.tables;
+  const { impactLabParticipants } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -292,7 +299,7 @@ export async function findParticipantById(
   store: RegistryStore,
   id: string,
 ): Promise<ParticipantDetail | null> {
-  const { impactLabParticipants } = store.tables;
+  const { impactLabParticipants } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -304,7 +311,7 @@ export async function findParticipantById(
 }
 
 export async function coffeeCodeTaken(store: RegistryStore, code: string): Promise<boolean> {
-  const { impactLabCoffeeCodes, impactLabParticipants } = store.tables;
+  const { impactLabCoffeeCodes, impactLabParticipants } = tables(store);
   const [inPool, onParticipant] = await Promise.all([
     store.db
       .select({ id: impactLabCoffeeCodes.id })
@@ -323,7 +330,7 @@ export async function coffeeCodeTaken(store: RegistryStore, code: string): Promi
 export async function findNextUnassignedCoffee(
   store: RegistryStore,
 ): Promise<{ code: string; id: string } | null> {
-  const { impactLabCoffeeCodes } = store.tables;
+  const { impactLabCoffeeCodes } = tables(store);
   const row = first(
     await store.db
       .select({ code: impactLabCoffeeCodes.code, id: impactLabCoffeeCodes.id })
@@ -341,7 +348,7 @@ async function insertClaimedParticipant(
   id: string,
   coffeeCode: string,
 ): Promise<Result<{ participant: ParticipantDetail }>> {
-  const { impactLabParticipants } = store.tables;
+  const { impactLabParticipants } = tables(store);
   const now = new Date();
   await store.db.insert(impactLabParticipants).values({
     checkedIn: input.checkedIn ?? false,
@@ -410,7 +417,7 @@ export async function updateParticipant(
     teamId?: string | null;
   },
 ): Promise<ParticipantDetail | null> {
-  const { impactLabParticipants } = store.tables;
+  const { impactLabParticipants } = tables(store);
   await store.db
     .update(impactLabParticipants)
     .set({ ...patch, updatedAt: new Date() })
@@ -419,7 +426,7 @@ export async function updateParticipant(
 }
 
 export async function clearSession(store: RegistryStore, token: string): Promise<void> {
-  const { impactLabParticipants } = store.tables;
+  const { impactLabParticipants } = tables(store);
   await store.db
     .update(impactLabParticipants)
     .set({ sessionToken: null, updatedAt: new Date() })
@@ -427,13 +434,13 @@ export async function clearSession(store: RegistryStore, token: string): Promise
 }
 
 export async function listTeams(store: RegistryStore): Promise<TeamDetail[]> {
-  const { impactLabTeams } = store.tables;
+  const { impactLabTeams } = tables(store);
   const rows = await store.db.select().from(impactLabTeams).orderBy(asc(impactLabTeams.name));
   return rows.map(toTeam);
 }
 
 export async function findTeam(store: RegistryStore, id: string): Promise<TeamDetail | null> {
-  const { impactLabTeams } = store.tables;
+  const { impactLabTeams } = tables(store);
   const row = first(
     await store.db.select().from(impactLabTeams).where(eq(impactLabTeams.id, id)).limit(1),
   );
@@ -444,7 +451,7 @@ export async function insertTeam(
   store: RegistryStore,
   input: { color: string; name: string; tableNumber?: string | null },
 ): Promise<Result<{ team: TeamDetail }>> {
-  const { impactLabTeams } = store.tables;
+  const { impactLabTeams } = tables(store);
   const id = newId("ilt");
   try {
     await store.db.insert(impactLabTeams).values({
@@ -472,7 +479,7 @@ export async function updateTeam(
   id: string,
   input: TeamInput,
 ): Promise<Result<{ team: TeamDetail }>> {
-  const { impactLabTeams } = store.tables;
+  const { impactLabTeams } = tables(store);
   const existing = await findTeam(store, id);
   if (!existing) {
     return err("not_found", 404, "Team not found");
@@ -500,7 +507,7 @@ export async function updateTeam(
 }
 
 export async function deleteTeam(store: RegistryStore, id: string): Promise<boolean> {
-  const { impactLabTeams } = store.tables;
+  const { impactLabTeams } = tables(store);
   const existing = await findTeam(store, id);
   if (!existing) {
     return false;
@@ -514,7 +521,7 @@ export async function upsertVote(
   participantId: string,
   statementId: string,
 ): Promise<void> {
-  const { impactLabVotes } = store.tables;
+  const { impactLabVotes } = tables(store);
   try {
     await store.db.insert(impactLabVotes).values({
       createdAt: new Date(),
@@ -534,7 +541,7 @@ export async function upsertVote(
 }
 
 export async function voteTallies(store: RegistryStore): Promise<Record<string, number>> {
-  const { impactLabVotes } = store.tables;
+  const { impactLabVotes } = tables(store);
   const rows = await store.db
     .select({
       count: count(),
@@ -550,13 +557,13 @@ export async function voteTallies(store: RegistryStore): Promise<Record<string, 
 }
 
 export async function countCoffeeCodes(store: RegistryStore): Promise<number> {
-  const { impactLabCoffeeCodes } = store.tables;
+  const { impactLabCoffeeCodes } = tables(store);
   const row = first(await store.db.select({ value: count() }).from(impactLabCoffeeCodes));
   return row?.value ?? 0;
 }
 
 export async function maxCoffeeSortOrder(store: RegistryStore): Promise<number> {
-  const { impactLabCoffeeCodes } = store.tables;
+  const { impactLabCoffeeCodes } = tables(store);
   const row = first(
     await store.db
       .select({ sortOrder: impactLabCoffeeCodes.sortOrder })
@@ -571,7 +578,7 @@ export async function insertCoffeeCode(
   store: RegistryStore,
   input: { code: string; sortOrder: number },
 ): Promise<void> {
-  const { impactLabCoffeeCodes } = store.tables;
+  const { impactLabCoffeeCodes } = tables(store);
   await store.db.insert(impactLabCoffeeCodes).values({
     code: input.code,
     createdAt: new Date(),
@@ -581,7 +588,7 @@ export async function insertCoffeeCode(
 }
 
 export async function coffeePoolStatus(store: RegistryStore): Promise<CoffeePoolStatus> {
-  const { impactLabCoffeeCodes, impactLabParticipants } = store.tables;
+  const { impactLabCoffeeCodes, impactLabParticipants } = tables(store);
   const rows = await store.db
     .select({
       coffeeRedeemed: impactLabParticipants.coffeeRedeemed,

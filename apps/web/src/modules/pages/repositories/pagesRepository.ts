@@ -7,18 +7,19 @@ import type {
   PublishedPage,
 } from "@/modules/pages/types";
 import { KNOWN_BLOCK_TYPES } from "@/modules/pages/validators";
+import { first } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
 export const HOME_SLUG = "home";
 
-type PageRow = TenantStore["tables"]["pages"]["$inferSelect"];
+/** The only tables this repository may touch. */
+type PagesTables = Pick<TenantTables, "pages">;
+const tables = (store: TenantStore): PagesTables => store.tables;
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
+type PageRow = TenantStore["tables"]["pages"]["$inferSelect"];
 
 function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
@@ -99,7 +100,7 @@ function toPublished(row: PageRow): PublishedPage {
 }
 
 async function pageById(store: TenantStore, id: string): Promise<PageRow | null> {
-  const { pages } = store.tables;
+  const { pages } = tables(store);
   const rows = await store.db
     .select()
     .from(pages)
@@ -113,7 +114,7 @@ export async function findBySlug(
   slug: string,
   ignoreId?: string,
 ): Promise<{ id: string } | null> {
-  const { pages } = store.tables;
+  const { pages } = tables(store);
   const filters = [eq(pages.orgId, store.orgId), eq(pages.slug, slug)];
   if (ignoreId) {
     filters.push(ne(pages.id, ignoreId));
@@ -128,7 +129,7 @@ export async function findBySlug(
 }
 
 export async function listContent(store: TenantStore): Promise<ContentPageSummary[]> {
-  const { pages } = store.tables;
+  const { pages } = tables(store);
   const rows = await store.db
     .select()
     .from(pages)
@@ -138,7 +139,7 @@ export async function listContent(store: TenantStore): Promise<ContentPageSummar
 }
 
 export async function listPublishedContent(store: TenantStore): Promise<ContentPageSummary[]> {
-  const { pages } = store.tables;
+  const { pages } = tables(store);
   const rows = await store.db
     .select()
     .from(pages)
@@ -171,7 +172,7 @@ export async function insertContent(
   store: TenantStore,
   input: ContentPageWrite,
 ): Promise<Result<{ page: ContentPageSummary }>> {
-  const { pages } = store.tables;
+  const { pages } = tables(store);
   const now = new Date();
   const id = newId("pg");
   try {
@@ -205,7 +206,7 @@ export async function updateContent(
   if (!current || current.slug === HOME_SLUG) {
     return err("not_found", 404, "Page not found");
   }
-  const { pages } = store.tables;
+  const { pages } = tables(store);
   const status = input.status ?? current.status;
   try {
     await store.db
@@ -235,7 +236,7 @@ export async function deleteContent(
   if (!current || current.slug === HOME_SLUG) {
     return err("not_found", 404, "Page not found");
   }
-  const { pages } = store.tables;
+  const { pages } = tables(store);
   await store.db.delete(pages).where(and(eq(pages.orgId, store.orgId), eq(pages.id, id)));
   return ok({ success: true });
 }
@@ -245,7 +246,7 @@ export async function upsertHome(
   blocks: Block[],
 ): Promise<Result<{ blocks: Block[] }>> {
   const existing = await findBySlug(store, HOME_SLUG);
-  const { pages } = store.tables;
+  const { pages } = tables(store);
   const now = new Date();
   const bodyJson = encodeBlocks(blocks);
   if (existing) {
@@ -279,7 +280,7 @@ export async function findPublishedBySlug(
   store: TenantStore,
   slug: string,
 ): Promise<PublishedPage | null> {
-  const { pages } = store.tables;
+  const { pages } = tables(store);
   const rows = await store.db
     .select()
     .from(pages)

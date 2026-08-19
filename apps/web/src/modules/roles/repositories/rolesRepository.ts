@@ -1,16 +1,17 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import type { RoleSummary, RoleWrite } from "@/modules/roles/types";
 import { type Permission, parsePermissions } from "@/shared/auth/permissions";
+import { first } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
-const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
+/** The only tables this repository may touch. */
+type RolesTables = Pick<TenantTables, "roles">;
+const tables = (store: TenantStore): RolesTables => store.tables;
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
+const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
 
 function isUniqueConstraint(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -36,7 +37,7 @@ function toSummary(
 }
 
 export async function listRoles(store: TenantStore): Promise<RoleSummary[]> {
-  const { roles } = store.tables;
+  const { roles } = tables(store);
   const rows = await store.db
     .select()
     .from(roles)
@@ -49,7 +50,7 @@ export async function findRoleByName(
   store: TenantStore,
   name: string,
 ): Promise<RoleSummary | null> {
-  const { roles } = store.tables;
+  const { roles } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -64,7 +65,7 @@ export async function insertRole(
   store: TenantStore,
   write: RoleWrite,
 ): Promise<Result<{ role: RoleSummary }>> {
-  const { roles } = store.tables;
+  const { roles } = tables(store);
   const now = new Date();
   try {
     await store.db.insert(roles).values({
@@ -103,7 +104,7 @@ export async function updateRoleByName(
   if (!existing) {
     return err("not_found", 404, "Role not found");
   }
-  const { roles } = store.tables;
+  const { roles } = tables(store);
   const set: { description?: string | null; permissionsJson?: string; updatedAt: Date } = {
     updatedAt: new Date(),
   };
@@ -135,7 +136,7 @@ export async function deleteRoleByName(
   if (existing.isSystem) {
     return err("forbidden", 403, "System roles cannot be deleted");
   }
-  const { roles } = store.tables;
+  const { roles } = tables(store);
   await store.db.delete(roles).where(and(eq(roles.orgId, store.orgId), eq(roles.name, name)));
   return ok({ deleted: true });
 }

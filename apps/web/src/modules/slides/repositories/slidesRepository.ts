@@ -11,16 +11,20 @@ import type {
   SlideStylePresetCreated,
   SlideStylePresetDetail,
 } from "@/modules/slides/types";
+import { first } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
-const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
+/** The only tables this repository may touch. */
+type SlidesTables = Pick<
+  TenantTables,
+  "slideExportJobs" | "slideGeneratorStates" | "slideStylePresets"
+>;
+const tables = (store: TenantStore): SlidesTables => store.tables;
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
+const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
 
 function isUniqueConstraint(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -89,7 +93,7 @@ export async function getStateByScope(
   store: TenantStore,
   scope: string,
 ): Promise<SlideGeneratorState> {
-  const { slideGeneratorStates } = store.tables;
+  const { slideGeneratorStates } = tables(store);
   const rows = await store.db
     .select()
     .from(slideGeneratorStates)
@@ -110,7 +114,7 @@ export async function upsertState(
   store: TenantStore,
   write: SlideStateWrite,
 ): Promise<Result<SlideStatePutResult>> {
-  const { slideGeneratorStates } = store.tables;
+  const { slideGeneratorStates } = tables(store);
   const now = new Date();
   const existing = first(
     await store.db
@@ -161,7 +165,7 @@ export async function upsertState(
 }
 
 export async function listPresets(store: TenantStore): Promise<SlideStylePresetDetail[]> {
-  const { slideStylePresets } = store.tables;
+  const { slideStylePresets } = tables(store);
   const rows = await store.db
     .select()
     .from(slideStylePresets)
@@ -180,7 +184,7 @@ export async function getPresetById(
   store: TenantStore,
   id: string,
 ): Promise<Result<{ preset: SlideStylePresetDetail }>> {
-  const { slideStylePresets } = store.tables;
+  const { slideStylePresets } = tables(store);
   const rows = await store.db
     .select()
     .from(slideStylePresets)
@@ -206,7 +210,7 @@ export async function insertPreset(
   name: string,
   dataJson: string,
 ): Promise<Result<{ preset: SlideStylePresetCreated }>> {
-  const { slideStylePresets } = store.tables;
+  const { slideStylePresets } = tables(store);
   const now = new Date();
   const id = newId("prst");
   try {
@@ -247,7 +251,7 @@ export async function updatePresetById(
   if (dataJson !== undefined) {
     set.dataJson = dataJson;
   }
-  const { slideStylePresets } = store.tables;
+  const { slideStylePresets } = tables(store);
   try {
     await store.db
       .update(slideStylePresets)
@@ -270,7 +274,7 @@ export async function deletePresetById(
   if (!existing.ok) {
     return existing;
   }
-  const { slideStylePresets } = store.tables;
+  const { slideStylePresets } = tables(store);
   await store.db
     .delete(slideStylePresets)
     .where(and(eq(slideStylePresets.orgId, store.orgId), eq(slideStylePresets.id, id)));
@@ -278,7 +282,7 @@ export async function deletePresetById(
 }
 
 export async function listJobs(store: TenantStore): Promise<SlideExportJobListItem[]> {
-  const { slideExportJobs } = store.tables;
+  const { slideExportJobs } = tables(store);
   const rows = await store.db
     .select()
     .from(slideExportJobs)
@@ -294,7 +298,7 @@ export async function getJobById(
   store: TenantStore,
   id: string,
 ): Promise<Result<{ job: SlideExportJobDetail }>> {
-  const { slideExportJobs } = store.tables;
+  const { slideExportJobs } = tables(store);
   const rows = await store.db
     .select()
     .from(slideExportJobs)
@@ -311,7 +315,7 @@ export async function insertJob(
   store: TenantStore,
   input: SlideExportJobWrite,
 ): Promise<Result<{ jobId: string }>> {
-  const { slideExportJobs } = store.tables;
+  const { slideExportJobs } = tables(store);
   const now = new Date();
   try {
     await store.db.insert(slideExportJobs).values({
@@ -340,7 +344,7 @@ export async function markJobFailed(
   id: string,
   errorMessage: string,
 ): Promise<void> {
-  const { slideExportJobs } = store.tables;
+  const { slideExportJobs } = tables(store);
   await store.db
     .update(slideExportJobs)
     .set({

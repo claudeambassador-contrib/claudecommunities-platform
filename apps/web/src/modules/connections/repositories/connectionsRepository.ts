@@ -4,16 +4,17 @@ import type {
   ConnectionListFilter,
   ConnectionStatus,
 } from "@/modules/connections/types";
+import { first } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
-const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
+/** The only tables this repository may touch. */
+type ConnectionsTables = Pick<TenantTables, "connections">;
+const tables = (store: TenantStore): ConnectionsTables => store.tables;
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
+const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
 
 function isUniqueConstraint(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -43,7 +44,7 @@ export async function findPair(
   userA: string,
   userB: string,
 ): Promise<ConnectionItem | null> {
-  const { connections } = store.tables;
+  const { connections } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -63,7 +64,7 @@ export async function findPair(
 }
 
 export async function findById(store: TenantStore, id: string): Promise<ConnectionItem | null> {
-  const { connections } = store.tables;
+  const { connections } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -79,7 +80,7 @@ export async function listConnections(
   actorId: string,
   options: { filter: ConnectionListFilter; status: ConnectionStatus },
 ): Promise<ConnectionItem[]> {
-  const { connections } = store.tables;
+  const { connections } = tables(store);
   let party = or(eq(connections.requesterId, actorId), eq(connections.receiverId, actorId));
   if (options.filter === "sent") {
     party = eq(connections.requesterId, actorId);
@@ -99,7 +100,7 @@ export async function insertConnection(
   requesterId: string,
   receiverId: string,
 ): Promise<Result<{ connection: ConnectionItem }>> {
-  const { connections } = store.tables;
+  const { connections } = tables(store);
   const now = new Date();
   const id = newId("con");
   try {
@@ -135,7 +136,7 @@ export async function updateStatus(
   id: string,
   status: ConnectionStatus,
 ): Promise<Result<{ connection: ConnectionItem }>> {
-  const { connections } = store.tables;
+  const { connections } = tables(store);
   await store.db
     .update(connections)
     .set({ status, updatedAt: new Date() })
@@ -151,7 +152,7 @@ export async function deleteById(
   store: TenantStore,
   id: string,
 ): Promise<Result<{ success: true }>> {
-  const { connections } = store.tables;
+  const { connections } = tables(store);
   await store.db
     .delete(connections)
     .where(and(eq(connections.orgId, store.orgId), eq(connections.id, id)));
@@ -159,7 +160,7 @@ export async function deleteById(
 }
 
 export async function deletePair(store: TenantStore, userA: string, userB: string): Promise<void> {
-  const { connections } = store.tables;
+  const { connections } = tables(store);
   await store.db
     .delete(connections)
     .where(

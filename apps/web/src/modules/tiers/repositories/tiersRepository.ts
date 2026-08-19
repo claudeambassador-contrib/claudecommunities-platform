@@ -1,15 +1,16 @@
 import { and, asc, eq } from "drizzle-orm";
 import type { TierSummary, TierWrite } from "@/modules/tiers/types";
+import { first } from "@/shared/db/rows";
+import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
-const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
+/** The only tables this repository may touch. */
+type TiersTables = Pick<TenantTables, "membershipTiers">;
+const tables = (store: TenantStore): TiersTables => store.tables;
 
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
+const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
 
 function isUniqueConstraint(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -59,7 +60,7 @@ function toSummary(row: {
 }
 
 export async function listTiers(store: TenantStore): Promise<TierSummary[]> {
-  const { membershipTiers } = store.tables;
+  const { membershipTiers } = tables(store);
   const rows = await store.db
     .select()
     .from(membershipTiers)
@@ -69,7 +70,7 @@ export async function listTiers(store: TenantStore): Promise<TierSummary[]> {
 }
 
 export async function findTier(store: TenantStore, id: string): Promise<TierSummary | null> {
-  const { membershipTiers } = store.tables;
+  const { membershipTiers } = tables(store);
   const row = first(
     await store.db
       .select()
@@ -84,7 +85,7 @@ export async function insertTier(
   store: TenantStore,
   write: TierWrite,
 ): Promise<Result<{ tier: TierSummary }>> {
-  const { membershipTiers } = store.tables;
+  const { membershipTiers } = tables(store);
   const now = new Date();
   const id = newId("tier");
   try {
@@ -136,7 +137,7 @@ export async function updateTier(
   if (!existing) {
     return err("not_found", 404, "Tier not found");
   }
-  const { membershipTiers } = store.tables;
+  const { membershipTiers } = tables(store);
   try {
     await store.db
       .update(membershipTiers)
@@ -170,7 +171,7 @@ export async function deleteTier(
   if (!existing) {
     return err("not_found", 404, "Tier not found");
   }
-  const { membershipTiers } = store.tables;
+  const { membershipTiers } = tables(store);
   await store.db
     .delete(membershipTiers)
     .where(and(eq(membershipTiers.orgId, store.orgId), eq(membershipTiers.id, id)));

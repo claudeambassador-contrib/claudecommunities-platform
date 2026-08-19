@@ -14,17 +14,13 @@ import {
 } from "@/modules/email/types";
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
+import { first } from "@/shared/db/rows";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
 const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function first<T>(rows: T[]): T | undefined {
-  const [row] = rows;
-  return row;
-}
 
 function isUniqueConstraint(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
