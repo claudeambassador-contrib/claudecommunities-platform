@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { isStorageConfigured, publicUrl, putBytes } from "@/shared/storage/r2";
+import { isStorageConfigured } from "@/shared/storage/r2";
 
 const CORS = {
   "Access-Control-Allow-Headers": "Authorization, Content-Type",
@@ -29,16 +29,14 @@ export const Route = createFileRoute("/api/upload/mcp")({
         if (!actor) {
           return withCors(Response.json({ error: "Unauthorized" }, { status: 401 }));
         }
-        const form = await request.formData();
-        const file = form.get("file");
-        const folder = String(form.get("folder") ?? "uploads");
-        if (!(file instanceof File)) {
-          return withCors(Response.json({ error: "file_required" }, { status: 400 }));
+        const { storeUpload } = await import("@/modules/system/services/uploadService");
+        const result = await storeUpload(await request.formData());
+        if (!result.ok) {
+          return withCors(
+            Response.json({ error: result.error.code }, { status: result.error.status }),
+          );
         }
-        const key = `${folder}/${crypto.randomUUID()}-${file.name}`;
-        const buf = await file.arrayBuffer();
-        await putBytes(key, buf, file.type || "application/octet-stream");
-        return withCors(Response.json({ key, url: publicUrl(key) }));
+        return withCors(Response.json({ key: result.key, url: result.url }));
       },
     },
   },
