@@ -105,3 +105,4 @@ export const eventResources = sqliteTable("event_resources", {
 export type EventRow = typeof events.$inferSelect;
 export type EventRsvpRow = typeof eventRsvps.$inferSelect;
 export type EventAgendaRow = typeof eventAgendaItems.$inferSelect;
+export type EventResourceRow = typeof eventResources.$inferSelect;

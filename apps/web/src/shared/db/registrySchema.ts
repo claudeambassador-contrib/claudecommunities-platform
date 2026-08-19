@@ -1,5 +1,6 @@
 import {
   auditLog,
+  emailPreferences,
   pendingAdminGrants,
   userMemberships,
   users,
@@ -20,6 +21,7 @@ import { tenantSettings, tenants } from "@/modules/tenants/schema.registry";
 export function createRegistrySchema() {
   return {
     auditLog,
+    emailPreferences,
     impactLabCoffeeCodes,
     impactLabConfig,
     impactLabInterests,

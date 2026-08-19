@@ -1,3 +1,4 @@
+import { DEFAULT_HOME_SECTIONS } from "@/modules/pages/homeDefaults";
 // biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
 import * as pagesRepo from "@/modules/pages/repositories/pagesRepository";
 import type {
@@ -150,4 +151,20 @@ export async function getPublishedPage(
   slug: string,
 ): Promise<Result<{ page: PublishedPage | null }>> {
   return ok({ page: await pagesRepo.findPublishedBySlug(store, slug) });
+}
+
+export async function listPublishedPages(
+  store: TenantStore,
+): Promise<Result<{ pages: ContentPageSummary[] }>> {
+  return ok({ pages: await pagesRepo.listPublishedContent(store) });
+}
+
+/** Published home blocks, or the code defaults when no row / empty body exists. */
+export async function getHomeSections(store: TenantStore): Promise<Result<{ blocks: Block[] }>> {
+  const published = await getPublishedPage(store, "home");
+  if (!published.ok) {
+    return published;
+  }
+  const blocks = published.page?.blocks ?? [];
+  return ok({ blocks: blocks.length > 0 ? blocks : DEFAULT_HOME_SECTIONS });
 }

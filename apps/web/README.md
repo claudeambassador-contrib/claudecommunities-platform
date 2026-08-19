@@ -30,10 +30,13 @@ bun run db:migrate:registry:local
 bun run db:migrate:tenant:local
 bun run db:provision:city -- sydney "Sydney"
 bunx wrangler d1 execute REGISTRY --local --file=scripts/.provision-sydney.sql
+bun run db:seed:city -- sydney --email you@example.com
 bun run dev   # http://localhost:3001
 ```
 
-Set `VITE_CLERK_PUBLISHABLE_KEY` + `CLERK_SECRET_KEY` in `.env.local`.
+`db:seed:city` fills the city D1 (spaces, posts, events + agenda, home, cities, courses, speakers, resources, tiers, email, social) and REGISTRY (Ada + optional owner). Sign in with `--email` once — Clerk claims the `invite_` owner row. Omit `--email` for public-page smoke only. `--dry-run` prints SQL without applying.
+
+Public pages load without Clerk keys. Sign-in still needs `VITE_CLERK_PUBLISHABLE_KEY` + `CLERK_SECRET_KEY` in `.env.local`, plus `http://localhost:3001` as an allowed origin. Playwright walks use `E2E_EMAIL` / `E2E_PASSWORD` against a real Clerk user (Ada is DB-only until those keys exist).
 
 ## Layout
 

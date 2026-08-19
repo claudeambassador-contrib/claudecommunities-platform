@@ -1,45 +1,67 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { listPosts } from "@/modules/community/services/postsService";
+import { useCallback } from "react";
+import { createCityPost, loadCommunityFeed } from "@/modules/community/services/postsService";
+import type { FeedCard, FeedSpaceOption } from "@/modules/community/types";
+import { EmptyCard, PageHeader, SignInCard } from "@/shared/ui/page";
+import { PostCard } from "@/shared/ui/post-card";
+import { PostComposer } from "@/shared/ui/post-composer";
 
-const getPosts = createServerFn({ method: "GET" })
-  .inputValidator((d: { citySlug: string }) => d)
+const getFeed = createServerFn({ method: "GET" })
+  .validator((d: { citySlug: string }) => d)
   .handler(async ({ data }) => {
-    const result = await listPosts(data.citySlug);
+    const result = await loadCommunityFeed(data.citySlug);
     if (!result.ok) {
-      return { posts: [] as { id: string; content: string; createdAt: string }[] };
+      return {
+        posts: [] as FeedCard[],
+        signedIn: false,
+        spaces: [] as FeedSpaceOption[],
+      };
     }
-    return {
-      posts: result.posts.map((p) => ({
-        id: p.id,
-        content: p.content,
-        createdAt: p.createdAt,
-      })),
-    };
+    return result;
+  });
+
+const submitPost = createServerFn({ method: "POST" })
+  .validator((d: { citySlug: string; content: string; spaceId: string; title?: string }) => d)
+  .handler(async ({ data }) => {
+    const result = await createCityPost(data.citySlug, {
+      content: data.content,
+      spaceId: data.spaceId,
+      title: data.title,
+    });
+    if (!result.ok) {
+      return { error: result.error.message ?? result.error.code, ok: false as const };
+    }
+    return { ok: true as const };
   });
 
 export const Route = createFileRoute("/$citySlug/community/")({
-  loader: ({ params }) => getPosts({ data: { citySlug: params.citySlug } }),
+  loader: ({ params }) => getFeed({ data: { citySlug: params.citySlug } }),
   component: CommunityPage,
 });
 
 function CommunityPage() {
-  const { posts } = Route.useLoaderData();
+  const { citySlug } = Route.useParams();
+  const { posts, signedIn, spaces } = Route.useLoaderData();
+
+  const handleCreate = useCallback(
+    async (input: { citySlug: string; content: string; spaceId: string; title?: string }) =>
+      submitPost({ data: input }),
+    [],
+  );
 
   return (
     <section className="stack">
-      <h2 style={{ margin: 0 }}>Community</h2>
-      {posts.length === 0 ? (
-        <div className="card muted">No posts yet. Sign in to create one.</div>
+      <PageHeader subtitle="Posts in this city" title="Feed" />
+      {signedIn ? (
+        <PostComposer citySlug={citySlug} onSubmit={handleCreate} spaces={spaces} />
       ) : (
-        posts.map((p) => (
-          <article className="card" key={p.id}>
-            <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{p.content}</p>
-            <div className="muted" style={{ marginTop: "0.5rem" }}>
-              {new Date(p.createdAt).toLocaleString()}
-            </div>
-          </article>
-        ))
+        <SignInCard href="/login" />
+      )}
+      {posts.length === 0 ? (
+        <EmptyCard>No posts yet.</EmptyCard>
+      ) : (
+        posts.map((post) => <PostCard citySlug={citySlug} key={post.id} post={post} />)
       )}
     </section>
   );

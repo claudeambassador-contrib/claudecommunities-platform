@@ -36,6 +36,18 @@ export function isAllowedLumaUrl(url: string): boolean {
   }
 }
 
+export function isAllowedResourceUrl(url: string): boolean {
+  if (url.startsWith("/api/files/")) {
+    return true;
+  }
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function isAllowedImageUrl(url: string): boolean {
   if (url.startsWith("/api/files/")) {
     return true;

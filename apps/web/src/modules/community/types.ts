@@ -51,6 +51,31 @@ export interface PostDetail {
   updatedAt: string;
 }
 
+export interface FeedAuthor {
+  id: string;
+  imageUrl: string | null;
+  name: string;
+}
+
+export interface FeedCard {
+  author: FeedAuthor;
+  commentCount: number;
+  content: string;
+  createdAt: string;
+  id: string;
+  isPinned: boolean;
+  mediaType: string | null;
+  mediaUrl: string | null;
+  reactionCount: number;
+  space: { color: string | null; name: string } | null;
+  title: string | null;
+}
+
+export interface FeedSpaceOption {
+  id: string;
+  name: string;
+}
+
 export interface CommentNode {
   authorId: string;
   content: string;

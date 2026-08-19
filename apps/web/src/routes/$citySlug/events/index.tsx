@@ -5,7 +5,7 @@ import { resolveCityContext } from "@/modules/tenants/services/resolveCityServic
 import { openTenantStore } from "@/shared/db/env";
 
 const getEvents = createServerFn({ method: "GET" })
-  .inputValidator((d: { citySlug: string }) => d)
+  .validator((d: { citySlug: string }) => d)
   .handler(async ({ data }) => {
     const city = await resolveCityContext(data.citySlug);
     if (!city.ok) {
@@ -50,13 +50,19 @@ function EventsPage() {
         <div className="card muted">No published events yet.</div>
       ) : (
         events.map((e) => (
-          <article className="card" key={e.id}>
+          <Link
+            className="card"
+            key={e.id}
+            params={{ citySlug: tenant.slug, slug: e.slug }}
+            style={{ display: "block" }}
+            to="/$citySlug/events/$slug"
+          >
             <strong>{e.title}</strong>
             <div className="muted">
               /{e.slug}
               {e.startTime ? ` · ${new Date(e.startTime).toLocaleString()}` : ""}
             </div>
-          </article>
+          </Link>
         ))
       )}
     </section>

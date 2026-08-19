@@ -7,6 +7,8 @@ import type {
   Clock,
   EventCreateBody,
   EventDetail,
+  EventResourceDetail,
+  EventResourceInput,
   EventUpdateBody,
   EventWrite,
   LumaWaitlistNotifier,
@@ -20,6 +22,7 @@ import {
   isAllowedImageUrl,
   isAllowedLumaUrl,
   isAllowedMeetingUrl,
+  isAllowedResourceUrl,
   isValidTimezone,
 } from "@/modules/events/validators";
 import type { Actor } from "@/shared/auth/actor";
@@ -122,7 +125,7 @@ function toEventWritePatch(
   return patch;
 }
 
-function validateInput(input: EventCreateBody | EventUpdateBody): Result<Record<string, never>> {
+function validateInput(input: EventCreateBody | EventUpdateBody): Result<{ valid: true }> {
   if (
     input.title !== undefined &&
     (!input.title || input.title.length < 1 || input.title.length > 200)
@@ -141,7 +144,7 @@ function validateInput(input: EventCreateBody | EventUpdateBody): Result<Record<
   if (input.imageUrl && !isAllowedImageUrl(input.imageUrl)) {
     return err("bad_request", 400, "imageUrl host not allowed");
   }
-  return ok({});
+  return ok({ valid: true });
 }
 
 function statusFromActive(isActive: boolean | undefined): "draft" | "published" {
@@ -168,6 +171,28 @@ export async function getEvent(
     return err("not_found", 404, "Event not found");
   }
   return found;
+}
+
+export async function getEventBySlugOrId(
+  store: TenantStore,
+  slugOrId: string,
+  options: { includeInactive?: boolean } = {},
+): Promise<Result<{ event: EventDetail }>> {
+  const byId = await eventsRepo.getById(store, slugOrId);
+  if (byId.ok) {
+    if (!options.includeInactive && byId.event.status !== "published") {
+      return err("not_found", 404, "Event not found");
+    }
+    return byId;
+  }
+  const bySlug = await eventsRepo.findBySlug(store, slugOrId);
+  if (!bySlug) {
+    return err("not_found", 404, "Event not found");
+  }
+  if (!options.includeInactive && bySlug.status !== "published") {
+    return err("not_found", 404, "Event not found");
+  }
+  return ok({ event: bySlug });
 }
 
 export async function createEvent(
@@ -383,6 +408,17 @@ export async function deleteRsvp(
   return ok({ success: true });
 }
 
+export async function listPublicAgenda(
+  store: TenantStore,
+  eventId: string,
+): Promise<Result<{ items: AgendaItemDetail[] }>> {
+  const found = await eventsRepo.getById(store, eventId);
+  if (!found.ok) {
+    return found;
+  }
+  return ok({ items: await eventsRepo.listAgendaItems(store, eventId) });
+}
+
 export async function listAgenda(
   store: TenantStore,
   actor: Actor,
@@ -392,11 +428,7 @@ export async function listAgenda(
   if (!perm.ok) {
     return perm;
   }
-  const found = await eventsRepo.getById(store, eventId);
-  if (!found.ok) {
-    return found;
-  }
-  return ok({ items: await eventsRepo.listAgendaItems(store, eventId) });
+  return await listPublicAgenda(store, eventId);
 }
 
 export async function addAgendaItem(
@@ -626,5 +658,56 @@ export async function getLumaInterestStatus(
     count,
     isAuthenticated: Boolean(viewer),
     registered,
+  });
+}
+
+export async function listEventResources(
+  store: TenantStore,
+  slugOrId: string,
+): Promise<Result<{ event: EventDetail; resources: EventResourceDetail[] }>> {
+  const found = await getEventBySlugOrId(store, slugOrId);
+  if (!found.ok) {
+    return found;
+  }
+  return ok({
+    event: found.event,
+    resources: await eventsRepo.listResources(store, found.event.id),
+  });
+}
+
+export async function addEventResource(
+  store: TenantStore,
+  actor: Actor,
+  slugOrId: string,
+  input: EventResourceInput,
+): Promise<Result<{ resource: EventResourceDetail }>> {
+  const perm = ensurePermission(actor, "events.edit");
+  if (!perm.ok) {
+    return perm;
+  }
+  const title = input.title.trim();
+  if (!title) {
+    return err("bad_request", 400, "Title is required");
+  }
+  if (!isAllowedResourceUrl(input.fileUrl)) {
+    return err("bad_request", 400, "Resource URL must be https");
+  }
+  const found = await getEventBySlugOrId(store, slugOrId, { includeInactive: true });
+  if (!found.ok) {
+    return found;
+  }
+  return ok({
+    resource: await eventsRepo.insertResource(
+      store,
+      found.event.id,
+      {
+        description: input.description?.trim() || null,
+        fileName: input.fileName?.trim() || title,
+        fileUrl: input.fileUrl.trim(),
+        mimeType: input.mimeType,
+        title,
+      },
+      actor.id,
+    ),
   });
 }

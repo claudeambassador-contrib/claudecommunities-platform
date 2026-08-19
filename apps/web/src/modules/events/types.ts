@@ -126,6 +126,26 @@ export interface RsvpStats {
   userRsvp: StoredRsvpStatus | null;
 }
 
+export interface EventResourceDetail {
+  createdAt: string;
+  description: string | null;
+  eventId: string;
+  fileName: string;
+  fileSize: number;
+  fileUrl: string;
+  id: string;
+  mimeType: string;
+  title: string;
+}
+
+export interface EventResourceInput {
+  description?: string | null;
+  fileName?: string;
+  fileUrl: string;
+  mimeType?: string;
+  title: string;
+}
+
 export interface Clock {
   now: () => Date;
 }

@@ -12,5 +12,7 @@ interface Env {
   MAINTENANCE_MODE?: string;
   MAINTENANCE_BYPASS_TOKEN?: string;
   VITE_REGION?: string;
+  VITE_CLERK_PUBLISHABLE_KEY?: string;
+  CLERK_PUBLISHABLE_KEY?: string;
   CLERK_SECRET_KEY?: string;
 }

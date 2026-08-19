@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_HOME_SECTIONS } from "@/modules/pages/homeDefaults";
+import { listIndustries, saveIndustry } from "@/modules/pages/services/industriesService";
 import {
   createContentPage,
   deleteContentPage,
   getContentPage,
+  getHomeSections,
   getPublishedPage,
   listContentPages,
+  listPublishedPages,
   saveHomeSections,
   updateContentPage,
 } from "@/modules/pages/services/pagesService";
@@ -47,6 +51,13 @@ describe("pagesService content pages", () => {
       return;
     }
     expect(listed.pages.map((p) => p.slug)).toEqual(["alpha", "zeta"]);
+
+    await updateContentPage(store, adminActor(), created.page.id, {
+      ...pageInput({ slug: "zeta", title: "Zeta live" }),
+      status: "published",
+    });
+    const published = await listPublishedPages(store);
+    expect(published.ok && published.pages.map((page) => page.slug)).toEqual(["zeta"]);
   });
 
   it("rejects create without pages.edit, reserved home slug, and duplicates", async () => {
@@ -238,6 +249,40 @@ describe("pagesService home and public read", () => {
     expect(reread.page?.blocks[0]).toMatchObject({ heading: "Updated home", type: "hero" });
   });
 
+  it("returns code default home sections when no published home exists", async () => {
+    const store = openMemoryTenant();
+    const missing = await getHomeSections(store);
+    expect(missing.ok).toBe(true);
+    if (missing.ok) {
+      expect(missing.blocks).toEqual(DEFAULT_HOME_SECTIONS);
+    }
+  });
+
+  it("coerces missing cards so a heading-only save can succeed", async () => {
+    const store = openMemoryTenant();
+    const now = new Date();
+    await store.db.insert(store.tables.pages).values({
+      bodyJson: JSON.stringify({
+        blocks: [{ enabled: true, heading: "Why", id: "benefits", type: "benefits" }],
+      }),
+      createdAt: now,
+      id: "pg_home",
+      orgId: store.orgId,
+      slug: "home",
+      status: "published",
+      title: "Home",
+      updatedAt: now,
+    });
+    const loaded = await getHomeSections(store);
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) {
+      return;
+    }
+    expect(loaded.blocks[0]).toMatchObject({ cards: [], id: "benefits", type: "benefits" });
+    const saved = await saveHomeSections(store, adminActor(), loaded.blocks);
+    expect(saved.ok).toBe(true);
+  });
+
   it("rejects unknown home blocks, unsafe links, and member home edits", async () => {
     const store = openMemoryTenant();
     const denied = await saveHomeSections(store, memberActor(), [
@@ -265,5 +310,31 @@ describe("pagesService home and public read", () => {
 
     const listed = await listContentPages(store, memberActor());
     expect(listed.ok).toBe(false);
+  });
+});
+
+describe("industriesService", () => {
+  it("lists built-ins and saves an override page", async () => {
+    const store = openMemoryTenant();
+    const listed = await listIndustries(store, adminActor());
+    expect(listed.ok).toBe(true);
+    if (!listed.ok) {
+      return;
+    }
+    expect(listed.industries.some((row) => row.slug === "saas" && !row.custom)).toBe(true);
+
+    const saved = await saveIndustry(store, adminActor(), {
+      body: "SaaS teams ship faster.",
+      slug: "saas",
+      title: "SaaS override",
+    });
+    expect(saved.ok).toBe(true);
+    const again = await listIndustries(store, adminActor());
+    expect(again.ok).toBe(true);
+    if (again.ok) {
+      const saas = again.industries.find((row) => row.slug === "saas");
+      expect(saas?.custom).toBe(true);
+      expect(saas?.title).toBe("SaaS override");
+    }
   });
 });

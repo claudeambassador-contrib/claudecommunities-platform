@@ -1,9 +1,11 @@
 import { and, asc, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
-import type { EventAgendaRow, EventRow } from "@/modules/events/schema.tenant";
+import type { EventAgendaRow, EventResourceRow, EventRow } from "@/modules/events/schema.tenant";
 import type {
   AgendaItemDetail,
   AgendaItemType,
   EventDetail,
+  EventResourceDetail,
+  EventResourceInput,
   EventWrite,
   RsvpRow,
   StoredRsvpStatus,
@@ -555,6 +557,68 @@ export async function listSitemapEntries(
     slug: row.slug,
     updatedAt: row.updatedAt.toISOString(),
   }));
+}
+
+function toResource(row: EventResourceRow): EventResourceDetail {
+  return {
+    createdAt: row.createdAt.toISOString(),
+    description: row.description ?? null,
+    eventId: row.eventId,
+    fileName: row.fileName,
+    fileSize: row.fileSize,
+    fileUrl: row.fileUrl,
+    id: row.id,
+    mimeType: row.mimeType,
+    title: row.title,
+  };
+}
+
+export async function listResources(
+  store: TenantStore,
+  eventId: string,
+): Promise<EventResourceDetail[]> {
+  const { eventResources } = store.tables;
+  const rows = await store.db
+    .select()
+    .from(eventResources)
+    .where(and(eq(eventResources.orgId, store.orgId), eq(eventResources.eventId, eventId)))
+    .orderBy(asc(eventResources.sortOrder), asc(eventResources.createdAt));
+  return rows.map(toResource);
+}
+
+export async function insertResource(
+  store: TenantStore,
+  eventId: string,
+  input: EventResourceInput,
+  uploadedBy: string | null,
+): Promise<EventResourceDetail> {
+  const { eventResources } = store.tables;
+  const id = newId("ers");
+  const now = new Date();
+  await store.db.insert(eventResources).values({
+    createdAt: now,
+    description: input.description ?? null,
+    eventId,
+    fileName: input.fileName ?? "link",
+    fileSize: 0,
+    fileUrl: input.fileUrl,
+    id,
+    mimeType: input.mimeType ?? "text/uri-list",
+    orgId: store.orgId,
+    sortOrder: 0,
+    title: input.title,
+    uploadedBy,
+  });
+  const rows = await store.db
+    .select()
+    .from(eventResources)
+    .where(eq(eventResources.id, id))
+    .limit(1);
+  const row = first(rows);
+  if (!row) {
+    throw new Error("insert resource failed");
+  }
+  return toResource(row);
 }
 
 export async function deleteLumaInterest(

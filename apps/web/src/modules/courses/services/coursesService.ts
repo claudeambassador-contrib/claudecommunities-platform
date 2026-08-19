@@ -52,6 +52,18 @@ export async function getCourse(
   return found;
 }
 
+export async function getPublishedBySlug(
+  store: TenantStore,
+  slug: string,
+  viewer?: Actor | null,
+): Promise<Result<{ course: CourseDetail }>> {
+  const row = await coursesRepo.findBySlug(store, slug);
+  if (!row) {
+    return err("not_found", 404, "Course not found");
+  }
+  return getCourse(store, row.id, viewer);
+}
+
 export async function createCourse(
   store: TenantStore,
   actor: Actor,

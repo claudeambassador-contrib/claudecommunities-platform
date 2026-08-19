@@ -356,6 +356,17 @@ export async function togglePostBookmark(
   return ok({ isBookmarked: await communityRepo.toggleBookmark(store, postId, actor.id) });
 }
 
+export async function listBookmarks(
+  store: TenantStore,
+  actor: Actor,
+): Promise<Result<{ posts: PostDetail[] }>> {
+  const feed = await listFeed(store, { viewer: actor });
+  if (!feed.ok) {
+    return feed;
+  }
+  return ok({ posts: feed.posts.filter((post) => post.isBookmarked) });
+}
+
 export async function unreadCounts(
   store: TenantStore,
   actor: Actor,

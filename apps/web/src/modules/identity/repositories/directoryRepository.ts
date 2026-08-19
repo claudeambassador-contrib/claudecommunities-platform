@@ -1,4 +1,4 @@
-import { and, desc, eq, like, or } from "drizzle-orm";
+import { and, desc, eq, inArray, like, or } from "drizzle-orm";
 import type {
   MembershipRole,
   MembershipWrite,
@@ -59,12 +59,15 @@ export async function insertMembership(
   });
 }
 
-export async function findUserById(store: RegistryStore, id: string): Promise<UserProfile | null> {
-  const { users } = store.tables;
-  const row = first(await store.db.select().from(users).where(eq(users.id, id)).limit(1));
-  if (!row) {
-    return null;
-  }
+function toProfile(row: {
+  createdAt: Date;
+  displayName: string | null;
+  email: string;
+  id: string;
+  imageUrl: string | null;
+  isBanned: boolean;
+  isSuperAdmin: boolean;
+}): UserProfile {
   return {
     createdAt: row.createdAt.toISOString(),
     displayName: row.displayName,
@@ -75,6 +78,89 @@ export async function findUserById(store: RegistryStore, id: string): Promise<Us
     isSuperAdmin: Boolean(row.isSuperAdmin),
     role: null,
   };
+}
+
+export async function findUserById(store: RegistryStore, id: string): Promise<UserProfile | null> {
+  const { users } = store.tables;
+  const row = first(await store.db.select().from(users).where(eq(users.id, id)).limit(1));
+  if (!row) {
+    return null;
+  }
+  return toProfile(row);
+}
+
+export async function findUserByEmail(
+  store: RegistryStore,
+  email: string,
+): Promise<UserProfile | null> {
+  const { users } = store.tables;
+  const row = first(
+    await store.db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1),
+  );
+  if (!row) {
+    return null;
+  }
+  return toProfile(row);
+}
+
+export async function updateUserProfile(
+  store: RegistryStore,
+  id: string,
+  patch: { displayName: string },
+): Promise<UserProfile | null> {
+  const { users } = store.tables;
+  await store.db
+    .update(users)
+    .set({ displayName: patch.displayName, updatedAt: new Date() })
+    .where(eq(users.id, id));
+  return findUserById(store, id);
+}
+
+export async function listInvitedMembers(
+  store: RegistryStore,
+  orgId: string,
+): Promise<
+  Array<{
+    createdAt: string;
+    displayName: string | null;
+    email: string;
+    hasSignedUp: boolean;
+    id: string;
+  }>
+> {
+  const { userMemberships, users } = store.tables;
+  const rows = await store.db
+    .select({
+      clerkUserId: users.clerkUserId,
+      createdAt: userMemberships.createdAt,
+      displayName: users.displayName,
+      email: users.email,
+      id: users.id,
+    })
+    .from(userMemberships)
+    .innerJoin(users, eq(users.id, userMemberships.userId))
+    .where(and(eq(userMemberships.orgId, orgId), like(users.clerkUserId, "invite_%")))
+    .orderBy(desc(userMemberships.createdAt));
+  return rows.map((row) => ({
+    createdAt: row.createdAt.toISOString(),
+    displayName: row.displayName,
+    email: row.email,
+    hasSignedUp: !row.clerkUserId.startsWith("invite_"),
+    id: row.id,
+  }));
+}
+
+export async function findUsersByIds(
+  store: RegistryStore,
+  ids: readonly string[],
+): Promise<UserProfile[]> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) {
+    return [];
+  }
+  const { users } = store.tables;
+  const rows = await store.db.select().from(users).where(inArray(users.id, unique));
+  return rows.map(toProfile);
 }
 
 export async function findMembership(

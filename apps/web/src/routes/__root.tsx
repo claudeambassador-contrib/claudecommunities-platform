@@ -1,7 +1,11 @@
 import { ClerkProvider } from "@clerk/tanstack-react-start";
-import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Outlet, Scripts, useRouter } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { useCallback } from "react";
+import { isClerkPublishableConfigured } from "@/shared/auth/clerk";
 import appCss from "../styles.css?url";
+
+const AUTH_OUTAGE = /clerk|publishable key|jwks|handshake/i;
 
 export const Route = createRootRoute({
   head: () => ({
@@ -13,6 +17,7 @@ export const Route = createRootRoute({
     links: [{ rel: "stylesheet", href: appCss }],
   }),
   component: RootComponent,
+  errorComponent: RootError,
   shellComponent: RootDocument,
 });
 
@@ -20,14 +25,60 @@ function RootComponent() {
   return <Outlet />;
 }
 
+function RootError({ error }: { error: Error }) {
+  const router = useRouter();
+  const message = error.message || "Something went wrong";
+  const authOutage = AUTH_OUTAGE.test(message);
+  const title = authOutage ? "Sign-in is unavailable" : "Page failed";
+  const detail = authOutage
+    ? "Authentication is not configured or Clerk could not complete a handshake. Public pages should still load — try again, or set VITE_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY in apps/web/.env.local."
+    : message;
+
+  const handleRetry = useCallback(() => {
+    router.invalidate();
+  }, [router]);
+
+  return (
+    <main className="shell stack">
+      <div className="card stack">
+        <h1 style={{ margin: 0 }}>{title}</h1>
+        <p className="muted" style={{ margin: 0 }}>
+          {detail}
+        </p>
+        <div className="row">
+          <button className="btn btn-primary" onClick={handleRetry} type="button">
+            Retry
+          </button>
+          <a className="btn" href="/">
+            Home
+          </a>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 function RootDocument({ children }: { children: ReactNode }) {
+  if (isClerkPublishableConfigured()) {
+    return (
+      <html lang="en">
+        <head>
+          <HeadContent />
+        </head>
+        <body>
+          <ClerkProvider>{children}</ClerkProvider>
+          <Scripts />
+        </body>
+      </html>
+    );
+  }
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        <ClerkProvider>{children}</ClerkProvider>
+        {children}
         <Scripts />
       </body>
     </html>

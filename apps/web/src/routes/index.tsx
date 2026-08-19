@@ -1,7 +1,8 @@
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/tanstack-react-start";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listPublicTenants } from "@/modules/tenants/services/publicListService";
+import { isClerkPublishableConfigured } from "@/shared/auth/clerk";
 
 const getDirectory = createServerFn({ method: "GET" }).handler(async () => {
   const result = await listPublicTenants();
@@ -29,22 +30,30 @@ function PlatformHome() {
           </p>
         </div>
         <div className="row">
-          <Show when="signed-out">
-            <SignInButton mode="modal">
-              <button type="button" className="btn">
-                Sign in
-              </button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <button type="button" className="btn btn-primary">
-                Sign up
-              </button>
-            </SignUpButton>
-          </Show>
-          <Show when="signed-in">
-            <UserButton />
-          </Show>
-          <Link to="/api/health" className="btn">
+          {isClerkPublishableConfigured() ? (
+            <>
+              <Show when="signed-out">
+                <SignInButton mode="modal">
+                  <button className="btn" type="button">
+                    Sign in
+                  </button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <button className="btn btn-primary" type="button">
+                    Sign up
+                  </button>
+                </SignUpButton>
+              </Show>
+              <Show when="signed-in">
+                <UserButton />
+              </Show>
+            </>
+          ) : (
+            <Link className="btn btn-primary" to="/login">
+              Sign in
+            </Link>
+          )}
+          <Link className="btn" to="/api/health">
             Health
           </Link>
         </div>
@@ -61,11 +70,11 @@ function PlatformHome() {
           <div className="stack">
             {tenants.map((t) => (
               <Link
-                key={t.slug}
-                to="/$citySlug"
-                params={{ citySlug: t.slug }}
                 className="card"
+                key={t.slug}
+                params={{ citySlug: t.slug }}
                 style={{ display: "block" }}
+                to="/$citySlug"
               >
                 <strong>{t.name}</strong>
                 <div className="muted">/{t.slug}</div>

@@ -62,6 +62,23 @@ function validateInput(input: CityInput): Result<{ write: CityWrite }> {
   });
 }
 
+export async function listCitiesPublic(
+  store: TenantStore,
+): Promise<Result<{ cities: AdminCity[] }>> {
+  return ok({ cities: await citiesRepo.listCities(store) });
+}
+
+export async function getCityPublic(
+  store: TenantStore,
+  slug: string,
+): Promise<Result<{ city: AdminCity }>> {
+  const city = await citiesRepo.findBySlug(store, slug);
+  if (!city) {
+    return err("not_found", 404, "City not found");
+  }
+  return ok({ city });
+}
+
 export async function listCitiesAdmin(
   store: TenantStore,
   actor: Actor,

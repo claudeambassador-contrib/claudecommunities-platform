@@ -1,30 +1,82 @@
-import {
-  WorkflowEntrypoint,
-  type WorkflowEvent,
-  type WorkflowStep,
-} from "cloudflare:workers";
+import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
+// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+import * as socialRepo from "@/modules/social/repositories/socialRepository";
+import { completeClaimedPublish } from "@/modules/social/services/socialService";
+import { zernioConnectorFromEnv } from "@/modules/social/zernioConnector";
+import { createTenantDb, getD1Binding } from "@/shared/db/client";
+import { tenantStore } from "@/shared/db/tenantStore";
 
-type Payload = { postId: string; orgId: string; d1Binding: string };
+interface Payload {
+  d1Binding: string;
+  orgId: string;
+  postId: string;
+}
+
+function openStore(env: Env, payload: Payload) {
+  const d1 = getD1Binding(env as unknown as Record<string, unknown>, payload.d1Binding);
+  return tenantStore(createTenantDb(d1), {
+    binding: payload.d1Binding,
+    orgId: payload.orgId,
+  });
+}
 
 /**
- * Durable social publish — stub ready for connector wiring (LinkedIn / Zernio).
- * Exported from src/server.ts (no OpenNext inject script needed).
+ * Durable social publish. Claims the row, calls the connector, then writes
+ * the real externalId. No stub ids — a missing connector fails the post.
  */
 export class PublishPostWorkflow extends WorkflowEntrypoint<Env, Payload> {
   async run(event: WorkflowEvent<Payload>, step: WorkflowStep) {
-    const { postId, orgId, d1Binding } = event.payload;
+    const { postId } = event.payload;
 
-    await step.do("claim", async () => {
-      return { postId, orgId, d1Binding, claimedAt: Date.now() };
+    const claimed = await step.do("claim", async () => {
+      const store = openStore(this.env, event.payload);
+      const result = await socialRepo.claimForPublish(store, postId);
+      if (!result.ok) {
+        throw new Error(result.error.message ?? result.error.code);
+      }
+      return { attempt: result.attempt, claimed: result.claimed, postId };
     });
 
-    await step.do("publish", async () => {
-      // Connector publish lands here in a later slice.
-      return { published: true, externalId: `stub_${postId}` };
+    const published = await step.do("publish", async () => {
+      const store = openStore(this.env, event.payload);
+      const existing = await socialRepo.getPostById(store, postId);
+      if (!existing.ok) {
+        throw new Error(existing.error.message ?? existing.error.code);
+      }
+      if (!claimed.claimed && existing.post.externalId) {
+        return {
+          externalId: existing.post.externalId,
+          externalUrl: existing.post.externalUrl,
+          status: existing.post.status,
+        };
+      }
+      const connector = zernioConnectorFromEnv(this.env as unknown as Record<string, unknown>);
+      if (!connector) {
+        await socialRepo.updatePostById(store, postId, {
+          errorMessage: "No social connector is configured on this Worker",
+          status: "failed",
+        });
+        throw new Error("No social connector is configured on this Worker");
+      }
+      const result = await completeClaimedPublish(store, existing.post, connector);
+      if (!result.ok) {
+        throw new Error(result.error.message ?? result.error.code);
+      }
+      if (!result.post.externalId) {
+        throw new Error("Connector published without an externalId");
+      }
+      return {
+        externalId: result.post.externalId,
+        externalUrl: result.post.externalUrl,
+        status: result.post.status,
+      };
     });
 
-    await step.do("finalize", async () => {
-      return { status: "published" as const };
-    });
+    await step.do("finalize", async () => ({
+      externalId: published.externalId,
+      status: published.status,
+    }));
+
+    return published;
   }
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { heuristicEvaluator, parseCandidateCsv } from "@/modules/attendance/heuristic";
 import {
   ATTENDANCE_BATCH_SIZE,
   evaluateCandidates,
@@ -54,6 +55,19 @@ describe("evaluateCandidates", () => {
     if (result.ok) {
       expect(seen).toEqual([ATTENDANCE_BATCH_SIZE, 3]);
       expect(result.evaluations).toHaveLength(people.length);
+    }
+  });
+
+  it("scores candidates with the heuristic evaluator", async () => {
+    const rows = parseCandidateCsv(
+      "name,email,role,company,interests,experience\nAda,ada@example.com,engineer,Acme,agents,mid",
+    );
+    expect(rows).toHaveLength(1);
+    const result = await evaluateCandidates("engineers building agents", rows, heuristicEvaluator);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.evaluations[0]?.email).toBe("ada@example.com");
+      expect(result.evaluations[0]?.fitScore).toBeGreaterThan(0);
     }
   });
 });

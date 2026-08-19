@@ -1,45 +1,69 @@
-import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { resolveCityContext } from "@/modules/tenants/services/resolveCityService";
+import { hasAnyAdminPermission } from "@/modules/identity/services/sessionService";
+import { getOwnProfile } from "@/modules/identity/services/usersService";
+import { loadCityPage } from "@/shared/http/cityPage";
+import { getRegionConfig } from "@/shared/region";
+import { CityHeader, type CityViewer } from "@/shared/ui/city-header";
+
+function selectPathname(state: { location: { pathname: string } }): string {
+  return state.location.pathname;
+}
 
 const loadCity = createServerFn({ method: "GET" })
-  .inputValidator((d: { citySlug: string }) => d)
+  .validator((d: { citySlug: string }) => d)
   .handler(async ({ data }) => {
-    const result = await resolveCityContext(data.citySlug);
-    if (!result.ok) {
+    const page = await loadCityPage(data.citySlug);
+    if (!page.ok) {
       throw redirect({ to: "/" });
     }
-    return result.tenant;
+    const region = getRegionConfig();
+    let viewer: CityViewer | null = null;
+    if (page.actor) {
+      const profile = await getOwnProfile(page.registry, page.actor);
+      viewer = {
+        id: page.actor.id,
+        imageUrl: profile.ok ? profile.user.imageUrl : null,
+        isAdmin: hasAnyAdminPermission(page.auth),
+        name: profile.ok
+          ? profile.user.displayName?.trim() || profile.user.email
+          : (page.actor.email ?? "Member"),
+      };
+    }
+    return {
+      countryName: region.countryName,
+      merchEnabled: region.merchEnabled,
+      tenant: page.tenant,
+      viewer,
+    };
   });
 
 export const Route = createFileRoute("/$citySlug")({
-  beforeLoad: async ({ params }) => {
-    const tenant = await loadCity({ data: { citySlug: params.citySlug } });
-    return { tenant };
-  },
+  beforeLoad: async ({ params }) => loadCity({ data: { citySlug: params.citySlug } }),
   component: CityLayout,
 });
 
 function CityLayout() {
-  const { tenant } = Route.useRouteContext();
+  const { countryName, merchEnabled, tenant, viewer } = Route.useRouteContext();
+  const pathname = useRouterState({ select: selectPathname });
+  const isCityAdmin = pathname.startsWith(`/${tenant.slug}/admin`);
+
+  if (isCityAdmin) {
+    return <Outlet />;
+  }
 
   return (
-    <div className="shell stack">
-      <header className="row" style={{ justifyContent: "space-between" }}>
-        <div>
-          <h1 style={{ margin: 0 }}>{tenant.name}</h1>
-          <p className="muted" style={{ margin: 0 }}>
-            City instance · org {tenant.orgId} · binding {tenant.d1Binding}
-          </p>
-        </div>
-        <nav className="row">
-          <a href={`/${tenant.slug}/events`}>Events</a>
-          <a href={`/${tenant.slug}/community`}>Community</a>
-          <a href={`/${tenant.slug}/admin`}>Admin</a>
-          <a href="/">Directory</a>
-        </nav>
-      </header>
-      <Outlet />
+    <div>
+      <CityHeader
+        cityName={tenant.name}
+        citySlug={tenant.slug}
+        countryName={countryName}
+        merchEnabled={merchEnabled}
+        viewer={viewer}
+      />
+      <div className="shell stack">
+        <Outlet />
+      </div>
     </div>
   );
 }

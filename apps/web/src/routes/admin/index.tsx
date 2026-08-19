@@ -21,7 +21,7 @@ const loadPlatform = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 const provision = createServerFn({ method: "POST" })
-  .inputValidator((d: { slug: string; name: string; region?: "au" | "nz" }) => d)
+  .validator((d: { slug: string; name: string; region?: "au" | "nz" }) => d)
   .handler(async ({ data }) => {
     const user = await syncSessionUser();
     if (!user.ok || !user.auth.isSuperAdmin) {

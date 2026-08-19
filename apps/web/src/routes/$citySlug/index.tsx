@@ -1,70 +1,54 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listEvents } from "@/modules/events/services/eventsService";
-import { resolveCityContext } from "@/modules/tenants/services/resolveCityService";
-import { openTenantStore } from "@/shared/db/env";
+import { getHomeSections } from "@/modules/pages/services/pagesService";
+import type { Block } from "@/modules/pages/types";
+import { loadCityPage } from "@/shared/http/cityPage";
+import { getRegionConfig } from "@/shared/region";
+import { CmsBlocks, type HomeEventCard } from "@/shared/ui/cms-blocks";
 
-const getEvents = createServerFn({ method: "GET" })
-  .inputValidator((d: { citySlug: string }) => d)
+const loadHome = createServerFn({ method: "GET" })
+  .validator((d: { citySlug: string }) => d)
   .handler(async ({ data }) => {
-    const city = await resolveCityContext(data.citySlug);
-    if (!city.ok) {
-      return { events: [] as { id: string; title: string; startTime: string | null }[] };
+    const page = await loadCityPage(data.citySlug);
+    if (!page.ok) {
+      return {
+        blocks: [] as Block[],
+        events: [] as HomeEventCard[],
+        signedIn: false,
+      };
     }
-    const result = await listEvents(openTenantStore(city.tenant));
-    if (!result.ok) {
-      return { events: [] as { id: string; title: string; startTime: string | null }[] };
-    }
+    const [home, events] = await Promise.all([getHomeSections(page.store), listEvents(page.store)]);
     return {
-      events: result.events.map((e) => ({ id: e.id, title: e.title, startTime: e.startTime })),
+      blocks: home.ok ? home.blocks : [],
+      events: events.ok
+        ? events.events.slice(0, 5).map((event) => ({
+            id: event.id,
+            slug: event.slug,
+            startTime: event.startTime,
+            title: event.title,
+          }))
+        : [],
+      signedIn: Boolean(page.actor),
     };
   });
 
 export const Route = createFileRoute("/$citySlug/")({
-  loader: ({ params }) => getEvents({ data: { citySlug: params.citySlug } }),
+  loader: ({ params }) => loadHome({ data: { citySlug: params.citySlug } }),
   component: CityHome,
 });
 
 function CityHome() {
   const { tenant } = Route.useRouteContext();
-  const { events } = Route.useLoaderData();
+  const { blocks, events, signedIn } = Route.useLoaderData();
 
   return (
-    <section className="stack">
-      <div className="card">
-        <h2 style={{ marginTop: 0 }}>Welcome to {tenant.name}</h2>
-        <p className="muted">
-          This city runs on its own D1 database. Content below is scoped via TenantStore + orgId.
-        </p>
-        <div className="row">
-          <Link
-            className="btn btn-primary"
-            params={{ citySlug: tenant.slug }}
-            to="/$citySlug/events"
-          >
-            Browse events
-          </Link>
-          <Link className="btn" params={{ citySlug: tenant.slug }} to="/$citySlug/community">
-            Community
-          </Link>
-        </div>
-      </div>
-
-      <div className="card stack">
-        <h3 style={{ margin: 0 }}>Upcoming events</h3>
-        {events.length === 0 ? (
-          <p className="muted">No events yet.</p>
-        ) : (
-          events.slice(0, 5).map((e) => (
-            <div key={e.id}>
-              <strong>{e.title}</strong>
-              <div className="muted">
-                {e.startTime ? new Date(e.startTime).toLocaleString() : "TBA"}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </section>
+    <CmsBlocks
+      blocks={blocks}
+      citySlug={tenant.slug}
+      events={events}
+      region={getRegionConfig()}
+      signedIn={signedIn}
+    />
   );
 }

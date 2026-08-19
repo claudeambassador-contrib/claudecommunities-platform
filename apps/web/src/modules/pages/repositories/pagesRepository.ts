@@ -24,6 +24,16 @@ function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
 
+function coerceHomeBlock(item: Record<string, unknown>): Block | null {
+  if (typeof item.type !== "string" || !KNOWN_BLOCK_TYPES.has(item.type)) {
+    return null;
+  }
+  if (item.type === "benefits" || item.type === "audienceSplit") {
+    return { ...(item as Block), cards: Array.isArray(item.cards) ? item.cards : [] } as Block;
+  }
+  return item as Block;
+}
+
 function parseBlocks(raw: string, contentOnly: boolean): Block[] {
   let parsed: unknown;
   try {
@@ -40,15 +50,23 @@ function parseBlocks(raw: string, contentOnly: boolean): Block[] {
   if (!arr) {
     return [];
   }
-  return arr.filter((item): item is Block => {
+  const blocks: Block[] = [];
+  for (const item of arr) {
     if (!(isObj(item) && typeof item.id === "string" && typeof item.enabled === "boolean")) {
-      return false;
+      continue;
     }
     if (contentOnly) {
-      return item.type === "richText" && typeof item.body === "string";
+      if (item.type === "richText" && typeof item.body === "string") {
+        blocks.push(item as Block);
+      }
+      continue;
     }
-    return typeof item.type === "string" && KNOWN_BLOCK_TYPES.has(item.type);
-  });
+    const block = coerceHomeBlock(item);
+    if (block) {
+      blocks.push(block);
+    }
+  }
+  return blocks;
 }
 
 function encodeBlocks(blocks: Block[]): string {
@@ -112,6 +130,18 @@ export async function listContent(store: TenantStore): Promise<ContentPageSummar
     .select()
     .from(pages)
     .where(and(eq(pages.orgId, store.orgId), ne(pages.slug, HOME_SLUG)))
+    .orderBy(asc(pages.slug));
+  return rows.map(toSummary);
+}
+
+export async function listPublishedContent(store: TenantStore): Promise<ContentPageSummary[]> {
+  const { pages } = store.tables;
+  const rows = await store.db
+    .select()
+    .from(pages)
+    .where(
+      and(eq(pages.orgId, store.orgId), ne(pages.slug, HOME_SLUG), eq(pages.status, "published")),
+    )
     .orderBy(asc(pages.slug));
   return rows.map(toSummary);
 }

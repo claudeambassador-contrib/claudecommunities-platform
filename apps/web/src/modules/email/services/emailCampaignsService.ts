@@ -3,6 +3,7 @@ import type {
   CampaignCreateBody,
   CampaignDetail,
   CampaignStatus,
+  CampaignUpdateBody,
   CampaignWorkflow,
   TemplateCreateBody,
   TemplateDetail,
@@ -83,6 +84,70 @@ export async function createCampaign(
     return err("not_found", 404, "Campaign not found");
   }
   return ok({ campaign });
+}
+
+export async function getCampaign(
+  store: TenantStore,
+  actor: Actor,
+  id: string,
+): Promise<Result<{ campaign: CampaignDetail }>> {
+  const perm = ensurePermission(actor, "email.view");
+  if (!perm.ok) {
+    return perm;
+  }
+  const { emailCampaigns } = store.tables;
+  const rows = await store.db
+    .select()
+    .from(emailCampaigns)
+    .where(and(eq(emailCampaigns.orgId, store.orgId), eq(emailCampaigns.id, id)))
+    .limit(1);
+  const [row] = rows;
+  if (!row) {
+    return err("not_found", 404, "Campaign not found");
+  }
+  return ok({ campaign: toCampaign(row) });
+}
+
+export async function updateCampaign(
+  store: TenantStore,
+  actor: Actor,
+  id: string,
+  input: CampaignUpdateBody,
+): Promise<Result<{ campaign: CampaignDetail }>> {
+  const perm = ensurePermission(actor, "email.edit");
+  if (!perm.ok) {
+    return perm;
+  }
+  const existing = await getCampaign(store, actor, id);
+  if (!existing.ok) {
+    return existing;
+  }
+  if (existing.campaign.status !== "draft" && existing.campaign.status !== "scheduled") {
+    return err("bad_request", 400, "Only draft or scheduled campaigns can be edited");
+  }
+  const name = input.name?.trim() ?? existing.campaign.name;
+  const subject = input.subject?.trim() ?? existing.campaign.subject;
+  if (!(name && subject)) {
+    return err("bad_request", 400, "name and subject are required");
+  }
+  let scheduledAt = existing.campaign.scheduledAt ? new Date(existing.campaign.scheduledAt) : null;
+  if (input.scheduledAt !== undefined) {
+    scheduledAt = input.scheduledAt ? new Date(input.scheduledAt) : null;
+  }
+  const status = input.status ?? (scheduledAt ? "scheduled" : existing.campaign.status);
+  const { emailCampaigns } = store.tables;
+  await store.db
+    .update(emailCampaigns)
+    .set({
+      bodyHtml: input.bodyHtml === undefined ? existing.campaign.bodyHtml : input.bodyHtml,
+      name,
+      scheduledAt,
+      status,
+      subject,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(emailCampaigns.orgId, store.orgId), eq(emailCampaigns.id, id)));
+  return getCampaign(store, actor, id);
 }
 
 export async function enqueueCampaignSend(

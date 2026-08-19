@@ -19,6 +19,7 @@ import * as roleTables from "@/modules/roles/schema.tenant";
 import * as slides from "@/modules/slides/schema.tenant";
 import * as social from "@/modules/social/schema.tenant";
 import * as talks from "@/modules/talks/schema.tenant";
+import * as tierTables from "@/modules/tiers/schema.tenant";
 
 export const eventsTable = events.events;
 export const eventRsvps = events.eventRsvps;
@@ -49,6 +50,8 @@ export const talkSubmissions = talks.talkSubmissions;
 export const emailCampaigns = email.emailCampaigns;
 export const emailTemplates = email.emailTemplates;
 export const emailSends = email.emailSends;
+export const emailAutomations = email.emailAutomations;
+export const emailSettings = email.emailSettings;
 
 export const socialAccounts = social.socialAccounts;
 export const socialPosts = social.socialPosts;
@@ -68,6 +71,7 @@ export const connections = connectionTables.connections;
 export const polls = pollTables.polls;
 export const pollOptions = pollTables.pollOptions;
 export const pollVotes = pollTables.pollVotes;
+export const membershipTiers = tierTables.membershipTiers;
 
 /** Stable object of tenant tables (no per-schema factory needed on D1). */
 export function createTenantSchema() {
@@ -81,8 +85,10 @@ export function createTenantSchema() {
     connections: connectionTables.connections,
     courseEnrollments: courses.courseEnrollments,
     courses: courses.courses,
+    emailAutomations: email.emailAutomations,
     emailCampaigns: email.emailCampaigns,
     emailSends: email.emailSends,
+    emailSettings: email.emailSettings,
     emailTemplates: email.emailTemplates,
     eventAgendaItems: events.eventAgendaItems,
     eventLumaInterests: events.eventLumaInterests,
@@ -91,6 +97,7 @@ export function createTenantSchema() {
     events: events.events,
     lessons: courses.lessons,
     likes: community.likes,
+    membershipTiers: tierTables.membershipTiers,
     notifications: pages.notifications,
     pages: pages.pages,
     pollOptions: pollTables.pollOptions,

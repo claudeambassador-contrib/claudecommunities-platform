@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addAgendaItem,
+  addEventResource,
   createEvent,
   deleteAgendaItem,
   deleteEvent,
@@ -9,6 +10,7 @@ import {
   getLumaWaitlistCount,
   getRsvpStats,
   listAgenda,
+  listEventResources,
   listEventSitemapEntries,
   listEvents,
   listLumaInterestsForUser,
@@ -25,6 +27,7 @@ import {
   isAllowedImageUrl,
   isAllowedLumaUrl,
   isAllowedMeetingUrl,
+  isAllowedResourceUrl,
 } from "@/modules/events/validators";
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
@@ -55,6 +58,12 @@ describe("event URL validators", () => {
     expect(isAllowedImageUrl("/api/files/sydney/cover.png")).toBe(true);
     expect(isAllowedImageUrl("https://images.lumacdn.com/photo.jpg")).toBe(true);
     expect(isAllowedImageUrl("https://evil.example/photo.jpg")).toBe(false);
+  });
+
+  it("allows https resource links", () => {
+    expect(isAllowedResourceUrl("https://drive.google.com/file")).toBe(true);
+    expect(isAllowedResourceUrl("/api/files/sydney/deck.pdf")).toBe(true);
+    expect(isAllowedResourceUrl("http://example.com/x")).toBe(false);
   });
 });
 
@@ -601,5 +610,35 @@ describe("luma interest", () => {
     }
     expect(sitemap.entries).toHaveLength(1);
     expect(sitemap.entries[0]?.slug).toBe("public-september-2026");
+  });
+
+  it("adds and lists event resources", async () => {
+    const store = openMemoryTenant();
+    const created = await createEvent(store, adminActor(), {
+      startTime: START,
+      title: "Workshop",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    const denied = await addEventResource(store, memberActor(), created.event.slug, {
+      fileUrl: "https://example.com/slides.pdf",
+      title: "Slides",
+    });
+    expect(denied.ok).toBe(false);
+
+    const added = await addEventResource(store, adminActor(), created.event.slug, {
+      description: "Deck",
+      fileUrl: "https://example.com/slides.pdf",
+      title: "Slides",
+    });
+    expect(added.ok).toBe(true);
+    const listed = await listEventResources(store, created.event.slug);
+    expect(listed.ok).toBe(true);
+    if (listed.ok) {
+      expect(listed.resources).toHaveLength(1);
+      expect(listed.resources[0]?.title).toBe("Slides");
+    }
   });
 });

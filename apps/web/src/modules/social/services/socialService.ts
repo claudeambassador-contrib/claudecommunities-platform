@@ -3,6 +3,7 @@ import * as socialRepo from "@/modules/social/repositories/socialRepository";
 import type {
   SocialAccountInput,
   SocialAccountSummary,
+  SocialConnector,
   SocialDeps,
   SocialPostInput,
   SocialPostListOptions,
@@ -350,25 +351,33 @@ export async function publishExisting(
       status: "failed",
     });
   }
+  return completeClaimedPublish(store, claimed.post, deps.connector);
+}
+
+export async function completeClaimedPublish(
+  store: TenantStore,
+  post: SocialPostSummary,
+  connector: SocialConnector,
+): Promise<Result<{ post: SocialPostSummary }>> {
   try {
-    const published = await deps.connector.publish({
-      content: claimed.post.content,
-      mediaType: claimed.post.mediaType,
-      mediaUrls: claimed.post.mediaUrls,
-      scheduledFor: claimed.post.scheduledAt ? new Date(claimed.post.scheduledAt) : undefined,
+    const published = await connector.publish({
+      content: post.content,
+      mediaType: post.mediaType,
+      mediaUrls: post.mediaUrls,
+      scheduledFor: post.scheduledAt ? new Date(post.scheduledAt) : undefined,
     });
-    const scheduledFor = claimed.post.scheduledAt ? new Date(claimed.post.scheduledAt) : null;
+    const scheduledFor = post.scheduledAt ? new Date(post.scheduledAt) : null;
     const nativeSchedule =
-      deps.connector.supportsNativeScheduling &&
+      connector.supportsNativeScheduling &&
       Boolean(scheduledFor && scheduledFor.getTime() > Date.now());
-    return await socialRepo.updatePostById(store, id, {
+    return await socialRepo.updatePostById(store, post.id, {
       externalId: published.externalId,
       externalUrl: published.externalUrl,
       publishedAt: nativeSchedule ? null : new Date(),
       status: nativeSchedule ? "scheduled" : "published",
     });
   } catch (error) {
-    return await socialRepo.updatePostById(store, id, {
+    return await socialRepo.updatePostById(store, post.id, {
       errorMessage: error instanceof Error ? error.message : "Publish failed",
       status: "failed",
     });
