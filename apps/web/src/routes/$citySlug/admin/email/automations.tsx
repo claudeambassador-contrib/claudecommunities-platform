@@ -7,8 +7,9 @@ import {
   setAutomationStatus,
 } from "@/modules/email/services/emailOpsService";
 import type { AutomationDetail, AutomationLiveStatus } from "@/modules/email/types";
-import { ensurePermission } from "@/shared/auth/actor";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
@@ -20,33 +21,15 @@ const TRIGGER_OPTIONS = [
 
 const loadAutomations = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return {
-        allowed: false as const,
-        automations: [] as AutomationDetail[],
-        reason: "unauthenticated",
-      };
-    }
-    const perm = ensurePermission(page.actor, "email.view");
-    if (!perm.ok) {
-      return {
-        allowed: false as const,
-        automations: [] as AutomationDetail[],
-        reason: perm.error.code,
-      };
-    }
-    const listed = await listAutomations(page.store, page.actor);
-    if (!listed.ok) {
-      return {
-        allowed: false as const,
-        automations: [] as AutomationDetail[],
-        reason: listed.error.code,
-      };
-    }
-    return { allowed: true as const, automations: listed.automations };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, "email.view", async (page) => {
+      const listed = await listAutomations(page.store, page.actor);
+      if (!listed.ok) {
+        return listed;
+      }
+      return ok({ automations: listed.automations });
+    }),
+  );
 
 const submitAutomation = createServerFn({ method: "POST" })
   .validator((d: { citySlug: string; name: string; triggerType: string }) => d)

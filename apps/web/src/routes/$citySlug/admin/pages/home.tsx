@@ -4,24 +4,19 @@ import { useCallback } from "react";
 import { getHomeSections, saveHomeSections } from "@/modules/pages/services/pagesService";
 import type { Block } from "@/modules/pages/types";
 import { HomeSectionsEditor } from "@/modules/pages/ui/home-sections-editor";
-import { ensurePermission } from "@/shared/auth/actor";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 
 const loadHome = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const perm = ensurePermission(page.actor, "pages.view");
-    if (!perm.ok) {
-      return { allowed: false as const, reason: perm.error.code };
-    }
-    const home = await getHomeSections(page.store);
-    return { allowed: true as const, blocks: home.ok ? home.blocks : [] };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, "pages.view", async (page) => {
+      const home = await getHomeSections(page.store);
+      return ok({ blocks: home.ok ? home.blocks : [] });
+    }),
+  );
 
 const saveHome = createServerFn({ method: "POST" })
   .validator((d: { blocks: Block[]; citySlug: string }) => d)

@@ -3,18 +3,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { type FormEvent, useCallback, useState } from "react";
 import { createCampaign } from "@/modules/email/services/emailCampaignsService";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 
 const load = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    return { allowed: true as const };
-  });
+  .handler(({ data }) => guarded(data.citySlug, null, async () => ok({})));
 
 const submit = createServerFn({ method: "POST" })
   .validator(

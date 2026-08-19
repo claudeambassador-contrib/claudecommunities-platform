@@ -1,37 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listEvents } from "@/modules/events/services/eventsService";
-import { ensurePermission } from "@/shared/auth/actor";
-import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
 const loadEvents = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const perm = ensurePermission(page.actor, "events.view");
-    if (!perm.ok) {
-      return { allowed: false as const, reason: perm.error.code };
-    }
-    const result = await listEvents(page.store, { includeInactive: true });
-    if (!result.ok) {
-      return { allowed: false as const, reason: result.error.code };
-    }
-    return {
-      allowed: true as const,
-      events: result.events.map((event) => ({
-        detail: [event.status, event.startTime ? new Date(event.startTime).toLocaleString() : null]
-          .filter(Boolean)
-          .join(" · "),
-        href: `/${page.tenant.slug}/events/${event.slug}`,
-        id: event.id,
-        title: event.title,
-      })),
-    };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, "events.view", async (page) => {
+      const result = await listEvents(page.store, { includeInactive: true });
+      if (!result.ok) {
+        return result;
+      }
+      return ok({
+        events: result.events.map((event) => ({
+          detail: [
+            event.status,
+            event.startTime ? new Date(event.startTime).toLocaleString() : null,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          href: `/${page.tenant.slug}/events/${event.slug}`,
+          id: event.id,
+          title: event.title,
+        })),
+      });
+    }),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/events/")({
   loader: ({ params }) => loadEvents({ data: { citySlug: params.citySlug } }),

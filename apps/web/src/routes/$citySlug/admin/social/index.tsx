@@ -4,6 +4,8 @@ import { type ChangeEvent, type FormEvent, useCallback, useState } from "react";
 import { createPost, listAccounts, listPosts } from "@/modules/social/services/socialService";
 import type { SocialPostAction } from "@/modules/social/types";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
@@ -26,32 +28,29 @@ function statusMessageForAction(action: SocialPostAction): string {
 
 const loadSocialPosts = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const postsResult = await listPosts(page.store, page.actor);
-    if (!postsResult.ok) {
-      return { allowed: false as const, reason: postsResult.error.code };
-    }
-    const accountsResult = await listAccounts(page.store, page.actor);
-    if (!accountsResult.ok) {
-      return { allowed: false as const, reason: accountsResult.error.code };
-    }
-    return {
-      accounts: accountsResult.accounts.map((account) => ({
-        displayName: account.displayName,
-        id: account.id,
-      })),
-      allowed: true as const,
-      posts: postsResult.posts.map((post) => ({
-        detail: [post.status, post.platform, post.scheduledAt].filter(Boolean).join(" · "),
-        id: post.id,
-        title: post.content.slice(0, 80) || "Untitled post",
-      })),
-    };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, null, async (page) => {
+      const postsResult = await listPosts(page.store, page.actor);
+      if (!postsResult.ok) {
+        return postsResult;
+      }
+      const accountsResult = await listAccounts(page.store, page.actor);
+      if (!accountsResult.ok) {
+        return accountsResult;
+      }
+      return ok({
+        accounts: accountsResult.accounts.map((account) => ({
+          displayName: account.displayName,
+          id: account.id,
+        })),
+        posts: postsResult.posts.map((post) => ({
+          detail: [post.status, post.platform, post.scheduledAt].filter(Boolean).join(" · "),
+          id: post.id,
+          title: post.content.slice(0, 80) || "Untitled post",
+        })),
+      });
+    }),
+  );
 
 const submitSocialPost = createServerFn({ method: "POST" })
   .validator(

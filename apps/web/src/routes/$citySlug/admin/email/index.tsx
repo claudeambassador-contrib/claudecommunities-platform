@@ -1,30 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listCampaigns } from "@/modules/email/services/emailCampaignsService";
-import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
 const loadCampaigns = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const result = await listCampaigns(page.store, page.actor);
-    if (!result.ok) {
-      return { allowed: false as const, reason: result.error.code };
-    }
-    return {
-      allowed: true as const,
-      campaigns: result.campaigns.map((campaign) => ({
-        detail: [campaign.status, campaign.subject].filter(Boolean).join(" · "),
-        href: `/${data.citySlug}/admin/email/${campaign.id}`,
-        id: campaign.id,
-        title: campaign.name,
-      })),
-    };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, null, async (page) => {
+      const result = await listCampaigns(page.store, page.actor);
+      if (!result.ok) {
+        return result;
+      }
+      return ok({
+        campaigns: result.campaigns.map((campaign) => ({
+          detail: [campaign.status, campaign.subject].filter(Boolean).join(" · "),
+          href: `/${data.citySlug}/admin/email/${campaign.id}`,
+          id: campaign.id,
+          title: campaign.name,
+        })),
+      });
+    }),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/email/")({
   loader: ({ params }) => loadCampaigns({ data: { citySlug: params.citySlug } }),

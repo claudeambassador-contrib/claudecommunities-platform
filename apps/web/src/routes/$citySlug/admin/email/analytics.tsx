@@ -1,49 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getEmailAnalytics } from "@/modules/email/services/emailOpsService";
-import type { EmailAnalytics } from "@/modules/email/types";
-import { ensurePermission } from "@/shared/auth/actor";
-import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
-
-const EMPTY_ANALYTICS: EmailAnalytics = { byCampaign: [], queued: 0, totalSends: 0 };
 
 const loadEmailAnalytics = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return {
-        allowed: false as const,
-        analytics: EMPTY_ANALYTICS,
-        reason: "unauthenticated",
-      };
-    }
-    const perm = ensurePermission(page.actor, "email.view");
-    if (!perm.ok) {
-      return {
-        allowed: false as const,
-        analytics: EMPTY_ANALYTICS,
-        reason: perm.error.code,
-      };
-    }
-    const loaded = await getEmailAnalytics(page.store, page.actor);
-    if (!loaded.ok) {
-      return {
-        allowed: false as const,
-        analytics: EMPTY_ANALYTICS,
-        reason: loaded.error.code,
-      };
-    }
-    return {
-      allowed: true as const,
-      analytics: {
-        byCampaign: loaded.byCampaign,
-        queued: loaded.queued,
-        totalSends: loaded.totalSends,
-      },
-    };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, "email.view", async (page) => {
+      const loaded = await getEmailAnalytics(page.store, page.actor);
+      if (!loaded.ok) {
+        return loaded;
+      }
+      return ok({
+        analytics: {
+          byCampaign: loaded.byCampaign,
+          queued: loaded.queued,
+          totalSends: loaded.totalSends,
+        },
+      });
+    }),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/email/analytics")({
   loader: ({ params }) => loadEmailAnalytics({ data: { citySlug: params.citySlug } }),

@@ -9,22 +9,22 @@ import {
 } from "@/modules/email/services/emailCampaignsService";
 import type { CampaignDetail } from "@/modules/email/types";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
 const load = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string; id: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const found = await getCampaign(page.store, page.actor, data.id);
-    if (!found.ok) {
-      return { allowed: false as const, reason: found.error.code };
-    }
-    return { allowed: true as const, campaign: found.campaign };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, null, async (page) => {
+      const found = await getCampaign(page.store, page.actor, data.id);
+      if (!found.ok) {
+        return found;
+      }
+      return ok({ campaign: found.campaign });
+    }),
+  );
 
 const save = createServerFn({ method: "POST" })
   .validator(

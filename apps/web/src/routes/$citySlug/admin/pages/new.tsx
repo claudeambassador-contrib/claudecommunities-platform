@@ -2,23 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { type FormEvent, useCallback, useState } from "react";
 import { createContentPage } from "@/modules/pages/services/pagesService";
-import { ensurePermission } from "@/shared/auth/actor";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 
 const loadNewPage = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const perm = ensurePermission(page.actor, "pages.edit");
-    if (!perm.ok) {
-      return { allowed: false as const, reason: perm.error.code };
-    }
-    return { allowed: true as const };
-  });
+  .handler(({ data }) => guarded(data.citySlug, "pages.edit", async () => ok({})));
 
 const submitPage = createServerFn({ method: "POST" })
   .validator((d: { citySlug: string; slug: string; title: string }) => d)

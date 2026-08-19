@@ -1,30 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listEmailContacts } from "@/modules/identity/services/usersService";
-import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
 const loadContacts = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, contacts: [], reason: "unauthenticated" };
-    }
-    const listed = await listEmailContacts(page.registry, page.actor, page.tenant.orgId);
-    if (!listed.ok) {
-      return { allowed: false as const, contacts: [], reason: listed.error.code };
-    }
-    return {
-      allowed: true as const,
-      contacts: listed.users.map((user) => ({
-        email: user.email,
-        id: user.id,
-        name: user.displayName ?? user.email,
-        role: user.role,
-      })),
-    };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, null, async (page) => {
+      const listed = await listEmailContacts(page.registry, page.actor, page.tenant.orgId);
+      if (!listed.ok) {
+        return listed;
+      }
+      return ok({
+        contacts: listed.users.map((user) => ({
+          email: user.email,
+          id: user.id,
+          name: user.displayName ?? user.email,
+          role: user.role,
+        })),
+      });
+    }),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/email/contacts")({
   loader: ({ params }) => loadContacts({ data: { citySlug: params.citySlug } }),

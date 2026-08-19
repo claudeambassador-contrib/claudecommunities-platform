@@ -4,29 +4,28 @@ import { type FormEvent, useCallback, useState } from "react";
 import { connectAccount, listAccounts } from "@/modules/social/services/socialService";
 import type { ConnectorId, SocialPlatform } from "@/modules/social/types";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
 const loadAccounts = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const result = await listAccounts(page.store, page.actor);
-    if (!result.ok) {
-      return { allowed: false as const, reason: result.error.code };
-    }
-    return {
-      allowed: true as const,
-      accounts: result.accounts.map((account) => ({
-        detail: [account.platform, account.connector].join(" · "),
-        id: account.id,
-        title: account.displayName,
-      })),
-    };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, null, async (page) => {
+      const result = await listAccounts(page.store, page.actor);
+      if (!result.ok) {
+        return result;
+      }
+      return ok({
+        accounts: result.accounts.map((account) => ({
+          detail: [account.platform, account.connector].join(" · "),
+          id: account.id,
+          title: account.displayName,
+        })),
+      });
+    }),
+  );
 
 const submitAccount = createServerFn({ method: "POST" })
   .validator(

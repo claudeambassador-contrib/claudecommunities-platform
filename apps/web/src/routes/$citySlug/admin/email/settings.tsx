@@ -2,40 +2,23 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { type FormEvent, useCallback, useState } from "react";
 import { getEmailSettings, saveEmailSettings } from "@/modules/email/services/emailOpsService";
-import { EMAIL_SETTINGS_DEFAULTS, type EmailSettingsDetail } from "@/modules/email/types";
-import { ensurePermission } from "@/shared/auth/actor";
+import type { EmailSettingsDetail } from "@/modules/email/types";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 
 const loadEmailSettings = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return {
-        allowed: false as const,
-        reason: "unauthenticated",
-        settings: EMAIL_SETTINGS_DEFAULTS,
-      };
-    }
-    const perm = ensurePermission(page.actor, "email.settings");
-    if (!perm.ok) {
-      return {
-        allowed: false as const,
-        reason: perm.error.code,
-        settings: EMAIL_SETTINGS_DEFAULTS,
-      };
-    }
-    const loaded = await getEmailSettings(page.store, page.actor);
-    if (!loaded.ok) {
-      return {
-        allowed: false as const,
-        reason: loaded.error.code,
-        settings: EMAIL_SETTINGS_DEFAULTS,
-      };
-    }
-    return { allowed: true as const, settings: loaded.settings };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, "email.settings", async (page) => {
+      const loaded = await getEmailSettings(page.store, page.actor);
+      if (!loaded.ok) {
+        return loaded;
+      }
+      return ok({ settings: loaded.settings });
+    }),
+  );
 
 const submitEmailSettings = createServerFn({ method: "POST" })
   .validator(
