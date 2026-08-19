@@ -235,3 +235,25 @@ export async function listOrgMembers(
     role: asRole(row.role),
   }));
 }
+
+/** Members who can receive campaign mail: not banned, has an email, not unsubscribed. */
+export async function listOrgRecipients(
+  store: RegistryStore,
+  orgId: string,
+): Promise<Array<{ email: string; id: string }>> {
+  const { emailPreferences, userMemberships, users } = store.tables;
+  const rows = await store.db
+    .select({
+      email: users.email,
+      id: users.id,
+      isBanned: users.isBanned,
+      weeklyDigest: emailPreferences.weeklyDigest,
+    })
+    .from(userMemberships)
+    .innerJoin(users, eq(users.id, userMemberships.userId))
+    .leftJoin(emailPreferences, eq(emailPreferences.userId, users.id))
+    .where(eq(userMemberships.orgId, orgId));
+  return rows
+    .filter((row) => !row.isBanned && row.weeklyDigest !== false && row.email.includes("@"))
+    .map((row) => ({ email: row.email.toLowerCase(), id: row.id }));
+}

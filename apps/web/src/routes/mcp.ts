@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/api/mcp")({
+export const Route = createFileRoute("/mcp")({
   server: {
     handlers: {
       DELETE: async ({ request }) => {

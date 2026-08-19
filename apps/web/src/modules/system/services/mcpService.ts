@@ -978,6 +978,10 @@ export function listMcpTools(): McpToolInfo[] {
   return [...MCP_CATALOG];
 }
 
+export function implementedMcpToolNames(): string[] {
+  return Object.keys(HANDLERS).sort();
+}
+
 export async function callMcpTool<T extends object = Record<string, unknown>>(
   name: string,
   args: McpArgs,
@@ -993,30 +997,3 @@ export async function callMcpTool<T extends object = Record<string, unknown>>(
   return (await handler(args, ctx)) as Result<T>;
 }
 
-/**
- * HTTP-thin MCP endpoint. Dispatch uses callMcpTool with an injected opener;
- * this handler only lists the catalog so it never imports env.
- */
-export async function handleMcpRequest(request: Request): Promise<Response> {
-  if (request.method === "GET") {
-    return Response.json({
-      name: "claudecommunities",
-      tools: listMcpTools(),
-      transport: "http",
-      version: "0.1.0",
-    });
-  }
-
-  try {
-    const body = (await request.json()) as {
-      method?: string;
-      params?: { arguments?: McpArgs; name?: string };
-    };
-    if (body.method === "tools/list") {
-      return Response.json({ tools: listMcpTools() });
-    }
-    return Response.json({ error: "not_implemented", method: body.method }, { status: 501 });
-  } catch {
-    return Response.json({ error: "invalid_json" }, { status: 400 });
-  }
-}

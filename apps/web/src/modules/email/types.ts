@@ -31,8 +31,14 @@ export interface TemplateDetail {
   subject: string | null;
 }
 
+export interface CampaignWorkflowInput {
+  campaignId: string;
+  d1Binding: string;
+  orgId: string;
+}
+
 export interface CampaignWorkflow {
-  start: (input: { campaignId: string }) => Promise<{ workflowId: string }>;
+  start: (input: CampaignWorkflowInput) => Promise<{ workflowId: string }>;
 }
 
 export const AUTOMATION_TRIGGERS = ["signup", "event_rsvp", "manual"] as const;

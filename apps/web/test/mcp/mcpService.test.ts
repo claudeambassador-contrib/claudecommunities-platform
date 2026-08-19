@@ -8,7 +8,7 @@ import {
   connectAccount,
   createPost as createSocialPost,
 } from "@/modules/social/services/socialService";
-import { callMcpTool, listMcpTools } from "@/modules/system/services/mcpService";
+import { callMcpTool, implementedMcpToolNames, listMcpTools } from "@/modules/system/services/mcpService";
 import type { McpDispatchContext } from "@/modules/system/types";
 import { createSpeaker, createTalkSubmission } from "@/modules/talks/services/talksService";
 import type { RegistryStore } from "@/shared/db/registryStore";
@@ -113,10 +113,36 @@ describe("listMcpTools", () => {
     for (const tool of tools) {
       expect(tool.description.length).toBeGreaterThan(0);
     }
+    expect(implementedMcpToolNames()).toEqual([...names].sort());
   });
 });
 
 describe("callMcpTool", () => {
+  it("returns the community feed for a city", async () => {
+    const store = openMemoryTenant();
+    const space = await createSpace(store, adminActor(), { name: "General", slug: "general" });
+    expect(space.ok).toBe(true);
+    if (!space.ok) {
+      return;
+    }
+    const posted = await createPost(store, adminActor(), {
+      content: "Hello feed",
+      spaceId: space.space.id,
+    });
+    expect(posted.ok).toBe(true);
+
+    const feed = await callMcpTool<{ posts: { content: string }[] }>(
+      "getFeed",
+      { citySlug: CITY },
+      dispatchCtx(store),
+    );
+    expect(feed.ok).toBe(true);
+    if (!feed.ok) {
+      return;
+    }
+    expect(feed.posts.map((post) => post.content)).toContain("Hello feed");
+  });
+
   it("returns platform health without opening a tenant", async () => {
     const result = await callMcpTool<{ region: string; service: string }>(
       "health",

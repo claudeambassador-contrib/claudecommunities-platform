@@ -73,6 +73,10 @@ export async function upsertFromClerk(
   return requireByClerkId(db, input.clerkUserId);
 }
 
+export async function listMembershipsForUser(db: RegistryDb, userId: string) {
+  return await db.select().from(userMemberships).where(eq(userMemberships.userId, userId));
+}
+
 export async function findMembership(db: RegistryDb, userId: string, orgId: string) {
   const rows = await db
     .select()

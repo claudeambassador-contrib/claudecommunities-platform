@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CitySlugRouteRouteImport } from './routes/$citySlug/route'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as OfflineRouteImport } from './routes/offline'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as RemotionRouteImport } from './routes/remotion'
@@ -25,11 +26,13 @@ import { Route as CitySlugMembershipRouteImport } from './routes/$citySlug/membe
 import { Route as CitySlugMerchRouteImport } from './routes/$citySlug/merch'
 import { Route as CitySlugProfessionalsRouteImport } from './routes/$citySlug/professionals'
 import { Route as CitySlugVibeCodersRouteImport } from './routes/$citySlug/vibe-coders'
+import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known/oauth-authorization-server'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiMcpRouteImport } from './routes/api/mcp'
 import { Route as ApiUploadRouteImport } from './routes/api/upload'
 import { Route as LoginSsoCallbackRouteImport } from './routes/login/sso-callback'
+import { Route as OauthRegisterRouteImport } from './routes/oauth/register'
 import { Route as SignupSsoCallbackRouteImport } from './routes/signup/sso-callback'
 import { Route as CitySlugAdminIndexRouteImport } from './routes/$citySlug/admin/index'
 import { Route as CitySlugAdminAnalyticsRouteImport } from './routes/$citySlug/admin/analytics'
@@ -69,7 +72,10 @@ import { Route as CitySlugResourcesIndexRouteImport } from './routes/$citySlug/r
 import { Route as CitySlugResourcesSlugRouteImport } from './routes/$citySlug/resources/$slug'
 import { Route as CitySlugSpeakIndexRouteImport } from './routes/$citySlug/speak/index'
 import { Route as CitySlugWebinarsClaudeCodeWebinarAustraliaRouteImport } from './routes/$citySlug/webinars/claude-code-webinar-australia'
+import { Route as DotwellKnownOauthProtectedResourceMcpRouteImport } from './routes/[.]well-known/oauth-protected-resource/mcp'
 import { Route as ApiFilesSplatRouteImport } from './routes/api/files.$'
+import { Route as ApiUploadMcpRouteImport } from './routes/api/upload/mcp'
+import { Route as ApiWebhooksResendRouteImport } from './routes/api/webhooks/resend'
 import { Route as CitySlugAdminCoursesIndexRouteImport } from './routes/$citySlug/admin/courses/index'
 import { Route as CitySlugAdminCoursesNewRouteImport } from './routes/$citySlug/admin/courses/new'
 import { Route as CitySlugAdminEmailIndexRouteImport } from './routes/$citySlug/admin/email/index'
@@ -106,6 +112,7 @@ import { Route as CitySlugEventsSlugIndexRouteImport } from './routes/$citySlug/
 import { Route as CitySlugEventsSlugResourcesRouteImport } from './routes/$citySlug/events/$slug/resources'
 import { Route as CitySlugEventsClaudeImpactLabMelbourneIndexRouteImport } from './routes/$citySlug/events/claude-impact-lab-melbourne/index'
 import { Route as CitySlugEventsClaudeImpactLabMelbourneSponsorRouteImport } from './routes/$citySlug/events/claude-impact-lab-melbourne/sponsor'
+import { Route as ApiEmailUnsubscribeTokenRouteImport } from './routes/api/email/unsubscribe.$token'
 import { Route as CitySlugAdminCoursesIdEditRouteImport } from './routes/$citySlug/admin/courses/$id/edit'
 import { Route as CitySlugCommunityLearnSlugIndexRouteImport } from './routes/$citySlug/community/learn/$slug/index'
 import { Route as CitySlugCommunityLearnSlugLessonRouteImport } from './routes/$citySlug/community/learn/$slug/$lesson'
@@ -123,6 +130,11 @@ const CitySlugRouteRoute = CitySlugRouteRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OfflineRoute = OfflineRouteImport.update({
@@ -190,6 +202,12 @@ const CitySlugVibeCodersRoute = CitySlugVibeCodersRouteImport.update({
   path: '/vibe-coders',
   getParentRoute: () => CitySlugRouteRoute,
 } as any)
+const DotwellKnownOauthAuthorizationServerRoute =
+  DotwellKnownOauthAuthorizationServerRouteImport.update({
+    id: '/.well-known/oauth-authorization-server',
+    path: '/.well-known/oauth-authorization-server',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
@@ -214,6 +232,11 @@ const LoginSsoCallbackRoute = LoginSsoCallbackRouteImport.update({
   id: '/sso-callback',
   path: '/sso-callback',
   getParentRoute: () => LoginRoute,
+} as any)
+const OauthRegisterRoute = OauthRegisterRouteImport.update({
+  id: '/oauth/register',
+  path: '/oauth/register',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const SignupSsoCallbackRoute = SignupSsoCallbackRouteImport.update({
   id: '/sso-callback',
@@ -418,9 +441,25 @@ const CitySlugWebinarsClaudeCodeWebinarAustraliaRoute =
     path: '/webinars/claude-code-webinar-australia',
     getParentRoute: () => CitySlugRouteRoute,
   } as any)
+const DotwellKnownOauthProtectedResourceMcpRoute =
+  DotwellKnownOauthProtectedResourceMcpRouteImport.update({
+    id: '/.well-known/oauth-protected-resource/mcp',
+    path: '/.well-known/oauth-protected-resource/mcp',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiFilesSplatRoute = ApiFilesSplatRouteImport.update({
   id: '/api/files/$',
   path: '/api/files/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUploadMcpRoute = ApiUploadMcpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => ApiUploadRoute,
+} as any)
+const ApiWebhooksResendRoute = ApiWebhooksResendRouteImport.update({
+  id: '/api/webhooks/resend',
+  path: '/api/webhooks/resend',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CitySlugAdminCoursesIndexRoute =
@@ -628,6 +667,12 @@ const CitySlugEventsClaudeImpactLabMelbourneSponsorRoute =
     path: '/events/claude-impact-lab-melbourne/sponsor',
     getParentRoute: () => CitySlugRouteRoute,
   } as any)
+const ApiEmailUnsubscribeTokenRoute =
+  ApiEmailUnsubscribeTokenRouteImport.update({
+    id: '/api/email/unsubscribe/$token',
+    path: '/api/email/unsubscribe/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CitySlugAdminCoursesIdEditRoute =
   CitySlugAdminCoursesIdEditRouteImport.update({
     id: '/courses/$id/edit',
@@ -651,6 +696,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$citySlug': typeof CitySlugRouteRouteWithChildren
   '/login': typeof LoginRouteWithChildren
+  '/mcp': typeof McpRoute
   '/offline': typeof OfflineRoute
   '/pricing': typeof PricingRoute
   '/remotion': typeof RemotionRoute
@@ -663,10 +709,12 @@ export interface FileRoutesByFullPath {
   '/$citySlug/merch': typeof CitySlugMerchRoute
   '/$citySlug/professionals': typeof CitySlugProfessionalsRoute
   '/$citySlug/vibe-coders': typeof CitySlugVibeCodersRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/api/health': typeof ApiHealthRoute
   '/api/mcp': typeof ApiMcpRoute
-  '/api/upload': typeof ApiUploadRoute
+  '/api/upload': typeof ApiUploadRouteWithChildren
   '/login/sso-callback': typeof LoginSsoCallbackRoute
+  '/oauth/register': typeof OauthRegisterRoute
   '/signup/sso-callback': typeof SignupSsoCallbackRoute
   '/$citySlug/': typeof CitySlugIndexRoute
   '/admin/': typeof AdminIndexRoute
@@ -699,7 +747,10 @@ export interface FileRoutesByFullPath {
   '/$citySlug/p/$': typeof CitySlugPSplatRoute
   '/$citySlug/resources/$slug': typeof CitySlugResourcesSlugRoute
   '/$citySlug/webinars/claude-code-webinar-australia': typeof CitySlugWebinarsClaudeCodeWebinarAustraliaRoute
+  '/.well-known/oauth-protected-resource/mcp': typeof DotwellKnownOauthProtectedResourceMcpRoute
   '/api/files/$': typeof ApiFilesSplatRoute
+  '/api/upload/mcp': typeof ApiUploadMcpRoute
+  '/api/webhooks/resend': typeof ApiWebhooksResendRoute
   '/$citySlug/admin/': typeof CitySlugAdminIndexRoute
   '/$citySlug/community/': typeof CitySlugCommunityIndexRoute
   '/$citySlug/courses/': typeof CitySlugCoursesIndexRoute
@@ -734,6 +785,7 @@ export interface FileRoutesByFullPath {
   '/$citySlug/community/settings/profile': typeof CitySlugCommunitySettingsProfileRoute
   '/$citySlug/events/$slug/resources': typeof CitySlugEventsSlugResourcesRoute
   '/$citySlug/events/claude-impact-lab-melbourne/sponsor': typeof CitySlugEventsClaudeImpactLabMelbourneSponsorRoute
+  '/api/email/unsubscribe/$token': typeof ApiEmailUnsubscribeTokenRoute
   '/$citySlug/admin/courses/': typeof CitySlugAdminCoursesIndexRoute
   '/$citySlug/admin/email/': typeof CitySlugAdminEmailIndexRoute
   '/$citySlug/admin/events/': typeof CitySlugAdminEventsIndexRoute
@@ -752,6 +804,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRouteWithChildren
+  '/mcp': typeof McpRoute
   '/offline': typeof OfflineRoute
   '/pricing': typeof PricingRoute
   '/remotion': typeof RemotionRoute
@@ -762,10 +815,12 @@ export interface FileRoutesByTo {
   '/$citySlug/merch': typeof CitySlugMerchRoute
   '/$citySlug/professionals': typeof CitySlugProfessionalsRoute
   '/$citySlug/vibe-coders': typeof CitySlugVibeCodersRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/api/health': typeof ApiHealthRoute
   '/api/mcp': typeof ApiMcpRoute
-  '/api/upload': typeof ApiUploadRoute
+  '/api/upload': typeof ApiUploadRouteWithChildren
   '/login/sso-callback': typeof LoginSsoCallbackRoute
+  '/oauth/register': typeof OauthRegisterRoute
   '/signup/sso-callback': typeof SignupSsoCallbackRoute
   '/$citySlug': typeof CitySlugIndexRoute
   '/admin': typeof AdminIndexRoute
@@ -798,7 +853,10 @@ export interface FileRoutesByTo {
   '/$citySlug/p/$': typeof CitySlugPSplatRoute
   '/$citySlug/resources/$slug': typeof CitySlugResourcesSlugRoute
   '/$citySlug/webinars/claude-code-webinar-australia': typeof CitySlugWebinarsClaudeCodeWebinarAustraliaRoute
+  '/.well-known/oauth-protected-resource/mcp': typeof DotwellKnownOauthProtectedResourceMcpRoute
   '/api/files/$': typeof ApiFilesSplatRoute
+  '/api/upload/mcp': typeof ApiUploadMcpRoute
+  '/api/webhooks/resend': typeof ApiWebhooksResendRoute
   '/$citySlug/admin': typeof CitySlugAdminIndexRoute
   '/$citySlug/community': typeof CitySlugCommunityIndexRoute
   '/$citySlug/courses': typeof CitySlugCoursesIndexRoute
@@ -833,6 +891,7 @@ export interface FileRoutesByTo {
   '/$citySlug/community/settings/profile': typeof CitySlugCommunitySettingsProfileRoute
   '/$citySlug/events/$slug/resources': typeof CitySlugEventsSlugResourcesRoute
   '/$citySlug/events/claude-impact-lab-melbourne/sponsor': typeof CitySlugEventsClaudeImpactLabMelbourneSponsorRoute
+  '/api/email/unsubscribe/$token': typeof ApiEmailUnsubscribeTokenRoute
   '/$citySlug/admin/courses': typeof CitySlugAdminCoursesIndexRoute
   '/$citySlug/admin/email': typeof CitySlugAdminEmailIndexRoute
   '/$citySlug/admin/events': typeof CitySlugAdminEventsIndexRoute
@@ -853,6 +912,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$citySlug': typeof CitySlugRouteRouteWithChildren
   '/login': typeof LoginRouteWithChildren
+  '/mcp': typeof McpRoute
   '/offline': typeof OfflineRoute
   '/pricing': typeof PricingRoute
   '/remotion': typeof RemotionRoute
@@ -865,10 +925,12 @@ export interface FileRoutesById {
   '/$citySlug/merch': typeof CitySlugMerchRoute
   '/$citySlug/professionals': typeof CitySlugProfessionalsRoute
   '/$citySlug/vibe-coders': typeof CitySlugVibeCodersRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/api/health': typeof ApiHealthRoute
   '/api/mcp': typeof ApiMcpRoute
-  '/api/upload': typeof ApiUploadRoute
+  '/api/upload': typeof ApiUploadRouteWithChildren
   '/login/sso-callback': typeof LoginSsoCallbackRoute
+  '/oauth/register': typeof OauthRegisterRoute
   '/signup/sso-callback': typeof SignupSsoCallbackRoute
   '/$citySlug/': typeof CitySlugIndexRoute
   '/admin/': typeof AdminIndexRoute
@@ -901,7 +963,10 @@ export interface FileRoutesById {
   '/$citySlug/p/$': typeof CitySlugPSplatRoute
   '/$citySlug/resources/$slug': typeof CitySlugResourcesSlugRoute
   '/$citySlug/webinars/claude-code-webinar-australia': typeof CitySlugWebinarsClaudeCodeWebinarAustraliaRoute
+  '/.well-known/oauth-protected-resource/mcp': typeof DotwellKnownOauthProtectedResourceMcpRoute
   '/api/files/$': typeof ApiFilesSplatRoute
+  '/api/upload/mcp': typeof ApiUploadMcpRoute
+  '/api/webhooks/resend': typeof ApiWebhooksResendRoute
   '/$citySlug/admin/': typeof CitySlugAdminIndexRoute
   '/$citySlug/community/': typeof CitySlugCommunityIndexRoute
   '/$citySlug/courses/': typeof CitySlugCoursesIndexRoute
@@ -936,6 +1001,7 @@ export interface FileRoutesById {
   '/$citySlug/community/settings/profile': typeof CitySlugCommunitySettingsProfileRoute
   '/$citySlug/events/$slug/resources': typeof CitySlugEventsSlugResourcesRoute
   '/$citySlug/events/claude-impact-lab-melbourne/sponsor': typeof CitySlugEventsClaudeImpactLabMelbourneSponsorRoute
+  '/api/email/unsubscribe/$token': typeof ApiEmailUnsubscribeTokenRoute
   '/$citySlug/admin/courses/': typeof CitySlugAdminCoursesIndexRoute
   '/$citySlug/admin/email/': typeof CitySlugAdminEmailIndexRoute
   '/$citySlug/admin/events/': typeof CitySlugAdminEventsIndexRoute
@@ -957,6 +1023,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$citySlug'
     | '/login'
+    | '/mcp'
     | '/offline'
     | '/pricing'
     | '/remotion'
@@ -969,10 +1036,12 @@ export interface FileRouteTypes {
     | '/$citySlug/merch'
     | '/$citySlug/professionals'
     | '/$citySlug/vibe-coders'
+    | '/.well-known/oauth-authorization-server'
     | '/api/health'
     | '/api/mcp'
     | '/api/upload'
     | '/login/sso-callback'
+    | '/oauth/register'
     | '/signup/sso-callback'
     | '/$citySlug/'
     | '/admin/'
@@ -1005,7 +1074,10 @@ export interface FileRouteTypes {
     | '/$citySlug/p/$'
     | '/$citySlug/resources/$slug'
     | '/$citySlug/webinars/claude-code-webinar-australia'
+    | '/.well-known/oauth-protected-resource/mcp'
     | '/api/files/$'
+    | '/api/upload/mcp'
+    | '/api/webhooks/resend'
     | '/$citySlug/admin/'
     | '/$citySlug/community/'
     | '/$citySlug/courses/'
@@ -1040,6 +1112,7 @@ export interface FileRouteTypes {
     | '/$citySlug/community/settings/profile'
     | '/$citySlug/events/$slug/resources'
     | '/$citySlug/events/claude-impact-lab-melbourne/sponsor'
+    | '/api/email/unsubscribe/$token'
     | '/$citySlug/admin/courses/'
     | '/$citySlug/admin/email/'
     | '/$citySlug/admin/events/'
@@ -1058,6 +1131,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/mcp'
     | '/offline'
     | '/pricing'
     | '/remotion'
@@ -1068,10 +1142,12 @@ export interface FileRouteTypes {
     | '/$citySlug/merch'
     | '/$citySlug/professionals'
     | '/$citySlug/vibe-coders'
+    | '/.well-known/oauth-authorization-server'
     | '/api/health'
     | '/api/mcp'
     | '/api/upload'
     | '/login/sso-callback'
+    | '/oauth/register'
     | '/signup/sso-callback'
     | '/$citySlug'
     | '/admin'
@@ -1104,7 +1180,10 @@ export interface FileRouteTypes {
     | '/$citySlug/p/$'
     | '/$citySlug/resources/$slug'
     | '/$citySlug/webinars/claude-code-webinar-australia'
+    | '/.well-known/oauth-protected-resource/mcp'
     | '/api/files/$'
+    | '/api/upload/mcp'
+    | '/api/webhooks/resend'
     | '/$citySlug/admin'
     | '/$citySlug/community'
     | '/$citySlug/courses'
@@ -1139,6 +1218,7 @@ export interface FileRouteTypes {
     | '/$citySlug/community/settings/profile'
     | '/$citySlug/events/$slug/resources'
     | '/$citySlug/events/claude-impact-lab-melbourne/sponsor'
+    | '/api/email/unsubscribe/$token'
     | '/$citySlug/admin/courses'
     | '/$citySlug/admin/email'
     | '/$citySlug/admin/events'
@@ -1158,6 +1238,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$citySlug'
     | '/login'
+    | '/mcp'
     | '/offline'
     | '/pricing'
     | '/remotion'
@@ -1170,10 +1251,12 @@ export interface FileRouteTypes {
     | '/$citySlug/merch'
     | '/$citySlug/professionals'
     | '/$citySlug/vibe-coders'
+    | '/.well-known/oauth-authorization-server'
     | '/api/health'
     | '/api/mcp'
     | '/api/upload'
     | '/login/sso-callback'
+    | '/oauth/register'
     | '/signup/sso-callback'
     | '/$citySlug/'
     | '/admin/'
@@ -1206,7 +1289,10 @@ export interface FileRouteTypes {
     | '/$citySlug/p/$'
     | '/$citySlug/resources/$slug'
     | '/$citySlug/webinars/claude-code-webinar-australia'
+    | '/.well-known/oauth-protected-resource/mcp'
     | '/api/files/$'
+    | '/api/upload/mcp'
+    | '/api/webhooks/resend'
     | '/$citySlug/admin/'
     | '/$citySlug/community/'
     | '/$citySlug/courses/'
@@ -1241,6 +1327,7 @@ export interface FileRouteTypes {
     | '/$citySlug/community/settings/profile'
     | '/$citySlug/events/$slug/resources'
     | '/$citySlug/events/claude-impact-lab-melbourne/sponsor'
+    | '/api/email/unsubscribe/$token'
     | '/$citySlug/admin/courses/'
     | '/$citySlug/admin/email/'
     | '/$citySlug/admin/events/'
@@ -1261,16 +1348,22 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CitySlugRouteRoute: typeof CitySlugRouteRouteWithChildren
   LoginRoute: typeof LoginRouteWithChildren
+  McpRoute: typeof McpRoute
   OfflineRoute: typeof OfflineRoute
   PricingRoute: typeof PricingRoute
   RemotionRoute: typeof RemotionRoute
   SignupRoute: typeof SignupRouteWithChildren
   SitemapRoute: typeof SitemapRoute
+  DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiMcpRoute: typeof ApiMcpRoute
-  ApiUploadRoute: typeof ApiUploadRoute
+  ApiUploadRoute: typeof ApiUploadRouteWithChildren
+  OauthRegisterRoute: typeof OauthRegisterRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  DotwellKnownOauthProtectedResourceMcpRoute: typeof DotwellKnownOauthProtectedResourceMcpRoute
   ApiFilesSplatRoute: typeof ApiFilesSplatRoute
+  ApiWebhooksResendRoute: typeof ApiWebhooksResendRoute
+  ApiEmailUnsubscribeTokenRoute: typeof ApiEmailUnsubscribeTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1294,6 +1387,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/offline': {
@@ -1387,6 +1487,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CitySlugVibeCodersRouteImport
       parentRoute: typeof CitySlugRouteRoute
     }
+    '/.well-known/oauth-authorization-server': {
+      id: '/.well-known/oauth-authorization-server'
+      path: '/.well-known/oauth-authorization-server'
+      fullPath: '/.well-known/oauth-authorization-server'
+      preLoaderRoute: typeof DotwellKnownOauthAuthorizationServerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/': {
       id: '/admin/'
       path: '/admin'
@@ -1421,6 +1528,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/login/sso-callback'
       preLoaderRoute: typeof LoginSsoCallbackRouteImport
       parentRoute: typeof LoginRoute
+    }
+    '/oauth/register': {
+      id: '/oauth/register'
+      path: '/oauth/register'
+      fullPath: '/oauth/register'
+      preLoaderRoute: typeof OauthRegisterRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/signup/sso-callback': {
       id: '/signup/sso-callback'
@@ -1695,11 +1809,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CitySlugWebinarsClaudeCodeWebinarAustraliaRouteImport
       parentRoute: typeof CitySlugRouteRoute
     }
+    '/.well-known/oauth-protected-resource/mcp': {
+      id: '/.well-known/oauth-protected-resource/mcp'
+      path: '/.well-known/oauth-protected-resource/mcp'
+      fullPath: '/.well-known/oauth-protected-resource/mcp'
+      preLoaderRoute: typeof DotwellKnownOauthProtectedResourceMcpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/files/$': {
       id: '/api/files/$'
       path: '/api/files/$'
       fullPath: '/api/files/$'
       preLoaderRoute: typeof ApiFilesSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/upload/mcp': {
+      id: '/api/upload/mcp'
+      path: '/mcp'
+      fullPath: '/api/upload/mcp'
+      preLoaderRoute: typeof ApiUploadMcpRouteImport
+      parentRoute: typeof ApiUploadRoute
+    }
+    '/api/webhooks/resend': {
+      id: '/api/webhooks/resend'
+      path: '/api/webhooks/resend'
+      fullPath: '/api/webhooks/resend'
+      preLoaderRoute: typeof ApiWebhooksResendRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$citySlug/admin/courses/': {
@@ -1953,6 +2088,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/$citySlug/events/claude-impact-lab-melbourne/sponsor'
       preLoaderRoute: typeof CitySlugEventsClaudeImpactLabMelbourneSponsorRouteImport
       parentRoute: typeof CitySlugRouteRoute
+    }
+    '/api/email/unsubscribe/$token': {
+      id: '/api/email/unsubscribe/$token'
+      path: '/api/email/unsubscribe/$token'
+      fullPath: '/api/email/unsubscribe/$token'
+      preLoaderRoute: typeof ApiEmailUnsubscribeTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/$citySlug/admin/courses/$id/edit': {
       id: '/$citySlug/admin/courses/$id/edit'
@@ -2208,20 +2350,40 @@ const SignupRouteChildren: SignupRouteChildren = {
 const SignupRouteWithChildren =
   SignupRoute._addFileChildren(SignupRouteChildren)
 
+interface ApiUploadRouteChildren {
+  ApiUploadMcpRoute: typeof ApiUploadMcpRoute
+}
+
+const ApiUploadRouteChildren: ApiUploadRouteChildren = {
+  ApiUploadMcpRoute: ApiUploadMcpRoute,
+}
+
+const ApiUploadRouteWithChildren = ApiUploadRoute._addFileChildren(
+  ApiUploadRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CitySlugRouteRoute: CitySlugRouteRouteWithChildren,
   LoginRoute: LoginRouteWithChildren,
+  McpRoute: McpRoute,
   OfflineRoute: OfflineRoute,
   PricingRoute: PricingRoute,
   RemotionRoute: RemotionRoute,
   SignupRoute: SignupRouteWithChildren,
   SitemapRoute: SitemapRoute,
+  DotwellKnownOauthAuthorizationServerRoute:
+    DotwellKnownOauthAuthorizationServerRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiMcpRoute: ApiMcpRoute,
-  ApiUploadRoute: ApiUploadRoute,
+  ApiUploadRoute: ApiUploadRouteWithChildren,
+  OauthRegisterRoute: OauthRegisterRoute,
   AdminIndexRoute: AdminIndexRoute,
+  DotwellKnownOauthProtectedResourceMcpRoute:
+    DotwellKnownOauthProtectedResourceMcpRoute,
   ApiFilesSplatRoute: ApiFilesSplatRoute,
+  ApiWebhooksResendRoute: ApiWebhooksResendRoute,
+  ApiEmailUnsubscribeTokenRoute: ApiEmailUnsubscribeTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

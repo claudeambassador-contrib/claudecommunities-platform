@@ -1,7 +1,8 @@
 # TanStack Start conversion status
 
-Greenfield app lives in [`apps/web`](../apps/web). The root Next.js app remains
-the production ship path until [`start-cutover.md`](./start-cutover.md).
+Greenfield app lives in [`apps/web`](../apps/web). There is no production traffic. Staging is the only Cloudflare target.
+Cutover means Start becomes that staging Worker, then the root Next/Prisma
+tree is deleted — see [`start-cutover.md`](./start-cutover.md).
 
 | Phase | Status | Notes |
 |---|---|---|
@@ -9,9 +10,9 @@ the production ship path until [`start-cutover.md`](./start-cutover.md).
 | 1 Data plane | Done | Flattened registry/tenant SQL, TenantStore, iso tests |
 | 2 Kernel | Done | Session sync, permissions, R2, maintenance, region |
 | 3 Domains | Scaffolded | Module services for events, community, courses, talks, email, social, slides, pages, impact-lab, MCP |
-| 4 Worker parity | Scaffolded | Workflows exported from `server.ts`, cron drain, upload/files, staging wrangler env. `PublishPostWorkflow` claims + publishes via Zernio when `ZERNIO_API_KEY` is set (no stub external ids). |
-| 5 Routes | In progress | Public city chrome works without Clerk keys. Seeded CMS home, merch embed, Remotion player, membership catalog, event agenda, resources list, email campaign builder, social composer, and slide canvas are on Start. Visual slide export / Next EmailBuilder / native LinkedIn connector remain thinner than Next. |
-| 6 Cutover | Prepared | Runbook + ETL stub; **Next not deleted** |
+| 4 Worker parity | In progress | Workflows exported from `server.ts`. Cron drains social posts and due email campaigns. `CampaignSendWorkflow` calls `sendCampaign` + Resend. MCP Streamable HTTP at `/mcp`. Staging deploy still owed. |
+| 5 Routes | In progress | Public city chrome works without Clerk keys. Seeded CMS home, merch embed, Remotion player, membership catalog, event agenda, resources list, email campaign builder + Send, social composer, and slide canvas are on Start. Visual slide export / Next EmailBuilder / native LinkedIn connector remain thinner than Next. |
+| 6 Cutover | Prepared | Clean-slate Start D1s (no ETL). **Next not deleted** until staging smoke on Start. |
 
 ## Start routes (vs Next)
 
@@ -23,7 +24,7 @@ Wired in `apps/web/src/routes` via `createFileRoute` + `createServerFn` + `loadC
 - **Impact Lab:** public, portal, admin, Melbourne event + sponsor
 - **City admin:** events, posts, users, roles, badges, tiers, cities, industries, courses, speakers, pages/home CMS, email (list + campaign builder), social (composer + schedule + publish), tools (QR, attendance, slide canvas), invite, import, settings, analytics
 
-Still thinner than Next: full slide-generator canvas/export, Next EmailBuilder block designer, LinkedIn-native social connector, Clerk-backed e2e user (needs keys).
+Still thinner than Next: full slide-generator canvas/export, Next EmailBuilder block designer, LinkedIn-native social connector.
 
 ## Local smoke
 

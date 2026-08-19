@@ -30,6 +30,7 @@ export const emailSends = sqliteTable("email_sends", {
     onDelete: "set null",
   }),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  externalId: text("external_id"),
   id: text("id").primaryKey(),
   orgId: text("org_id").notNull(),
   status: text("status").notNull().default("queued"),

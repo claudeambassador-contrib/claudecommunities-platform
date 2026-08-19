@@ -1,7 +1,12 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { type FormEvent, useCallback, useMemo, useState } from "react";
-import { getCampaign, updateCampaign } from "@/modules/email/services/emailCampaignsService";
+import {
+  campaignWorkflowFromEnv,
+  enqueueCampaignSend,
+  getCampaign,
+  updateCampaign,
+} from "@/modules/email/services/emailCampaignsService";
 import type { CampaignDetail } from "@/modules/email/types";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { Can } from "@/shared/ui/can";
@@ -49,6 +54,26 @@ const save = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+const sendNow = createServerFn({ method: "POST" })
+  .validator((d: { citySlug: string; id: string }) => d)
+  .handler(async ({ data }) => {
+    const page = await loadCityPage(data.citySlug);
+    if (!(page.ok && page.actor)) {
+      return { error: "unauthenticated", ok: false as const };
+    }
+    const { workerEnv } = await import("@/shared/db/env");
+    const result = await enqueueCampaignSend(
+      page.store,
+      page.actor,
+      data.id,
+      campaignWorkflowFromEnv(workerEnv()),
+    );
+    if (!result.ok) {
+      return { error: result.error.message ?? result.error.code, ok: false as const };
+    }
+    return { ok: true as const, workflowId: result.workflowId };
+  });
+
 export const Route = createFileRoute("/$citySlug/admin/email/$id")({
   loader: ({ params }) => load({ data: { citySlug: params.citySlug, id: params.id } }),
   component: Page,
@@ -77,15 +102,10 @@ function Page() {
   return <CampaignBuilder campaign={data.campaign} citySlug={citySlug} />;
 }
 
-function CampaignBuilder({
-  campaign,
-  citySlug,
-}: {
-  campaign: CampaignDetail;
-  citySlug: string;
-}) {
+function CampaignBuilder({ campaign, citySlug }: { campaign: CampaignDetail; citySlug: string }) {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
   const [preview, setPreview] = useState(campaign.bodyHtml ?? "");
   const locked = campaign.status !== "draft" && campaign.status !== "scheduled";
 
@@ -116,6 +136,19 @@ function CampaignBuilder({
     },
     [campaign.id, citySlug, router],
   );
+
+  const handleSend = useCallback(async () => {
+    setSending(true);
+    setStatus(null);
+    const result = await sendNow({ data: { citySlug, id: campaign.id } });
+    setSending(false);
+    if (result.ok) {
+      setStatus("Send queued.");
+      await router.invalidate();
+      return;
+    }
+    setStatus(result.error);
+  }, [campaign.id, citySlug, router]);
 
   const previewDoc = useMemo(
     () => preview || "<p class='muted'>Preview appears here.</p>",
@@ -155,16 +188,23 @@ function CampaignBuilder({
               style={{ width: "100%" }}
             />
             {status ? <p className="muted">{status}</p> : null}
-            <button className="btn btn-primary" type="submit">
-              Save
-            </button>
+            <div className="row">
+              <button className="btn btn-primary" type="submit">
+                Save
+              </button>
+              <Can permission="email.send">
+                <button className="btn" disabled={sending} onClick={handleSend} type="button">
+                  {sending ? "Sending…" : "Send"}
+                </button>
+              </Can>
+            </div>
           </form>
         </Can>
       )}
       <div className="card stack">
         <strong>Preview</strong>
         <div
-          // Preview is admin-authored HTML for this city's campaigns.
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: admin-authored campaign preview
           dangerouslySetInnerHTML={{ __html: previewDoc }}
         />
       </div>

@@ -150,19 +150,29 @@ export async function updateCampaign(
   return getCampaign(store, actor, id);
 }
 
-export async function enqueueCampaignSend(
+export function campaignWorkflowFromEnv(
+  env: Record<string, unknown>,
+): CampaignWorkflow | undefined {
+  const binding = env.CAMPAIGN_SEND as
+    | { create?: (opts: { params: unknown }) => Promise<{ id?: string }> }
+    | undefined;
+  const create = binding?.create;
+  if (!create) {
+    return undefined;
+  }
+  return {
+    async start(input) {
+      const instance = await create({ params: input });
+      return { workflowId: instance.id ?? "campaign-send" };
+    },
+  };
+}
+
+export async function startCampaignSend(
   store: TenantStore,
-  actor: Actor,
   campaignId: string,
-  workflow?: CampaignWorkflow,
+  workflow: CampaignWorkflow,
 ): Promise<Result<{ workflowId: string }>> {
-  const perm = ensurePermission(actor, "email.send");
-  if (!perm.ok) {
-    return perm;
-  }
-  if (!workflow) {
-    return err("unavailable", 503, "CAMPAIGN_SEND workflow binding is not configured");
-  }
   const { emailCampaigns } = store.tables;
   const rows = await store.db
     .select()
@@ -181,11 +191,31 @@ export async function enqueueCampaignSend(
     .set({ status: "sending", updatedAt: new Date() })
     .where(and(eq(emailCampaigns.orgId, store.orgId), eq(emailCampaigns.id, campaignId)));
   try {
-    const started = await workflow.start({ campaignId });
+    const started = await workflow.start({
+      campaignId,
+      d1Binding: store.binding,
+      orgId: store.orgId,
+    });
     return ok({ workflowId: started.workflowId });
   } catch (error) {
     return err("workflow_failed", 500, error instanceof Error ? error.message : "Failed to start");
   }
+}
+
+export async function enqueueCampaignSend(
+  store: TenantStore,
+  actor: Actor,
+  campaignId: string,
+  workflow?: CampaignWorkflow,
+): Promise<Result<{ workflowId: string }>> {
+  const perm = ensurePermission(actor, "email.send");
+  if (!perm.ok) {
+    return perm;
+  }
+  if (!workflow) {
+    return err("unavailable", 503, "CAMPAIGN_SEND workflow binding is not configured");
+  }
+  return await startCampaignSend(store, campaignId, workflow);
 }
 
 export async function listDueScheduled(

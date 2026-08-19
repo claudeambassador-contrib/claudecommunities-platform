@@ -1,58 +1,51 @@
 # TanStack Start cutover runbook
 
-This document is **Phase 5**. Do not execute production cutover until
-`apps/web` has staging feature parity (Phases 0–4) and stakeholders sign off.
+There is **no production traffic**. Staging is the only Cloudflare target.
+Once Start smokes on staging, delete the root Next/Prisma/OpenNext tree.
+Do **not** ETL from the Next shared D1 — Start D1s are clean-slate.
 
 ## Preconditions
 
-- [ ] Early staging (`claudecommunities-start-staging`) has REGISTRY + city D1s
-- [ ] Isolation tests green (`bun run test:iso` in `apps/web`)
-- [ ] Clerk keys configured for the Start Worker
-- [ ] R2 `STORAGE`, Browser Rendering, Workflows, cron verified on staging
-- [ ] Decision on ETL: migrate historical events/members **or** clean-slate launch
+- [x] Isolation tests green (`bun run test:iso` in `apps/web`)
+- [x] Campaign send writes `email_sends` via Resend + `CAMPAIGN_SEND` workflow
+- [x] Cron drains due social posts **and** scheduled campaigns
+- [x] MCP Streamable HTTP at `/mcp` + `/api/upload/mcp`
+- [ ] Staging Worker (`deploy:staging`) has remote REGISTRY + city D1s
+- [ ] Clerk, Resend, Zernio, R2 secrets on the Start Worker
+- [ ] Smoke: login, send one campaign, MCP `health`, upload, social schedule
 
-## Optional ETL (shared D1 → per-city D1)
-
-The legacy app uses one shared D1 with `tenantId` columns. Script stub:
+## Staging checklist
 
 ```bash
-bun apps/web/scripts/etl-from-legacy.mjs --tenant sydney --legacy-db <id>
+cd apps/web
+bun run gen:wrangler
+# wrangler d1 migrations apply REGISTRY --remote --env staging
+# wrangler d1 migrations apply TENANT_SYDNEY --remote --env staging
+# wrangler secret put CLERK_SECRET_KEY --env staging
+# wrangler secret put RESEND_API_KEY --env staging
+# wrangler secret put ZERNIO_API_KEY --env staging
+bun run deploy:staging
 ```
 
-Export rows where `tenantId = 'sydney'` (or the legacy slug) into the city D1.
-Registry users/memberships are rebuilt from Clerk + `UserTenant`.
+CLI against Start:
 
-## Dual-run checklist
-
-1. Deploy Start Worker beside Next (separate worker name — already the case).
-2. Point a staging hostname at Start; keep production on Next.
-3. Verify: auth, city home, events, community, admin, MCP, upload, cron drain.
-4. Freeze flattened schema — additive migrations only after this point.
-
-## Production DNS cutover (per region)
-
-1. `bun run deploy:staging` smoke OK.
-2. Create production REGISTRY + city D1s; apply `drizzle/registry` + `drizzle/tenant`.
-3. Put secrets: Clerk, maintenance, LinkedIn/Zernio, Resend/Send16, render signing.
-4. Switch DNS / Workers routes from OpenNext worker → Start worker.
-5. Monitor `wrangler tail` for 30–60 minutes.
+```bash
+cd cli
+CLAUDECOMMUNITY_CLI_URL=http://localhost:3001 bun src/index.ts login
+# or --server https://<staging-host>
+```
 
 ## Retire Next / Prisma / OpenNext
 
-Only after production is stable on Start:
+Only after the staging smoke above:
 
 ```bash
-# Remove after cutover is confirmed (destructive):
+# Destructive — do not run until Start is the staging Worker:
 # - prisma/, migrations/ (legacy), open-next.config.ts
 # - @opennextjs/cloudflare, next, @prisma/*, @clerk/nextjs
 # - scripts/inject-workflow-exports.mjs, patches/opennext*
 # - src/app, src/middleware.ts (Next), eslint.config.mjs Next lockdown
-# - Move Ultracite biome config to repo root; apps/web becomes the app
+# - Point root package.json dev/test/check at apps/web
 ```
 
-Until then, **keep the root Next app shipping**.
-
-## Rollback
-
-Re-point DNS/routes to the previous OpenNext worker. City D1s and REGISTRY are
-independent — rolling back the Worker does not require dropping new D1s.
+Keep `cli/` and `mcp-ui/`; they only need the Start origin.

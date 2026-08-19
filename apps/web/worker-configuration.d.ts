@@ -15,4 +15,7 @@ interface Env {
   VITE_CLERK_PUBLISHABLE_KEY?: string;
   CLERK_PUBLISHABLE_KEY?: string;
   CLERK_SECRET_KEY?: string;
+  RESEND_API_KEY?: string;
+  RESEND_WEBHOOK_SECRET?: string;
+  RENDER_SIGNING_SECRET?: string;
 }

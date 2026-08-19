@@ -44,10 +44,10 @@ describe("emailCampaignsService", () => {
       return;
     }
 
-    const started: string[] = [];
+    const started: Array<{ campaignId: string; d1Binding: string; orgId: string }> = [];
     const queued = await enqueueCampaignSend(store, adminActor(), created.campaign.id, {
-      start: ({ campaignId }) => {
-        started.push(campaignId);
+      start: (input) => {
+        started.push(input);
         return Promise.resolve({ workflowId: "wf_1" });
       },
     });
@@ -56,7 +56,9 @@ describe("emailCampaignsService", () => {
       return;
     }
     expect(queued.workflowId).toBe("wf_1");
-    expect(started).toEqual([created.campaign.id]);
+    expect(started).toEqual([
+      { campaignId: created.campaign.id, d1Binding: store.binding, orgId: store.orgId },
+    ]);
 
     const listed = await listCampaigns(store, adminActor());
     expect(listed.ok).toBe(true);
