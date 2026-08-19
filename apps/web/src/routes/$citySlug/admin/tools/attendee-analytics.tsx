@@ -1,35 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listEvents } from "@/modules/events/services/eventsService";
-import { ensurePermission } from "@/shared/auth/actor";
-import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
 const loadAttendeeAnalytics = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, events: [], reason: "unauthenticated" };
-    }
-    const perm = ensurePermission(page.actor, "tools.use");
-    if (!perm.ok) {
-      return { allowed: false as const, events: [], reason: perm.error.code };
-    }
-    const listed = await listEvents(page.store, { includeInactive: true });
-    return {
-      allowed: true as const,
-      events: listed.ok
-        ? listed.events.map((event) => ({
-            id: event.id,
-            rsvpCount: event.rsvpCount,
-            startTime: event.startTime,
-            status: event.status,
-            title: event.title,
-          }))
-        : [],
-    };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, "tools.use", async (page) => {
+      const listed = await listEvents(page.store, { includeInactive: true });
+      return ok({
+        events: listed.ok
+          ? listed.events.map((event) => ({
+              id: event.id,
+              rsvpCount: event.rsvpCount,
+              startTime: event.startTime,
+              status: event.status,
+              title: event.title,
+            }))
+          : [],
+      });
+    }),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/tools/attendee-analytics")({
   loader: ({ params }) => loadAttendeeAnalytics({ data: { citySlug: params.citySlug } }),

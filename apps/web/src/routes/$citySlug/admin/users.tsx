@@ -1,29 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listUsers } from "@/modules/identity/services/usersService";
-import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
 const loadUsers = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const result = await listUsers(page.registry, page.actor, page.tenant.orgId);
-    if (!result.ok) {
-      return { allowed: false as const, reason: result.error.code };
-    }
-    return {
-      allowed: true as const,
-      users: result.users.map((user) => ({
-        detail: [user.email, user.role].filter(Boolean).join(" · "),
-        id: user.id,
-        title: user.displayName || user.email,
-      })),
-    };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, null, async (page) => {
+      const result = await listUsers(page.registry, page.actor, page.tenant.orgId);
+      if (!result.ok) {
+        return result;
+      }
+      return ok({
+        users: result.users.map((user) => ({
+          detail: [user.email, user.role].filter(Boolean).join(" · "),
+          id: user.id,
+          title: user.displayName || user.email,
+        })),
+      });
+    }),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/users")({
   loader: ({ params }) => loadUsers({ data: { citySlug: params.citySlug } }),

@@ -3,22 +3,22 @@ import { createServerFn } from "@tanstack/react-start";
 import { type FormEvent, useCallback, useState } from "react";
 import { getIndustry, saveIndustry } from "@/modules/pages/services/industriesService";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
 const loadIndustry = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string; slug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, industry: null, reason: "unauthenticated" };
-    }
-    const found = await getIndustry(page.store, page.actor, data.slug);
-    if (!found.ok) {
-      return { allowed: false as const, industry: null, reason: found.error.code };
-    }
-    return { allowed: true as const, industry: found.industry };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, null, async (page) => {
+      const found = await getIndustry(page.store, page.actor, data.slug);
+      if (!found.ok) {
+        return found;
+      }
+      return ok({ industry: found.industry });
+    }),
+  );
 
 const submitIndustry = createServerFn({ method: "POST" })
   .validator((d: { body: string; citySlug: string; slug: string; title: string }) => d)
@@ -48,7 +48,7 @@ function IndustryDetailPage() {
   const { citySlug } = Route.useParams();
   const data = Route.useLoaderData();
 
-  if (!(data.allowed && data.industry)) {
+  if (!data.allowed) {
     return <DeniedCard reason={data.reason} title="Industry" />;
   }
 

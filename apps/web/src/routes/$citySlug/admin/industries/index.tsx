@@ -1,23 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listIndustries } from "@/modules/pages/services/industriesService";
-import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
 const loadIndustries = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, industries: [], reason: "unauthenticated" };
-    }
-    const listed = await listIndustries(page.store, page.actor);
-    if (!listed.ok) {
-      return { allowed: false as const, industries: [], reason: listed.error.code };
-    }
-    return { allowed: true as const, industries: listed.industries };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, null, async (page) => {
+      const listed = await listIndustries(page.store, page.actor);
+      if (!listed.ok) {
+        return listed;
+      }
+      return ok({ industries: listed.industries });
+    }),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/industries/")({
   loader: ({ params }) => loadIndustries({ data: { citySlug: params.citySlug } }),

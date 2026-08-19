@@ -8,6 +8,8 @@ import {
   putState,
 } from "@/modules/slides/services/slideGeneratorService";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 import { SlideCanvas } from "@/shared/ui/slide-canvas";
@@ -29,30 +31,27 @@ function parseJsonField(raw: string): { error: string; ok: false } | { ok: true;
 
 const loadSlideGenerator = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string; scope: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const presetsResult = await listPresets(page.store, page.actor);
-    if (!presetsResult.ok) {
-      return { allowed: false as const, reason: presetsResult.error.code };
-    }
-    const scope = data.scope.trim() || "global";
-    const stateResult = await getState(page.store, page.actor, scope);
-    return {
-      allowed: true as const,
-      presets: presetsResult.presets.map((preset) => ({
-        detail: new Date(preset.updatedAt).toLocaleString(),
-        id: preset.id,
-        title: preset.name,
-      })),
-      scope,
-      stateError: stateResult.ok ? null : (stateResult.error.message ?? stateResult.error.code),
-      stateJson: formatStateJson(stateResult.ok ? stateResult.state.data : null),
-      updatedAt: stateResult.ok ? stateResult.state.updatedAt : null,
-    };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, null, async (page) => {
+      const presetsResult = await listPresets(page.store, page.actor);
+      if (!presetsResult.ok) {
+        return presetsResult;
+      }
+      const scope = data.scope.trim() || "global";
+      const stateResult = await getState(page.store, page.actor, scope);
+      return ok({
+        presets: presetsResult.presets.map((preset) => ({
+          detail: new Date(preset.updatedAt).toLocaleString(),
+          id: preset.id,
+          title: preset.name,
+        })),
+        scope,
+        stateError: stateResult.ok ? null : (stateResult.error.message ?? stateResult.error.code),
+        stateJson: formatStateJson(stateResult.ok ? stateResult.state.data : null),
+        updatedAt: stateResult.ok ? stateResult.state.updatedAt : null,
+      });
+    }),
+  );
 
 const saveWorkingState = createServerFn({ method: "POST" })
   .validator((d: { citySlug: string; data: unknown; scope: string }) => d)

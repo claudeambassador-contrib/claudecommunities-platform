@@ -3,28 +3,23 @@ import { createServerFn } from "@tanstack/react-start";
 import { type FormEvent, useCallback, useState } from "react";
 import { createTier, listTiers } from "@/modules/tiers/services/tiersService";
 import type { TierSummary } from "@/modules/tiers/types";
-import { ensurePermission } from "@/shared/auth/actor";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
 const loadTiers = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated", tiers: [] as TierSummary[] };
-    }
-    const perm = ensurePermission(page.actor, "tiers.view");
-    if (!perm.ok) {
-      return { allowed: false as const, reason: perm.error.code, tiers: [] as TierSummary[] };
-    }
-    const listed = await listTiers(page.store, page.actor);
-    if (!listed.ok) {
-      return { allowed: false as const, reason: listed.error.code, tiers: [] as TierSummary[] };
-    }
-    return { allowed: true as const, tiers: listed.tiers };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, "tiers.view", async (page) => {
+      const listed = await listTiers(page.store, page.actor);
+      if (!listed.ok) {
+        return listed;
+      }
+      return ok({ tiers: listed.tiers });
+    }),
+  );
 
 const submitTier = createServerFn({ method: "POST" })
   .validator(

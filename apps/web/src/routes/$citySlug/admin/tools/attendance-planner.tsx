@@ -6,21 +6,13 @@ import { evaluateCandidates } from "@/modules/attendance/services/attendanceEval
 import type { Evaluation } from "@/modules/attendance/types";
 import { ensurePermission } from "@/shared/auth/actor";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
 const loadPlanner = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const perm = ensurePermission(page.actor, "tools.use");
-    if (!perm.ok) {
-      return { allowed: false as const, reason: perm.error.code };
-    }
-    return { allowed: true as const };
-  });
+  .handler(({ data }) => guarded(data.citySlug, "tools.use", () => Promise.resolve(ok({}))));
 
 const runPlanner = createServerFn({ method: "POST" })
   .validator((d: { candidates: string; citySlug: string; prompt: string }) => d)

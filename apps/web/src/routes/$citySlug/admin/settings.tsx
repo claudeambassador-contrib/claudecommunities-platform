@@ -1,30 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { ensurePermission } from "@/shared/auth/actor";
-import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 
 const loadSettings = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const perm = ensurePermission(page.actor, "tenant.settings");
-    if (!perm.ok) {
-      return { allowed: false as const, reason: perm.error.code };
-    }
-    return {
-      allowed: true as const,
-      tenant: {
-        name: page.tenant.name,
-        region: page.tenant.region,
-        slug: page.tenant.slug,
-        timezone: page.tenant.timezone,
-      },
-    };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, "tenant.settings", (page) =>
+      Promise.resolve(
+        ok({
+          tenant: {
+            name: page.tenant.name,
+            region: page.tenant.region,
+            slug: page.tenant.slug,
+            timezone: page.tenant.timezone,
+          },
+        }),
+      ),
+    ),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/settings")({
   loader: ({ params }) => loadSettings({ data: { citySlug: params.citySlug } }),

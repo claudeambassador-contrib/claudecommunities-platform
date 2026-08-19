@@ -3,27 +3,21 @@ import { createServerFn } from "@tanstack/react-start";
 import { type FormEvent, useCallback, useState } from "react";
 import { inviteMember, listInvites } from "@/modules/identity/services/usersService";
 import type { InviteRecord } from "@/modules/identity/types";
-import { ensurePermission } from "@/shared/auth/actor";
 import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
 const loadInvite = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, invites: [] as InviteRecord[], reason: "unauthenticated" };
-    }
-    const perm = ensurePermission(page.actor, "users.invite");
-    if (!perm.ok) {
-      return { allowed: false as const, invites: [] as InviteRecord[], reason: perm.error.code };
-    }
-    const listed = await listInvites(page.registry, page.actor, page.tenant.orgId);
-    return {
-      allowed: true as const,
-      invites: listed.ok ? listed.invites : [],
-    };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, "users.invite", async (page) => {
+      const listed = await listInvites(page.registry, page.actor, page.tenant.orgId);
+      return ok({
+        invites: listed.ok ? listed.invites : ([] as InviteRecord[]),
+      });
+    }),
+  );
 
 const submitInvite = createServerFn({ method: "POST" })
   .validator((d: { citySlug: string; displayName: string; email: string }) => d)

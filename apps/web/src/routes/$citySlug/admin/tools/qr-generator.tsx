@@ -1,24 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { type FormEvent, useCallback, useState } from "react";
-import { ensurePermission } from "@/shared/auth/actor";
-import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 import { RemoteImage } from "@/shared/ui/remote-image";
 
 const loadQr = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const perm = ensurePermission(page.actor, "tools.use");
-    if (!perm.ok) {
-      return { allowed: false as const, reason: perm.error.code };
-    }
-    return { allowed: true as const };
-  });
+  .handler(({ data }) => guarded(data.citySlug, "tools.use", () => Promise.resolve(ok({}))));
 
 export const Route = createFileRoute("/$citySlug/admin/tools/qr-generator")({
   loader: ({ params }) => loadQr({ data: { citySlug: params.citySlug } }),
