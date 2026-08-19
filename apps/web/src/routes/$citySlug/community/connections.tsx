@@ -47,9 +47,7 @@ const load = createServerFn({ method: "GET" })
   });
 
 const respond = createServerFn({ method: "POST" })
-  .validator(
-    (d: { citySlug: string; connectionId: string; status: "accepted" | "rejected" }) => d,
-  )
+  .validator((d: { citySlug: string; connectionId: string; status: "accepted" | "rejected" }) => d)
   .handler(async ({ data }) => {
     const page = await requireCityActor(data.citySlug);
     if (!page.ok) {

@@ -404,13 +404,15 @@ export async function toggleReaction(
   emoji: string,
 ): Promise<boolean> {
   const target = store.tables[table];
+  const ownerColumn =
+    table === "reactions" ? store.tables.reactions.postId : store.tables.commentReactions.commentId;
   const rows = await store.db
     .select()
     .from(target)
     .where(
       and(
         eq(target.orgId, store.orgId),
-        eq(target[ownerKey], ownerId),
+        eq(ownerColumn, ownerId),
         eq(target.userId, userId),
         eq(target.emoji, emoji),
       ),
@@ -437,15 +439,17 @@ export async function toggleReaction(
 export async function listReactions(
   store: TenantStore,
   table: "reactions" | "commentReactions",
-  ownerKey: "postId" | "commentId",
+  _ownerKey: "postId" | "commentId",
   ownerId: string,
   viewerId: string | null,
 ): Promise<ReactionSummary[]> {
   const target = store.tables[table];
+  const ownerColumn =
+    table === "reactions" ? store.tables.reactions.postId : store.tables.commentReactions.commentId;
   const rows = await store.db
     .select()
     .from(target)
-    .where(and(eq(target.orgId, store.orgId), eq(target[ownerKey], ownerId)));
+    .where(and(eq(target.orgId, store.orgId), eq(ownerColumn, ownerId)));
   const byEmoji = new Map<string, { count: number; reacted: boolean }>();
   for (const row of rows) {
     const entry = byEmoji.get(row.emoji) ?? { count: 0, reacted: false };

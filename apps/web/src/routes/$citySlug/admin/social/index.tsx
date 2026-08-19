@@ -1,16 +1,28 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import { type ChangeEvent, type FormEvent, useCallback, useState } from "react";
 import { createPost, listAccounts, listPosts } from "@/modules/social/services/socialService";
 import type { SocialPostAction } from "@/modules/social/types";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
-type ComposerAccount = {
+interface ComposerAccount {
   displayName: string;
   id: string;
-};
+}
+
+const MEDIA_URL_SEPARATOR = /\n|,/;
+
+function statusMessageForAction(action: SocialPostAction): string {
+  if (action === "publish") {
+    return "Publish queued.";
+  }
+  if (action === "scheduled") {
+    return "Post scheduled.";
+  }
+  return "Draft saved.";
+}
 
 const loadSocialPosts = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
@@ -113,13 +125,7 @@ function AdminSocialPage() {
   );
 }
 
-function ComposerForm({
-  accounts,
-  citySlug,
-}: {
-  accounts: ComposerAccount[];
-  citySlug: string;
-}) {
+function ComposerForm({ accounts, citySlug }: { accounts: ComposerAccount[]; citySlug: string }) {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
   const [content, setContent] = useState("");
@@ -129,14 +135,12 @@ function ComposerForm({
       event.preventDefault();
       const form = event.currentTarget;
       const fd = new FormData(form);
-      const submitter = (event.nativeEvent as SubmitEvent).submitter;
+      const { submitter } = event.nativeEvent as SubmitEvent;
       const action =
-        submitter instanceof HTMLButtonElement
-          ? (submitter.value as SocialPostAction)
-          : "draft";
+        submitter instanceof HTMLButtonElement ? (submitter.value as SocialPostAction) : "draft";
       const scheduledRaw = String(fd.get("scheduledAt") ?? "").trim();
       const mediaRaw = String(fd.get("mediaUrls") ?? "")
-        .split(/\n|,/)
+        .split(MEDIA_URL_SEPARATOR)
         .map((url) => url.trim())
         .filter(Boolean);
       if (action === "scheduled" && !scheduledRaw) {
@@ -163,22 +167,20 @@ function ComposerForm({
           scheduledAt,
         },
       });
-      if (result.ok) {
-        form.reset();
-        setContent("");
-        setStatus(
-          action === "publish"
-            ? "Publish queued."
-            : action === "scheduled"
-              ? "Post scheduled."
-              : "Draft saved.",
-        );
-        await router.invalidate();
+      if (!result.ok) {
+        setStatus(result.error);
         return;
       }
-      setStatus(result.error);
+      form.reset();
+      setContent("");
+      setStatus(statusMessageForAction(action));
+      await router.invalidate();
     },
-    [citySlug, router],
+    [citySlug, content, router],
+  );
+  const handleContentChange = useCallback(
+    (event: ChangeEvent<HTMLTextAreaElement>) => setContent(event.target.value),
+    [],
   );
 
   return (
@@ -193,7 +195,7 @@ function ComposerForm({
       <textarea
         className="field"
         name="content"
-        onChange={(event) => setContent(event.target.value)}
+        onChange={handleContentChange}
         placeholder="Post content"
         required
         rows={6}

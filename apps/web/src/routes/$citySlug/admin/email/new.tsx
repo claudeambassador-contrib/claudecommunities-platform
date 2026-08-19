@@ -18,8 +18,13 @@ const load = createServerFn({ method: "GET" })
 
 const submit = createServerFn({ method: "POST" })
   .validator(
-    (d: { bodyHtml: string; citySlug: string; name: string; scheduledAt: string; subject: string }) =>
-      d,
+    (d: {
+      bodyHtml: string;
+      citySlug: string;
+      name: string;
+      scheduledAt: string;
+      subject: string;
+    }) => d,
   )
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);

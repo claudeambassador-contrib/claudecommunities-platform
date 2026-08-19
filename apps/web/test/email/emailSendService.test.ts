@@ -34,16 +34,18 @@ function recordingTransport(): EmailTransport & { from: string[]; to: string[] }
   const from: string[] = [];
   return {
     from,
-    to,
-    async sendBatch(messages) {
+    sendBatch(messages) {
       from.push(...messages.map((message) => message.from));
       to.push(...messages.map((message) => message.to));
-      return messages.map((message) => ({
-        email: message.to,
-        id: `re_${message.to}`,
-        ok: true,
-      }));
+      return Promise.resolve(
+        messages.map((message) => ({
+          email: message.to,
+          id: `re_${message.to}`,
+          ok: true,
+        })),
+      );
     },
+    to,
   };
 }
 

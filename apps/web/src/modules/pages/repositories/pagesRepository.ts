@@ -29,9 +29,12 @@ function coerceHomeBlock(item: Record<string, unknown>): Block | null {
     return null;
   }
   if (item.type === "benefits" || item.type === "audienceSplit") {
-    return { ...(item as Block), cards: Array.isArray(item.cards) ? item.cards : [] } as Block;
+    return {
+      ...(item as unknown as Block),
+      cards: Array.isArray(item.cards) ? item.cards : [],
+    } as unknown as Block;
   }
-  return item as Block;
+  return item as unknown as Block;
 }
 
 function parseBlocks(raw: string, contentOnly: boolean): Block[] {
@@ -57,7 +60,7 @@ function parseBlocks(raw: string, contentOnly: boolean): Block[] {
     }
     if (contentOnly) {
       if (item.type === "richText" && typeof item.body === "string") {
-        blocks.push(item as Block);
+        blocks.push(item as unknown as Block);
       }
       continue;
     }

@@ -1,5 +1,5 @@
 import type { Block, BlockType, PageStatus } from "@/modules/pages/types";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { type Empty, err, ok, type Result } from "@/shared/http/errors";
 
 const MAX_BLOCKS = 30;
 const MAX_PATH_SEGMENTS = 5;
@@ -101,11 +101,7 @@ export function validateStatus(raw: unknown): Result<{ status: PageStatus }> {
   return bad("Invalid status");
 }
 
-function validateCards(
-  cards: unknown,
-  where: string,
-  requireHref: boolean,
-): Result<Record<string, never>> {
+function validateCards(cards: unknown, where: string, requireHref: boolean): Result<Empty> {
   if (!Array.isArray(cards)) {
     return bad(`${where}: cards must be an array`);
   }
@@ -127,14 +123,11 @@ function validateCards(
   return ok({});
 }
 
-function optFields(okFields: boolean, message: string): Result<Record<string, never>> {
+function optFields(okFields: boolean, message: string): Result<Empty> {
   return okFields ? ok({}) : bad(message);
 }
 
-const HOME_FIELD_VALIDATORS: Record<
-  BlockType,
-  (b: Raw, where: string) => Result<Record<string, never>>
-> = {
+const HOME_FIELD_VALIDATORS: Record<BlockType, (b: Raw, where: string) => Result<Empty>> = {
   audienceSplit: (b, where) =>
     isOptStr(b.heading) && isOptStr(b.subheading)
       ? validateCards(b.cards, where, true)
@@ -177,11 +170,11 @@ const HOME_FIELD_VALIDATORS: Record<
   },
 };
 
-function validateHomeFields(b: Raw, type: BlockType, where: string): Result<Record<string, never>> {
+function validateHomeFields(b: Raw, type: BlockType, where: string): Result<Empty> {
   return HOME_FIELD_VALIDATORS[type](b, where);
 }
 
-function validateHomeBlock(raw: unknown, index: number): Result<Record<string, never>> {
+function validateHomeBlock(raw: unknown, index: number): Result<Empty> {
   const where = `block ${index}`;
   if (!isObj(raw)) {
     return bad(`${where}: not an object`);

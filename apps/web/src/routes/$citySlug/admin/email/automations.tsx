@@ -192,15 +192,17 @@ function AutomationStatusButtons({
     },
     [automation.id, citySlug, router],
   );
+  const handlePause = useCallback(() => handleStatus("paused"), [handleStatus]);
+  const handleActivate = useCallback(() => handleStatus("active"), [handleStatus]);
 
   return (
     <div className="row" style={{ marginTop: "0.5rem" }}>
       {automation.status === "active" ? (
-        <button className="btn" onClick={() => handleStatus("paused")} type="button">
+        <button className="btn" onClick={handlePause} type="button">
           Pause
         </button>
       ) : (
-        <button className="btn" onClick={() => handleStatus("active")} type="button">
+        <button className="btn" onClick={handleActivate} type="button">
           Activate
         </button>
       )}

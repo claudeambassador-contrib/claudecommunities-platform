@@ -1,12 +1,12 @@
-import { createMiddleware } from "@tanstack/react-start";
 import { env } from "cloudflare:workers";
+import { createMiddleware } from "@tanstack/react-start";
 
 /**
  * Maintenance kill-switch — mirrors the Next middleware behaviour.
  * Toggle via Worker secret MAINTENANCE_MODE; bypass with ?bypass=<token>.
  */
 export const maintenanceMiddleware = createMiddleware({ type: "request" }).server(
-  async ({ next, request }) => {
+  ({ next, request }) => {
     const mode = String((env as { MAINTENANCE_MODE?: string }).MAINTENANCE_MODE ?? "false");
     if (mode !== "true" && mode !== "1") {
       return next();
@@ -30,11 +30,11 @@ export const maintenanceMiddleware = createMiddleware({ type: "request" }).serve
         <p>Claude Communities is undergoing maintenance.</p>
       </body></html>`,
       {
-        status: 503,
         headers: {
           "content-type": "text/html; charset=utf-8",
           "retry-after": "300",
         },
+        status: 503,
       },
     );
   },

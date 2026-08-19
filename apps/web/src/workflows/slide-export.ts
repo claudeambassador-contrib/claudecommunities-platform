@@ -1,10 +1,10 @@
-import {
-  WorkflowEntrypoint,
-  type WorkflowEvent,
-  type WorkflowStep,
-} from "cloudflare:workers";
+import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 
-type Payload = { jobId: string; orgId: string; d1Binding: string };
+interface Payload {
+  d1Binding: string;
+  jobId: string;
+  orgId: string;
+}
 
 export class SlideExportWorkflow extends WorkflowEntrypoint<Env, Payload> {
   async run(event: WorkflowEvent<Payload>, step: WorkflowStep) {

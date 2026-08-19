@@ -8,7 +8,7 @@ import {
 import { actorFromAuth } from "@/modules/identity/services/sessionService";
 import { callMcpTool, listMcpTools } from "@/modules/system/services/mcpService";
 import type { McpArgs, McpDispatchContext } from "@/modules/system/types";
-import { resolveCityContext } from "@/modules/tenants/services/resolveCityService";
+import { resolveCityContext } from "@/modules/tenants/services/publicListService";
 import type { Actor } from "@/shared/auth/actor";
 import { clerkKeysFromRecord } from "@/shared/auth/clerk";
 import { permissionsForRole } from "@/shared/auth/permissions";

@@ -1,7 +1,7 @@
 import { createPost, listFeed, listSpaces } from "@/modules/community/services/communityService";
 import type { FeedCard, FeedSpaceOption, PostDetail } from "@/modules/community/types";
 import { listPublicAuthors } from "@/modules/identity/services/usersService";
-import { resolveCityContext } from "@/modules/tenants/services/resolveCityService";
+import { resolveCityContext } from "@/modules/tenants/services/publicListService";
 import { openTenantStore } from "@/shared/db/env";
 import { loadCityPage, requireCityActor } from "@/shared/http/cityPage";
 import { ok, type Result } from "@/shared/http/errors";

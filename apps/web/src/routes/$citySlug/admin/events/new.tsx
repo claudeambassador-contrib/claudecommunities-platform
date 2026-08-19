@@ -21,9 +21,7 @@ const loadNewEvent = createServerFn({ method: "GET" })
   });
 
 const submitEvent = createServerFn({ method: "POST" })
-  .validator(
-    (d: { citySlug: string; location: string; startTime: string; title: string }) => d,
-  )
+  .validator((d: { citySlug: string; location: string; startTime: string; title: string }) => d)
   .handler(async ({ data }) => {
     const page = await loadCityPage(data.citySlug);
     if (!(page.ok && page.actor)) {

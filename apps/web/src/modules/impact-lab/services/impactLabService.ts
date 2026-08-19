@@ -15,7 +15,7 @@ import type {
   TeamInput,
 } from "@/modules/impact-lab/types";
 import type { RegistryStore } from "@/shared/db/registryStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { type Empty, err, ok, type Result } from "@/shared/http/errors";
 
 export const COFFEE_POOL_SIZE = 100;
 export const DEFAULT_ACCESS_CODE = "IMPACTLAB";
@@ -229,10 +229,7 @@ export async function countInterests(store: RegistryStore): Promise<Result<{ cou
   return ok({ count: await repo.countInterests(store) });
 }
 
-export async function verifyAccessCode(
-  store: RegistryStore,
-  code: string,
-): Promise<Result<Record<string, never>>> {
+export async function verifyAccessCode(store: RegistryStore, code: string): Promise<Result<Empty>> {
   const loaded = await getConfig(store);
   if (!loaded.ok) {
     return loaded;
@@ -328,7 +325,7 @@ export async function getParticipantFromSession(
 export async function signOutBySessionToken(
   store: RegistryStore,
   token: string,
-): Promise<Result<Record<string, never>>> {
+): Promise<Result<Empty>> {
   await repo.clearSession(store, token);
   return ok({});
 }
@@ -431,7 +428,7 @@ export async function isPortalAdmin(
 async function requireAdmin(
   store: RegistryStore,
   adminToken: string | null | undefined,
-): Promise<Result<Record<string, never>>> {
+): Promise<Result<Empty>> {
   if (!(await isPortalAdmin(store, adminToken))) {
     return err("unauthenticated", 401, "Unauthorized");
   }
@@ -457,7 +454,7 @@ export async function loginAdmin(
 export async function logoutAdmin(
   store: RegistryStore,
   adminToken: string,
-): Promise<Result<Record<string, never>>> {
+): Promise<Result<Empty>> {
   const gated = await requireAdmin(store, adminToken);
   if (!gated.ok) {
     return gated;
@@ -503,7 +500,7 @@ export async function adminDeleteTeam(
   store: RegistryStore,
   adminToken: string,
   id: string,
-): Promise<Result<Record<string, never>>> {
+): Promise<Result<Empty>> {
   const gated = await requireAdmin(store, adminToken);
   if (!gated.ok) {
     return gated;

@@ -42,15 +42,15 @@ describe("clerk config helpers", () => {
     process.env.VITE_CLERK_PUBLISHABLE_KEY = "";
     process.env.CLERK_SECRET_KEY = "";
     const keys = clerkKeysFromRecord({
-      VITE_CLERK_PUBLISHABLE_KEY: "pk_test_worker",
       CLERK_SECRET_KEY: "sk_test_worker",
+      VITE_CLERK_PUBLISHABLE_KEY: "pk_test_worker",
     });
     expect(keys.publishable).toBe("pk_test_worker");
     expect(keys.secret).toBe("sk_test_worker");
     expect(
       isClerkServerConfigured({
-        VITE_CLERK_PUBLISHABLE_KEY: "pk_test_worker",
         CLERK_SECRET_KEY: "sk_test_worker",
+        VITE_CLERK_PUBLISHABLE_KEY: "pk_test_worker",
       }),
     ).toBe(true);
   });

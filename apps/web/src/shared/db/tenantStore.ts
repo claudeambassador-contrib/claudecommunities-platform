@@ -8,22 +8,19 @@ import { createTenantSchema, type TenantTables } from "./tenantSchema";
  * wrong-binding bug cannot silently read/write another city's logical rows.
  */
 export interface TenantStore {
+  readonly binding: string;
   readonly db: TenantDb;
   readonly orgId: string;
-  readonly binding: string;
   readonly tables: TenantTables;
 }
 
 const tableCache = createTenantSchema();
 
-export function tenantStore(
-  db: TenantDb,
-  args: { orgId: string; binding: string },
-): TenantStore {
+export function tenantStore(db: TenantDb, args: { orgId: string; binding: string }): TenantStore {
   return {
+    binding: args.binding,
     db,
     orgId: args.orgId,
-    binding: args.binding,
     tables: tableCache,
   };
 }
@@ -33,7 +30,7 @@ export function storeFrom(ctx: {
   tenantDb: TenantDb;
 }): TenantStore {
   return tenantStore(ctx.tenantDb, {
-    orgId: ctx.tenant.orgId,
     binding: ctx.tenant.d1Binding,
+    orgId: ctx.tenant.orgId,
   });
 }

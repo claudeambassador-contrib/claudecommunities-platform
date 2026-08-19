@@ -15,7 +15,7 @@ import { isStorageUrl, isValidEmail } from "@/modules/talks/validators";
 import type { Actor } from "@/shared/auth/actor";
 import { ensureOwnerOrPermission, ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { type Empty, err, ok, type Result } from "@/shared/http/errors";
 
 const VALID_STATUSES: readonly TalkSubmissionStatus[] = ["pending", "approved", "declined"];
 
@@ -37,7 +37,7 @@ function isTalkAdmin(actor: Actor): boolean {
   return ensurePermission(actor, "speakers.edit").ok;
 }
 
-function requireOwnerOrAdmin(actor: Actor, ownerId: string | null): Result<Record<string, never>> {
+function requireOwnerOrAdmin(actor: Actor, ownerId: string | null): Result<Empty> {
   return ensureOwnerOrPermission(actor, ownerId ?? "", "speakers.edit");
 }
 

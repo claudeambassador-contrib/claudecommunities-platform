@@ -8,17 +8,16 @@ import { listFeed, listSpaces } from "@/modules/community/services/communityServ
 import { listPublished, listPublishedScheduled } from "@/modules/courses/services/coursesService";
 import { listCampaigns } from "@/modules/email/services/emailCampaignsService";
 import { listEvents, listPublicAgenda } from "@/modules/events/services/eventsService";
-import { listPublishedPages } from "@/modules/pages/services/pagesService";
-import { listAccounts, listPosts } from "@/modules/social/services/socialService";
-import { listSpeakers } from "@/modules/talks/services/talksService";
-import { listPublicTiers } from "@/modules/tiers/services/tiersService";
 import {
   findByClerkId,
   findByEmail,
   findMembership,
 } from "@/modules/identity/repositories/usersRepository";
-import { getHomeSections } from "@/modules/pages/services/pagesService";
+import { getHomeSections, listPublishedPages } from "@/modules/pages/services/pagesService";
+import { listAccounts, listPosts } from "@/modules/social/services/socialService";
+import { listSpeakers } from "@/modules/talks/services/talksService";
 import { buildCitySeed } from "@/modules/tenants/seed/citySeed";
+import { listPublicTiers } from "@/modules/tiers/services/tiersService";
 import { createRegistrySchema } from "@/shared/db/registrySchema";
 import { registryStore } from "@/shared/db/registryStore";
 import { createTenantSchema } from "@/shared/db/tenantSchema";

@@ -6,9 +6,13 @@ export const Route = createFileRoute("/api/files/$")({
     handlers: {
       GET: async ({ params }) => {
         const key = params._splat ?? "";
-        if (!key) return new Response("Not found", { status: 404 });
+        if (!key) {
+          return new Response("Not found", { status: 404 });
+        }
         const obj = await getObject(key);
-        if (!obj) return new Response("Not found", { status: 404 });
+        if (!obj) {
+          return new Response("Not found", { status: 404 });
+        }
         const headers = new Headers();
         if (obj.httpMetadata?.contentType) {
           headers.set("content-type", obj.httpMetadata.contentType);

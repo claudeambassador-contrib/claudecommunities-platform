@@ -1,8 +1,8 @@
 import { env } from "cloudflare:workers";
 import type { TenantContext } from "@/shared/http/routeContext";
 import { createRegistryDb, createTenantDb, getD1Binding } from "./client";
-import { registryStore, type RegistryStore } from "./registryStore";
-import { tenantStore, type TenantStore } from "./tenantStore";
+import { type RegistryStore, registryStore } from "./registryStore";
+import { type TenantStore, tenantStore } from "./tenantStore";
 
 /** Worker env as a loose record for D1 binding lookups. */
 export function workerEnv(): Record<string, unknown> {
@@ -22,8 +22,8 @@ export function openTenantStore(tenant: Pick<TenantContext, "orgId" | "d1Binding
   const e = workerEnv();
   const d1 = getD1Binding(e, tenant.d1Binding);
   return tenantStore(createTenantDb(d1), {
-    orgId: tenant.orgId,
     binding: tenant.d1Binding,
+    orgId: tenant.orgId,
   });
 }
 

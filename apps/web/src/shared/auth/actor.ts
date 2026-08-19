@@ -1,5 +1,5 @@
 import { hasPermission, type Permission } from "@/shared/auth/permissions";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { type Empty, err, ok, type Result } from "@/shared/http/errors";
 
 /** Transport-agnostic actor passed into domain services. */
 export interface Actor {
@@ -10,10 +10,7 @@ export interface Actor {
   permissions: ReadonlySet<Permission>;
 }
 
-export function ensurePermission(
-  actor: Actor,
-  permission: Permission,
-): Result<Record<string, never>> {
+export function ensurePermission(actor: Actor, permission: Permission): Result<Empty> {
   if (actor.isSuperAdmin) {
     return ok({});
   }
@@ -34,7 +31,7 @@ export function ensureOwnerOrPermission(
   actor: Actor,
   ownerId: string,
   permission: Permission,
-): Result<Record<string, never>> {
+): Result<Empty> {
   if (actor.id === ownerId) {
     return ok({});
   }

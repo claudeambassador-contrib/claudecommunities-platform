@@ -85,13 +85,7 @@ function EmailSettingsPage() {
   );
 }
 
-function SettingsForm({
-  citySlug,
-  settings,
-}: {
-  citySlug: string;
-  settings: EmailSettingsDetail;
-}) {
+function SettingsForm({ citySlug, settings }: { citySlug: string; settings: EmailSettingsDetail }) {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
 

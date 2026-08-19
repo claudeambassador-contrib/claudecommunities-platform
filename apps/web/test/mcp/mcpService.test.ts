@@ -8,7 +8,11 @@ import {
   connectAccount,
   createPost as createSocialPost,
 } from "@/modules/social/services/socialService";
-import { callMcpTool, implementedMcpToolNames, listMcpTools } from "@/modules/system/services/mcpService";
+import {
+  callMcpTool,
+  implementedMcpToolNames,
+  listMcpTools,
+} from "@/modules/system/services/mcpService";
 import type { McpDispatchContext } from "@/modules/system/types";
 import { createSpeaker, createTalkSubmission } from "@/modules/talks/services/talksService";
 import type { RegistryStore } from "@/shared/db/registryStore";
@@ -80,9 +84,10 @@ function dispatchCtx(
   actor = adminActor(),
   extras: { registry?: RegistryStore; upload?: McpDispatchContext["upload"] } = {},
 ): McpDispatchContext {
+  const { registry } = extras;
   return {
     actor,
-    openRegistry: extras.registry ? () => extras.registry : undefined,
+    openRegistry: registry ? () => registry : undefined,
     openTenant: () => store,
     upload: extras.upload,
   };

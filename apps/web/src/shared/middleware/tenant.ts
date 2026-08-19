@@ -14,8 +14,8 @@ export const tenantRequestMiddleware = createMiddleware({ type: "request" }).ser
 
     const result = await next({
       context: {
-        tenantSlugHint: pathSlug ?? hostSlug ?? null,
         requestHost: url.hostname,
+        tenantSlugHint: pathSlug ?? hostSlug ?? null,
       },
     });
     return result;
@@ -38,18 +38,28 @@ const RESERVED = new Set([
 ]);
 
 function pathTenantSlug(pathname: string): string | null {
-  const seg = pathname.split("/").filter(Boolean)[0];
-  if (!seg || RESERVED.has(seg) || seg.startsWith(".")) return null;
+  const seg = pathname.split("/").find(Boolean);
+  if (!seg || RESERVED.has(seg) || seg.startsWith(".")) {
+    return null;
+  }
   return seg.toLowerCase();
 }
 
 function hostTenantSlug(hostname: string): string | null {
   // city.claudecommunities.com → city; localhost / workers.dev → null
-  if (hostname === "localhost" || hostname.endsWith(".localhost")) return null;
-  if (hostname.endsWith(".workers.dev")) return null;
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) {
+    return null;
+  }
+  if (hostname.endsWith(".workers.dev")) {
+    return null;
+  }
   const parts = hostname.split(".");
-  if (parts.length < 3) return null;
+  if (parts.length < 3) {
+    return null;
+  }
   const sub = parts[0]?.toLowerCase();
-  if (!sub || sub === "www" || sub === "app") return null;
+  if (!sub || sub === "www" || sub === "app") {
+    return null;
+  }
   return sub;
 }

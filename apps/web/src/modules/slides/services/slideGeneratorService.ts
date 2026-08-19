@@ -12,11 +12,11 @@ import type {
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { type Empty, err, ok, type Result } from "@/shared/http/errors";
 
 const MAX_BODY_BYTES = 256 * 1024;
 
-function validateScope(scope: string): Result<Record<string, never>> {
+function validateScope(scope: string): Result<Empty> {
   if (typeof scope !== "string" || scope.length === 0 || scope.length > 200) {
     return err("bad_request", 400, "Invalid scope");
   }

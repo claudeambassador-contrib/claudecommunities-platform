@@ -996,4 +996,3 @@ export async function callMcpTool<T extends object = Record<string, unknown>>(
   }
   return (await handler(args, ctx)) as Result<T>;
 }
-

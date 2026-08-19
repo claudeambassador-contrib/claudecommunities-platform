@@ -1,8 +1,9 @@
+import { auth } from "@clerk/tanstack-react-start/server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { auth } from "@clerk/tanstack-react-start/server";
-import { listPublicTenants, provisionCity } from "@/modules/tenants/services/publicListService";
+import { type FormEvent, useCallback, useState } from "react";
 import { syncSessionUser } from "@/modules/identity/services/sessionService";
+import { listPublicTenants, provisionCity } from "@/modules/tenants/services/publicListService";
 
 const loadPlatform = createServerFn({ method: "GET" }).handler(async () => {
   const session = await auth();
@@ -10,7 +11,7 @@ const loadPlatform = createServerFn({ method: "GET" }).handler(async () => {
     return { allowed: false as const, tenants: [] as { slug: string; name: string }[] };
   }
   const user = await syncSessionUser();
-  if (!user.ok || !user.auth.isSuperAdmin) {
+  if (!(user.ok && user.auth.isSuperAdmin)) {
     return { allowed: false as const, tenants: [] as { slug: string; name: string }[] };
   }
   const list = await listPublicTenants();
@@ -24,11 +25,13 @@ const provision = createServerFn({ method: "POST" })
   .validator((d: { slug: string; name: string; region?: "au" | "nz" }) => d)
   .handler(async ({ data }) => {
     const user = await syncSessionUser();
-    if (!user.ok || !user.auth.isSuperAdmin) {
+    if (!(user.ok && user.auth.isSuperAdmin)) {
       return { ok: false as const, error: "forbidden" };
     }
     const result = await provisionCity(data);
-    if (!result.ok) return { ok: false as const, error: result.error.code };
+    if (!result.ok) {
+      return { ok: false as const, error: result.error.code };
+    }
     return { ok: true as const, tenant: result.tenant };
   });
 
@@ -54,7 +57,9 @@ function PlatformAdmin() {
   return (
     <main className="shell stack">
       <h1 style={{ margin: 0 }}>Platform admin</h1>
-      <p className="muted">Provision city instances (registry row). Create D1 + migrate separately.</p>
+      <p className="muted">
+        Provision city instances (registry row). Create D1 + migrate separately.
+      </p>
       <div className="card stack">
         <strong>Cities</strong>
         {data.tenants.map((t) => (
@@ -69,26 +74,28 @@ function PlatformAdmin() {
 }
 
 function ProvisionForm() {
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = useCallback(async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const slug = String(fd.get("slug") ?? "");
+    const name = String(fd.get("name") ?? "");
+    const result = await provision({ data: { slug, name, region: "au" } });
+    if (result.ok) {
+      window.location.reload();
+    } else {
+      setError(result.error);
+    }
+  }, []);
+
   return (
-    <form
-      className="card stack"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        const fd = new FormData(e.currentTarget);
-        const slug = String(fd.get("slug") ?? "");
-        const name = String(fd.get("name") ?? "");
-        const result = await provision({ data: { slug, name, region: "au" } });
-        if (result.ok) {
-          window.location.reload();
-        } else {
-          alert(result.error);
-        }
-      }}
-    >
+    <form className="card stack" onSubmit={handleSubmit}>
       <strong>Provision city</strong>
-      <input name="slug" placeholder="sydney" required className="btn" style={{ width: "100%" }} />
-      <input name="name" placeholder="Sydney" required className="btn" style={{ width: "100%" }} />
-      <button type="submit" className="btn btn-primary">
+      <input className="btn" name="slug" placeholder="sydney" required style={{ width: "100%" }} />
+      <input className="btn" name="name" placeholder="Sydney" required style={{ width: "100%" }} />
+      {error ? <p className="muted">{error}</p> : null}
+      <button className="btn btn-primary" type="submit">
         Create registry row
       </button>
     </form>

@@ -1,7 +1,6 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: dark;
   --bg: #1c1917;
   --fg: #faf9f6;
   --muted: #a8a29e;
@@ -17,13 +16,14 @@
     Helvetica,
     Arial,
     sans-serif;
+  color-scheme: dark;
 }
 
 body {
-  margin: 0;
   min-height: 100dvh;
-  background: var(--bg);
+  margin: 0;
   color: var(--fg);
+  background: var(--bg);
 }
 
 a {
@@ -37,15 +37,15 @@ a:hover {
 
 .shell {
   max-width: 72rem;
-  margin: 0 auto;
   padding: 1.5rem;
+  margin: 0 auto;
 }
 
 .card {
+  padding: 1.25rem;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  padding: 1.25rem;
 }
 
 .muted {
@@ -54,15 +54,15 @@ a:hover {
 
 .btn {
   display: inline-flex;
-  align-items: center;
   gap: 0.5rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
-  background: var(--card);
-  color: var(--fg);
+  align-items: center;
   padding: 0.5rem 0.875rem;
-  cursor: pointer;
   font: inherit;
+  color: var(--fg);
+  cursor: pointer;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
 }
 
 .btn:active {
@@ -70,10 +70,10 @@ a:hover {
 }
 
 .btn-primary {
+  font-weight: 600;
+  color: #1c1917;
   background: var(--accent);
   border-color: var(--accent);
-  color: #1c1917;
-  font-weight: 600;
 }
 
 .stack {
@@ -90,12 +90,12 @@ a:hover {
 }
 
 .field {
+  padding: 0.55rem 0.75rem;
   font: inherit;
   color: var(--fg);
   background: rgb(255 255 255 / 0.05);
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  padding: 0.55rem 0.75rem;
 }
 
 .field:focus {
@@ -109,25 +109,25 @@ a:hover {
   top: 0;
   z-index: 40;
   background: rgb(28 25 23 / 0.95);
-  backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
 }
 
 .city-header-inner {
-  max-width: 75rem;
-  margin: 0 auto;
-  min-height: 4.5rem;
-  padding: 0 1.5rem;
   display: flex;
+  gap: 1rem;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  max-width: 75rem;
+  min-height: 4.5rem;
+  padding: 0 1.5rem;
+  margin: 0 auto;
 }
 
 .city-brand {
   display: flex;
-  align-items: center;
   gap: 0.75rem;
+  align-items: center;
   color: var(--fg);
   text-decoration: none;
 }
@@ -138,14 +138,14 @@ a:hover {
 }
 
 .city-mark {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.4rem;
-  background: var(--accent);
-  color: #1c1917;
   display: grid;
   place-items: center;
+  width: 2rem;
+  height: 2rem;
   font-weight: 700;
+  color: #1c1917;
+  background: var(--accent);
+  border-radius: 0.4rem;
 }
 
 .city-brand-text {
@@ -156,13 +156,13 @@ a:hover {
 
 .city-nav-desktop {
   display: none;
-  align-items: center;
   gap: 1.25rem;
+  align-items: center;
 }
 
 .city-nav-link {
-  color: var(--muted);
   position: relative;
+  color: var(--muted);
   white-space: nowrap;
 }
 
@@ -173,20 +173,20 @@ a:hover {
 }
 
 .city-nav-link-active::after {
-  content: "";
   position: absolute;
-  left: 0;
   right: 0;
   bottom: -0.5rem;
+  left: 0;
   height: 2px;
-  border-radius: 999px;
+  content: "";
   background: var(--accent);
+  border-radius: 999px;
 }
 
 .city-session {
   display: flex;
-  align-items: center;
   gap: 0.75rem;
+  align-items: center;
 }
 
 .city-menu-btn {
@@ -194,9 +194,9 @@ a:hover {
   flex-direction: column;
   gap: 5px;
   padding: 0.5rem;
+  cursor: pointer;
   background: none;
   border: 0;
-  cursor: pointer;
 }
 
 .city-menu-btn span {
@@ -223,25 +223,25 @@ a:hover {
 }
 
 .admin-app {
-  min-height: 100dvh;
   display: flex;
+  min-height: 100dvh;
   background: var(--bg);
 }
 
 .admin-sidebar {
   display: none;
-  width: 15rem;
   flex-shrink: 0;
-  border-right: 1px solid var(--border);
+  width: 15rem;
   background: #1c1917;
+  border-right: 1px solid var(--border);
 }
 
 .admin-nav {
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
   min-height: 100%;
   padding: 1.25rem 0.85rem;
-  gap: 0.75rem;
 }
 
 .admin-nav-brand {
@@ -260,39 +260,39 @@ a:hover {
   padding: 0.85rem 0.65rem 0.35rem;
   font-size: 0.7rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: #57534e;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .admin-nav-link {
   display: block;
   padding: 0.45rem 0.65rem;
-  border-radius: 0.5rem;
   color: var(--muted);
+  border-radius: 0.5rem;
 }
 
 .admin-nav-link:hover {
-  background: rgb(255 255 255 / 0.05);
   color: var(--fg);
   text-decoration: none;
+  background: rgb(255 255 255 / 0.05);
 }
 
 .admin-main {
-  flex: 1;
-  min-width: 0;
   display: flex;
+  flex: 1;
   flex-direction: column;
+  min-width: 0;
 }
 
 .admin-topbar {
-  height: 3.5rem;
   display: flex;
-  align-items: center;
   gap: 0.75rem;
+  align-items: center;
+  height: 3.5rem;
   padding: 0 1rem;
-  border-bottom: 1px solid var(--border);
   background: rgb(28 25 23 / 0.95);
+  border-bottom: 1px solid var(--border);
 }
 
 .admin-menu-btn {
@@ -312,8 +312,8 @@ a:hover {
 .admin-drawer-backdrop {
   position: absolute;
   inset: 0;
-  border: 0;
   background: rgb(0 0 0 / 0.45);
+  border: 0;
 }
 
 .admin-drawer-panel {
@@ -325,19 +325,19 @@ a:hover {
 }
 
 .post-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 0.85rem;
-  padding: 1.15rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  padding: 1.15rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
 }
 
 .post-card-meta {
   display: flex;
-  align-items: center;
   gap: 0.75rem;
+  align-items: center;
 }
 
 .post-card-title {
@@ -352,9 +352,9 @@ a:hover {
 
 .post-card-media {
   width: 100%;
-  border-radius: 0.65rem;
-  object-fit: cover;
   max-height: 22rem;
+  object-fit: cover;
+  border-radius: 0.65rem;
 }
 
 .post-card-footer {

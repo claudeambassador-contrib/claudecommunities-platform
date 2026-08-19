@@ -1,7 +1,7 @@
 import { auth, clerkClient } from "@clerk/tanstack-react-start/server";
 // biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
 import * as usersRepo from "@/modules/identity/repositories/usersRepository";
-import { resolveCityContext } from "@/modules/tenants/services/resolveCityService";
+import { resolveCityContext } from "@/modules/tenants/services/publicListService";
 import type { Actor } from "@/shared/auth/actor";
 import { isClerkServerConfigured } from "@/shared/auth/clerk";
 import { hasPermission, type Permission, permissionsForRole } from "@/shared/auth/permissions";

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listEvents } from "@/modules/events/services/eventsService";
-import { resolveCityContext } from "@/modules/tenants/services/resolveCityService";
+import { resolveCityContext } from "@/modules/tenants/services/publicListService";
 import { openTenantStore } from "@/shared/db/env";
 
 const getEvents = createServerFn({ method: "GET" })

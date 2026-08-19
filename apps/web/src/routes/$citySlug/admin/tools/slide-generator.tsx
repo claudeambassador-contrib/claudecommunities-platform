@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useCallback, useState } from "react";
+import { type ChangeEvent, type FormEvent, useCallback, useState } from "react";
 import {
   createPreset,
   getState,
@@ -142,6 +142,10 @@ function WorkingStateForm({
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(stateError);
   const [draftJson, setDraftJson] = useState(stateJson);
+  const handleDraftChange = useCallback(
+    (event: ChangeEvent<HTMLTextAreaElement>) => setDraftJson(event.target.value),
+    [],
+  );
 
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -187,7 +191,7 @@ function WorkingStateForm({
       <textarea
         className="field"
         name="data"
-        onChange={(event) => setDraftJson(event.target.value)}
+        onChange={handleDraftChange}
         placeholder="{}"
         rows={12}
         style={{ width: "100%" }}
