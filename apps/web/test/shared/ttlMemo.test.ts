@@ -23,4 +23,16 @@ describe("ttlMemo", () => {
     const memo = ttlMemo<number>(60_000);
     expect(memo.get("nope")).toBeUndefined();
   });
+
+  it("delete removes a cached value", () => {
+    const memo = ttlMemo<number>(60_000);
+    memo.set("k", 1);
+    memo.delete("k");
+    expect(memo.get("k")).toBeUndefined();
+  });
+
+  it("delete on an unknown key is a no-op", () => {
+    const memo = ttlMemo<number>(60_000);
+    expect(() => memo.delete("nope")).not.toThrow();
+  });
 });

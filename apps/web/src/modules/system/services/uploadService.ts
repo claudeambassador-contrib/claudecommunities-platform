@@ -82,6 +82,17 @@ export function buildUploadKey(opts: {
   return ok({ key });
 }
 
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+  "application/pdf",
+]);
+
 /** The one upload implementation. Routes are thin adapters over this. */
 export async function storeUpload(
   form: FormData,
@@ -90,6 +101,12 @@ export async function storeUpload(
   const file = form.get("file");
   if (!(file instanceof File)) {
     return err("file_required", 400);
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return err("file_too_large", 413);
+  }
+  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    return err("unsupported_type", 415);
   }
   const folder = String(form.get("folder") ?? "uploads");
   const built = buildUploadKey({ filename: file.name, folder, r2Prefix: opts.r2Prefix });

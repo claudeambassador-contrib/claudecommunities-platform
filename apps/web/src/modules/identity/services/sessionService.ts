@@ -13,8 +13,10 @@ import { newId } from "@/shared/ids";
 import { ttlMemo } from "@/shared/ttlMemo";
 
 /** 60s isolate cache: Clerk fetch + registry upsert per user, city row per slug.
- *  Accepted staleness: bans/profile edits and tenant config take ≤60s to land
- *  on a hot isolate. Membership/role stays fresh per request. */
+ *  Role is always fresh per-request. Ban status and super-admin flag are now
+ *  re-checked against the registry (D1) on every memo hit too — only the
+ *  Clerk profile fetch + upsert are memoized 60s. City TenantContext can
+ *  still be stale up to 60s. */
 const sessionMemo = ttlMemo<AuthContext>(60_000);
 const cityMemo = ttlMemo<TenantContext>(60_000);
 
@@ -35,7 +37,15 @@ export async function syncSessionUser(db: RegistryDb): Promise<Result<{ auth: Au
 
   const cached = sessionMemo.get(session.userId);
   if (cached) {
-    return ok({ auth: cached });
+    const fresh = await usersRepo.findByClerkId(db, session.userId);
+    if (fresh) {
+      if (fresh.isBanned) {
+        sessionMemo.delete(session.userId);
+        return err("banned", 403);
+      }
+      return ok({ auth: { ...cached, isSuperAdmin: fresh.isSuperAdmin } });
+    }
+    // Row vanished since caching — fall through to the full re-sync path.
   }
 
   const clerkUser = await readClerkUser(session.userId);

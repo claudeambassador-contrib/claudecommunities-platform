@@ -4,11 +4,15 @@
  * keys are low-cardinality (users, city slugs).
  */
 export function ttlMemo<T>(ttlMs: number): {
+  delete: (key: string) => void;
   get: (key: string) => T | undefined;
   set: (key: string, value: T) => void;
 } {
   const entries = new Map<string, { at: number; value: T }>();
   return {
+    delete(key) {
+      entries.delete(key);
+    },
     get(key) {
       const hit = entries.get(key);
       if (!hit) {

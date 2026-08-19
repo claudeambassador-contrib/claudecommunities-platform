@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // uploadService imports @/shared/storage/r2, which imports @/shared/db/env,
 // which imports the `cloudflare:workers` module — unavailable under vitest's
@@ -113,6 +113,10 @@ function formDataWith(fields: Record<string, string | File>): FormData {
 }
 
 describe("storeUpload", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("rejects a missing file", async () => {
     const result = await storeUpload(formDataWith({ folder: "uploads" }));
     expect(result.ok).toBe(false);
@@ -148,5 +152,35 @@ describe("storeUpload", () => {
       expect(result.error.code).toBe("storage_unavailable");
       expect(result.error.status).toBe(503);
     }
+  });
+
+  it("rejects a file over the size cap without calling putBytes", async () => {
+    const oversize = new Uint8Array(15 * 1024 * 1024 + 1);
+    const file = new File([oversize], "big.png", { type: "image/png" });
+    const result = await storeUpload(formDataWith({ file, folder: "uploads" }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("file_too_large");
+      expect(result.error.status).toBe(413);
+    }
+    expect(vi.mocked(putBytes)).not.toHaveBeenCalled();
+  });
+
+  it("rejects a disallowed MIME type without calling putBytes", async () => {
+    const file = new File(["<html></html>"], "a.html", { type: "text/html" });
+    const result = await storeUpload(formDataWith({ file, folder: "uploads" }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("unsupported_type");
+      expect(result.error.status).toBe(415);
+    }
+    expect(vi.mocked(putBytes)).not.toHaveBeenCalled();
+  });
+
+  it("accepts an allowed MIME type (application/pdf)", async () => {
+    const file = new File(["%PDF-1.4"], "doc.pdf", { type: "application/pdf" });
+    const result = await storeUpload(formDataWith({ file, folder: "uploads" }));
+    expect(result.ok).toBe(true);
+    expect(vi.mocked(putBytes)).toHaveBeenCalledOnce();
   });
 });
