@@ -4,17 +4,19 @@ import { createServerFn } from "@tanstack/react-start";
 import { type FormEvent, useCallback, useState } from "react";
 import { syncSessionUser } from "@/modules/identity/services/sessionService";
 import { listPublicTenants, provisionCity } from "@/modules/tenants/services/publicListService";
+import { getRegistryDb } from "@/shared/db/env";
 
 const loadPlatform = createServerFn({ method: "GET" }).handler(async () => {
   const session = await auth();
   if (!session.isAuthenticated) {
     return { allowed: false as const, tenants: [] as { slug: string; name: string }[] };
   }
-  const user = await syncSessionUser();
+  const registryDb = getRegistryDb();
+  const user = await syncSessionUser(registryDb);
   if (!(user.ok && user.auth.isSuperAdmin)) {
     return { allowed: false as const, tenants: [] as { slug: string; name: string }[] };
   }
-  const list = await listPublicTenants();
+  const list = await listPublicTenants(registryDb);
   return {
     allowed: true as const,
     tenants: list.ok ? list.tenants : [],
@@ -24,11 +26,12 @@ const loadPlatform = createServerFn({ method: "GET" }).handler(async () => {
 const provision = createServerFn({ method: "POST" })
   .validator((d: { slug: string; name: string; region?: "au" | "nz" }) => d)
   .handler(async ({ data }) => {
-    const user = await syncSessionUser();
+    const registryDb = getRegistryDb();
+    const user = await syncSessionUser(registryDb);
     if (!(user.ok && user.auth.isSuperAdmin)) {
       return { ok: false as const, error: "forbidden" };
     }
-    const result = await provisionCity(data);
+    const result = await provisionCity(registryDb, data);
     if (!result.ok) {
       return { ok: false as const, error: result.error.code };
     }

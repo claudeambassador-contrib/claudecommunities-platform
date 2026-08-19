@@ -5,12 +5,13 @@ import { resolveCityContext } from "@/modules/tenants/services/publicListService
 import type { Actor } from "@/shared/auth/actor";
 import { isClerkServerConfigured } from "@/shared/auth/clerk";
 import { hasPermission, type Permission, permissionsForRole } from "@/shared/auth/permissions";
+import type { RegistryDb } from "@/shared/db/client";
 import { getRegistryDb, openTenantStore, workerEnv } from "@/shared/db/env";
 import { err, ok, type Result } from "@/shared/http/errors";
 import type { AuthContext, RouteContext } from "@/shared/http/routeContext";
 import { newId } from "@/shared/ids";
 
-export async function syncSessionUser(): Promise<Result<{ auth: AuthContext }>> {
+export async function syncSessionUser(db: RegistryDb): Promise<Result<{ auth: AuthContext }>> {
   if (!isClerkServerConfigured(workerEnv())) {
     return err("unauthenticated", 401);
   }
@@ -36,7 +37,6 @@ export async function syncSessionUser(): Promise<Result<{ auth: AuthContext }>> 
     return err("missing_email", 400);
   }
 
-  const db = getRegistryDb();
   const user = await usersRepo.upsertFromClerk(db, {
     clerkUserId: clerk.id,
     displayName: [clerk.firstName, clerk.lastName].filter(Boolean).join(" ") || clerk.username,
@@ -74,18 +74,22 @@ async function readClerkUser(userId: string) {
 export async function buildCityRouteContext(
   citySlug: string,
 ): Promise<Result<{ ctx: RouteContext }>> {
-  const city = await resolveCityContext(citySlug);
+  const registryDb = getRegistryDb();
+  const city = await resolveCityContext(registryDb, citySlug);
   if (!city.ok) {
     return city;
   }
 
   const store = openTenantStore(city.tenant);
-  const session = await syncSessionUser();
+  const session = await syncSessionUser(registryDb);
   let authCtx: AuthContext | null = null;
 
   if (session.ok) {
-    const db = getRegistryDb();
-    const membership = await usersRepo.findMembership(db, session.auth.userId, city.tenant.orgId);
+    const membership = await usersRepo.findMembership(
+      registryDb,
+      session.auth.userId,
+      city.tenant.orgId,
+    );
     const role = membership?.role ?? null;
     authCtx = {
       ...session.auth,
@@ -99,7 +103,7 @@ export async function buildCityRouteContext(
   return ok({
     ctx: {
       auth: authCtx,
-      registryDb: getRegistryDb(),
+      registryDb,
       tenant: city.tenant,
       tenantDb: store.db,
     },

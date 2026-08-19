@@ -3,9 +3,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listPublicTenants } from "@/modules/tenants/services/publicListService";
 import { isClerkPublishableConfigured } from "@/shared/auth/clerk";
+import { getRegistryDb } from "@/shared/db/env";
 
 const getDirectory = createServerFn({ method: "GET" }).handler(async () => {
-  const result = await listPublicTenants();
+  const result = await listPublicTenants(getRegistryDb());
   if (!result.ok) {
     return { tenants: [] as { slug: string; name: string }[] };
   }

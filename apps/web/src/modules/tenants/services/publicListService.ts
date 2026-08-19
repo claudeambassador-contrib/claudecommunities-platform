@@ -5,7 +5,7 @@ import {
 } from "@/modules/tenants/repositories/tenantsRepository";
 import type { TenantRow } from "@/modules/tenants/schema.registry";
 import { tenantSettings } from "@/modules/tenants/schema.registry";
-import { getRegistryDb } from "@/shared/db/env";
+import type { RegistryDb } from "@/shared/db/client";
 import { err, ok, type Result } from "@/shared/http/errors";
 import type { TenantContext } from "@/shared/http/routeContext";
 import { generateOrgId, newId, nowMs, toD1Binding, toSafeSlug } from "@/shared/ids";
@@ -42,6 +42,7 @@ function toContext(row: TenantRow): TenantContext {
  * so `d1Binding` exists on the Worker before traffic hits the city.
  */
 export async function provisionCity(
+  db: RegistryDb,
   input: ProvisionCityInput,
 ): Promise<Result<{ tenant: TenantContext }>> {
   const slug = toSafeSlug(input.slug);
@@ -49,7 +50,6 @@ export async function provisionCity(
     return err("invalid_slug", 400, "Slug is required");
   }
 
-  const db = getRegistryDb();
   const existing = await findBySlug(db, slug);
   if (existing) {
     return err("slug_taken", 409, `City ${slug} already exists`);
@@ -86,11 +86,10 @@ export async function provisionCity(
   return ok({ tenant: toContext(row) });
 }
 
-export async function listPublicTenants(): Promise<
-  Result<{ tenants: { slug: string; name: string }[] }>
-> {
+export async function listPublicTenants(
+  db: RegistryDb,
+): Promise<Result<{ tenants: { slug: string; name: string }[] }>> {
   try {
-    const db = getRegistryDb();
     const rows = await listListed(db);
     return ok({
       tenants: rows.map((r) => ({ name: r.name, slug: r.slug })),
@@ -101,9 +100,11 @@ export async function listPublicTenants(): Promise<
   }
 }
 
-export async function resolveCityContext(slug: string): Promise<Result<{ tenant: TenantContext }>> {
+export async function resolveCityContext(
+  db: RegistryDb,
+  slug: string,
+): Promise<Result<{ tenant: TenantContext }>> {
   try {
-    const db = getRegistryDb();
     const row = await findBySlug(db, toSafeSlug(slug));
     if (!row) {
       return err("not_found", 404);

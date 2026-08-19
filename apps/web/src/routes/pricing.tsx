@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listPublicTenants } from "@/modules/tenants/services/publicListService";
+import { getRegistryDb } from "@/shared/db/env";
 import { getRegionConfig } from "@/shared/region";
 
 const load = createServerFn({ method: "GET" }).handler(async () => {
-  const listed = await listPublicTenants();
+  const listed = await listPublicTenants(getRegistryDb());
   return { cities: listed.ok ? listed.tenants : [] };
 });
 

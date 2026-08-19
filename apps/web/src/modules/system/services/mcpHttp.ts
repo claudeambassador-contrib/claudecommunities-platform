@@ -67,11 +67,12 @@ export async function actorFromBearer(
     if (!clerkUserId) {
       return null;
     }
-    const user = await findByClerkId(getRegistryDb(), clerkUserId);
+    const registryDb = getRegistryDb();
+    const user = await findByClerkId(registryDb, clerkUserId);
     if (!user || user.isBanned) {
       return null;
     }
-    const memberships = await listMembershipsForUser(getRegistryDb(), user.id);
+    const memberships = await listMembershipsForUser(registryDb, user.id);
     const role = user.isSuperAdmin ? "owner" : bestRole(memberships.map((row) => row.role));
     const authCtx: AuthContext = {
       clerkUserId: user.clerkUserId,
@@ -110,7 +111,7 @@ function dispatchContext(actor: Actor, request: Request): McpDispatchContext {
     actor,
     openRegistry: () => getRegistryStore(),
     openTenant: async (citySlug) => {
-      const city = await resolveCityContext(citySlug);
+      const city = await resolveCityContext(getRegistryDb(), citySlug);
       if (!city.ok) {
         throw new Error(city.error.message ?? "City not found");
       }

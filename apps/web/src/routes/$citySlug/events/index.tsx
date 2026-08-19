@@ -2,12 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listEvents } from "@/modules/events/services/eventsService";
 import { resolveCityContext } from "@/modules/tenants/services/publicListService";
-import { openTenantStore } from "@/shared/db/env";
+import { getRegistryDb, openTenantStore } from "@/shared/db/env";
 
 const getEvents = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
   .handler(async ({ data }) => {
-    const city = await resolveCityContext(data.citySlug);
+    const city = await resolveCityContext(getRegistryDb(), data.citySlug);
     if (!city.ok) {
       return {
         events: [] as { id: string; title: string; startTime: string | null; slug: string }[],
