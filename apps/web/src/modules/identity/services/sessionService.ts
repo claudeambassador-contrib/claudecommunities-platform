@@ -8,8 +8,15 @@ import { hasPermission, type Permission, permissionsForRole } from "@/shared/aut
 import type { RegistryDb } from "@/shared/db/client";
 import { getRegistryDb, openTenantStore, workerEnv } from "@/shared/db/env";
 import { err, ok, type Result } from "@/shared/http/errors";
-import type { AuthContext, RouteContext } from "@/shared/http/routeContext";
+import type { AuthContext, RouteContext, TenantContext } from "@/shared/http/routeContext";
 import { newId } from "@/shared/ids";
+import { ttlMemo } from "@/shared/ttlMemo";
+
+/** 60s isolate cache: Clerk fetch + registry upsert per user, city row per slug.
+ *  Accepted staleness: bans/profile edits and tenant config take ≤60s to land
+ *  on a hot isolate. Membership/role stays fresh per request. */
+const sessionMemo = ttlMemo<AuthContext>(60_000);
+const cityMemo = ttlMemo<TenantContext>(60_000);
 
 export async function syncSessionUser(db: RegistryDb): Promise<Result<{ auth: AuthContext }>> {
   if (!isClerkServerConfigured(workerEnv())) {
@@ -24,6 +31,11 @@ export async function syncSessionUser(db: RegistryDb): Promise<Result<{ auth: Au
   }
   if (!(session.isAuthenticated && session.userId)) {
     return err("unauthenticated", 401);
+  }
+
+  const cached = sessionMemo.get(session.userId);
+  if (cached) {
+    return ok({ auth: cached });
   }
 
   const clerkUser = await readClerkUser(session.userId);
@@ -50,16 +62,17 @@ export async function syncSessionUser(db: RegistryDb): Promise<Result<{ auth: Au
     return err("banned", 403);
   }
 
-  return ok({
-    auth: {
-      clerkUserId: user.clerkUserId,
-      email: user.email,
-      isSuperAdmin: user.isSuperAdmin,
-      permissions: permissionsForRole(null),
-      role: null,
-      userId: user.id,
-    },
-  });
+  const authCtx: AuthContext = {
+    clerkUserId: user.clerkUserId,
+    email: user.email,
+    isSuperAdmin: user.isSuperAdmin,
+    permissions: permissionsForRole(null),
+    role: null,
+    userId: user.id,
+  };
+  sessionMemo.set(session.userId, authCtx);
+
+  return ok({ auth: authCtx });
 }
 
 async function readClerkUser(userId: string) {
@@ -71,16 +84,33 @@ async function readClerkUser(userId: string) {
   }
 }
 
-export async function buildCityRouteContext(
+async function resolveTenant(
+  registryDb: RegistryDb,
   citySlug: string,
-): Promise<Result<{ ctx: RouteContext }>> {
-  const registryDb = getRegistryDb();
+): Promise<Result<{ tenant: TenantContext }>> {
+  const cached = cityMemo.get(citySlug);
+  if (cached) {
+    return ok({ tenant: cached });
+  }
   const city = await resolveCityContext(registryDb, citySlug);
   if (!city.ok) {
     return city;
   }
+  cityMemo.set(citySlug, city.tenant);
+  return ok({ tenant: city.tenant });
+}
 
-  const store = openTenantStore(city.tenant);
+export async function buildCityRouteContext(
+  citySlug: string,
+): Promise<Result<{ ctx: RouteContext }>> {
+  const registryDb = getRegistryDb();
+  const resolvedTenant = await resolveTenant(registryDb, citySlug);
+  if (!resolvedTenant.ok) {
+    return resolvedTenant;
+  }
+  const { tenant } = resolvedTenant;
+
+  const store = openTenantStore(tenant);
   const session = await syncSessionUser(registryDb);
   let authCtx: AuthContext | null = null;
 
@@ -88,7 +118,7 @@ export async function buildCityRouteContext(
     const membership = await usersRepo.findMembership(
       registryDb,
       session.auth.userId,
-      city.tenant.orgId,
+      tenant.orgId,
     );
     const role = membership?.role ?? null;
     authCtx = {
@@ -104,7 +134,7 @@ export async function buildCityRouteContext(
     ctx: {
       auth: authCtx,
       registryDb,
-      tenant: city.tenant,
+      tenant,
       tenantDb: store.db,
     },
   });
