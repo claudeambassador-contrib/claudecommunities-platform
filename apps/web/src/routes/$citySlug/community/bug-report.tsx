@@ -18,17 +18,17 @@ function BugReportPage(): ReactElement {
         <p className="muted m-0">
           This form is not connected to a backend. Copy your notes and send them to the maintainers.
         </p>
-        <label className="stack">
+        <label className="field-label">
           Title
-          <input className="btn" name="title" placeholder="Brief description" required />
+          <input className="field" name="title" placeholder="Brief description" required />
         </label>
-        <label className="stack">
+        <label className="field-label">
           Description
-          <textarea className="btn" name="description" placeholder="What happened?" rows={4} />
+          <textarea className="field" name="description" placeholder="What happened?" rows={4} />
         </label>
-        <label className="stack">
+        <label className="field-label">
           Steps to reproduce
-          <textarea className="btn" name="steps" placeholder="1. Go to…" rows={3} />
+          <textarea className="field" name="steps" placeholder="1. Go to…" rows={3} />
         </label>
         <button className="btn btn-primary" type="submit">
           Copy for maintainers
