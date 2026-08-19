@@ -480,3 +480,14 @@ export async function getPostForPublish(
 ): Promise<Result<{ post: SocialPostSummary }>> {
   return await socialRepo.getPostById(store, postId);
 }
+
+export async function countScheduled(
+  store: TenantStore,
+  actor: Actor,
+): Promise<Result<{ count: number }>> {
+  const perm = ensurePermission(actor, "social.view");
+  if (!perm.ok) {
+    return perm;
+  }
+  return ok({ count: await socialRepo.countByStatus(store, "scheduled") });
+}
