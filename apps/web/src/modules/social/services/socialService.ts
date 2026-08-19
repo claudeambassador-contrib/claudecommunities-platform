@@ -19,7 +19,7 @@ import {
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { type Empty, err, ok, type Result } from "@/shared/http/errors";
 
 const DEFAULT_MAX_TEXT = 3000;
 
@@ -462,7 +462,7 @@ export async function markPublishFailed(
   store: TenantStore,
   postId: string,
   message: string,
-): Promise<Result<Record<string, unknown>>> {
+): Promise<Result<Empty>> {
   const updated = await socialRepo.updatePostById(store, postId, {
     errorMessage: message,
     status: "failed",
