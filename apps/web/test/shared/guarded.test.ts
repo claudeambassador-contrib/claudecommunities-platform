@@ -32,19 +32,31 @@ describe("guarded", () => {
   it("denies when the page fails to load", async () => {
     vi.mocked(loadCityPage).mockResolvedValue(err("not_found", 404) as never);
     const result = await guarded("sydney", null, async () => ok({ x: 1 }));
-    expect(result).toEqual({ allowed: false, reason: "not_found" });
+    expect(result).toEqual({
+      allowed: false,
+      code: "not_found",
+      reason: "That page or record doesn't exist.",
+    });
   });
 
   it("denies unauthenticated (no actor)", async () => {
     vi.mocked(loadCityPage).mockResolvedValue(page({ actor: null }) as never);
     const result = await guarded("sydney", null, async () => ok({ x: 1 }));
-    expect(result).toEqual({ allowed: false, reason: "unauthenticated" });
+    expect(result).toEqual({
+      allowed: false,
+      code: "unauthenticated",
+      reason: "Sign in to continue.",
+    });
   });
 
-  it("denies a missing permission with reason 'forbidden'", async () => {
+  it("denies a missing permission with code 'forbidden'", async () => {
     vi.mocked(loadCityPage).mockResolvedValue(page() as never);
     const result = await guarded("sydney", "events.edit", async () => ok({ x: 1 }));
-    expect(result).toEqual({ allowed: false, reason: "forbidden" });
+    expect(result).toEqual({
+      allowed: false,
+      code: "forbidden",
+      reason: "Missing permission: events.edit",
+    });
   });
 
   it("maps a service error to denied", async () => {
@@ -54,7 +66,11 @@ describe("guarded", () => {
       null,
       async () => err("invalid_input", 400) as Result<{ x: number }>,
     );
-    expect(result).toEqual({ allowed: false, reason: "invalid_input" });
+    expect(result).toEqual({
+      allowed: false,
+      code: "invalid_input",
+      reason: "That input couldn't be saved. Check the fields and try again.",
+    });
   });
 
   it("returns the payload flattened with allowed: true", async () => {
