@@ -34,45 +34,26 @@ async function drainCity(
   city: { d1Binding: string; orgId: string; slug: string },
   campaignWorkflow: import("@/modules/email/types").CampaignWorkflow | undefined,
 ): Promise<void> {
-  const { and, eq, isNull, lte } = await import("drizzle-orm");
   const { createTenantDb, getD1Binding } = await import("@/shared/db/client");
-  const { socialPosts } = await import("@/modules/social/schema.tenant");
   const { tenantStore } = await import("@/shared/db/tenantStore");
   const { listDueScheduled, startCampaignSend } = await import(
     "@/modules/email/services/emailCampaignsService"
   );
+  const { listDuePublishable } = await import("@/modules/social/services/socialService");
+  const { publishStarterFromEnv } = await import("@/modules/social/services/publishStarter");
 
   const now = new Date();
   const store = tenantStore(createTenantDb(getD1Binding(env, city.d1Binding)), {
     binding: city.d1Binding,
     orgId: city.orgId,
   });
-  const due = await store.db
-    .select()
-    .from(socialPosts)
-    .where(
-      and(
-        eq(socialPosts.orgId, store.orgId),
-        eq(socialPosts.status, "scheduled"),
-        isNull(socialPosts.externalId),
-        lte(socialPosts.scheduledAt, now),
-      ),
-    )
-    .limit(25);
 
-  const wf = env.PUBLISH_POST as
-    | { create: (opts: { params: unknown }) => Promise<unknown> }
-    | undefined;
-  for (const post of due) {
-    if (wf?.create) {
+  const due = await listDuePublishable(store, now);
+  const starter = publishStarterFromEnv(env);
+  if (due.ok && starter) {
+    for (const post of due.posts) {
       // biome-ignore lint/performance/noAwaitInLoops: workflow create is per-post
-      await wf.create({
-        params: {
-          d1Binding: city.d1Binding,
-          orgId: city.orgId,
-          postId: post.id,
-        },
-      });
+      await starter.start({ d1Binding: city.d1Binding, orgId: city.orgId, postId: post.id });
     }
   }
 

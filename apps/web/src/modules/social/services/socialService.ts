@@ -435,3 +435,48 @@ export async function resetStuckPublishing(
   const cutoff = new Date(Date.now() - maxAgeMinutes * 60 * 1000);
   return ok({ count: await socialRepo.resetStuckPublishing(store, cutoff) });
 }
+
+/** Cron-facing: due scheduled posts with no externalId (native-scheduled excluded). */
+export async function listDuePublishable(
+  store: TenantStore,
+  now: Date,
+): Promise<Result<{ posts: { id: string }[] }>> {
+  const posts = await socialRepo.listDueScheduled(store, now);
+  return ok({ posts: posts.map((p) => ({ id: p.id })) });
+}
+
+/** Workflow-facing: atomically claim a post for publishing. */
+export async function claimPostForPublish(
+  store: TenantStore,
+  postId: string,
+): Promise<Result<{ attempt: number; claimed: boolean }>> {
+  const result = await socialRepo.claimForPublish(store, postId);
+  if (!result.ok) {
+    return result;
+  }
+  return ok({ attempt: result.attempt, claimed: result.claimed });
+}
+
+/** Workflow-facing: terminal failure transition, one place. */
+export async function markPublishFailed(
+  store: TenantStore,
+  postId: string,
+  message: string,
+): Promise<Result<Record<string, unknown>>> {
+  const updated = await socialRepo.updatePostById(store, postId, {
+    errorMessage: message,
+    status: "failed",
+  });
+  if (!updated.ok) {
+    return updated;
+  }
+  return ok({});
+}
+
+/** Workflow-facing: fetch a post without an actor/permission check (system-triggered). */
+export async function getPostForPublish(
+  store: TenantStore,
+  postId: string,
+): Promise<Result<{ post: SocialPostSummary }>> {
+  return await socialRepo.getPostById(store, postId);
+}

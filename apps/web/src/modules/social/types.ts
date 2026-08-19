@@ -115,6 +115,11 @@ export interface SocialPublishWorkflow {
   start: (input: { attempt: number; postId: string }) => Promise<{ workflowId: string }>;
 }
 
+/** Typed seam over the PUBLISH_POST workflow binding, used by the cron drain. */
+export interface PublishStarter {
+  start: (params: { d1Binding: string; orgId: string; postId: string }) => Promise<void>;
+}
+
 export interface SocialDeps {
   connector?: SocialConnector;
   workflow?: SocialPublishWorkflow;

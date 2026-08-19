@@ -1,7 +1,10 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
-import * as socialRepo from "@/modules/social/repositories/socialRepository";
-import { completeClaimedPublish } from "@/modules/social/services/socialService";
+import {
+  claimPostForPublish,
+  completeClaimedPublish,
+  getPostForPublish,
+  markPublishFailed,
+} from "@/modules/social/services/socialService";
 import { zernioConnectorFromEnv } from "@/modules/social/zernioConnector";
 import { createTenantDb, getD1Binding } from "@/shared/db/client";
 import { tenantStore } from "@/shared/db/tenantStore";
@@ -30,7 +33,7 @@ export class PublishPostWorkflow extends WorkflowEntrypoint<Env, Payload> {
 
     const claimed = await step.do("claim", async () => {
       const store = openStore(this.env, event.payload);
-      const result = await socialRepo.claimForPublish(store, postId);
+      const result = await claimPostForPublish(store, postId);
       if (!result.ok) {
         throw new Error(result.error.message ?? result.error.code);
       }
@@ -39,7 +42,7 @@ export class PublishPostWorkflow extends WorkflowEntrypoint<Env, Payload> {
 
     const published = await step.do("publish", async () => {
       const store = openStore(this.env, event.payload);
-      const existing = await socialRepo.getPostById(store, postId);
+      const existing = await getPostForPublish(store, postId);
       if (!existing.ok) {
         throw new Error(existing.error.message ?? existing.error.code);
       }
@@ -52,10 +55,7 @@ export class PublishPostWorkflow extends WorkflowEntrypoint<Env, Payload> {
       }
       const connector = zernioConnectorFromEnv(this.env as unknown as Record<string, unknown>);
       if (!connector) {
-        await socialRepo.updatePostById(store, postId, {
-          errorMessage: "No social connector is configured on this Worker",
-          status: "failed",
-        });
+        await markPublishFailed(store, postId, "No social connector is configured on this Worker");
         throw new Error("No social connector is configured on this Worker");
       }
       const result = await completeClaimedPublish(store, existing.post, connector);
