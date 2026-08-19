@@ -1,30 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { listAllAdmin } from "@/modules/courses/services/coursesService";
-import { loadCityPage } from "@/shared/http/cityPage";
+import { ok } from "@/shared/http/errors";
+import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
 const loadCourses = createServerFn({ method: "GET" })
   .validator((d: { citySlug: string }) => d)
-  .handler(async ({ data }) => {
-    const page = await loadCityPage(data.citySlug);
-    if (!(page.ok && page.actor)) {
-      return { allowed: false as const, reason: "unauthenticated" };
-    }
-    const result = await listAllAdmin(page.store, page.actor);
-    if (!result.ok) {
-      return { allowed: false as const, reason: result.error.code };
-    }
-    return {
-      allowed: true as const,
-      courses: result.courses.map((course) => ({
-        detail: `${course.status} · ${course.lessonCount} lessons`,
-        href: `/${page.tenant.slug}/admin/courses/${course.id}/edit`,
-        id: course.id,
-        title: course.title,
-      })),
-    };
-  });
+  .handler(({ data }) =>
+    guarded(data.citySlug, null, async (page) => {
+      const result = await listAllAdmin(page.store, page.actor);
+      if (!result.ok) {
+        return result;
+      }
+      return ok({
+        courses: result.courses.map((course) => ({
+          detail: `${course.status} · ${course.lessonCount} lessons`,
+          href: `/${page.tenant.slug}/admin/courses/${course.id}/edit`,
+          id: course.id,
+          title: course.title,
+        })),
+      });
+    }),
+  );
 
 export const Route = createFileRoute("/$citySlug/admin/courses/")({
   loader: ({ params }) => loadCourses({ data: { citySlug: params.citySlug } }),
