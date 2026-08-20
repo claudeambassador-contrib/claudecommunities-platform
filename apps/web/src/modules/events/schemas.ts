@@ -72,38 +72,56 @@ export function isValidTimezone(timezone: string): boolean {
 }
 
 /**
- * The rule-bearing subset of an event write body — the fields
- * `eventsService.validateInput` used to hand-check one by one. Every field is
- * optional here on purpose: create and update both call this schema with
- * only the keys that are present, so a field absent from the input is simply
- * not validated (matching the old `input.field !== undefined` guards), while
- * a field present as an empty string is treated as "not provided" too
- * (matching the old truthy `input.field && ...` guards).
+ * The one write shape for events. Every field is optional here on purpose:
+ * create and update share this schema, so a field absent from the input is
+ * simply not validated (matching the old `input.field !== undefined` guards),
+ * while a field present as an empty string or `null` is treated as "not
+ * provided" by the rule-bearing refinements (matching the old truthy
+ * `input.field && ...` guards).
+ *
+ * `coverUrl` is the canonical name for the cover image — it matches the
+ * `events.cover_url` column. The MCP tool layer still speaks `imageUrl` on the
+ * wire and translates once at its boundary.
  */
 export const eventWriteInput = z.object({
-  imageUrl: z
+  city: z.string().nullish(),
+  coverUrl: z
     .string()
-    .refine((value) => !value || isAllowedImageUrl(value), "imageUrl host not allowed")
-    .optional(),
+    .nullish()
+    .refine((value) => !value || isAllowedImageUrl(value), "coverUrl host not allowed"),
+  description: z.string().nullish(),
+  endTime: z.string().nullish(),
+  eventType: z.string().nullish(),
+  feedbackUrl: z.string().nullish(),
+  footerText: z.string().nullish(),
+  headerText: z.string().nullish(),
+  isActive: z.boolean().optional(),
+  isOnline: z.boolean().optional(),
+  location: z.string().nullish(),
   lumaUrl: z
     .string()
+    .nullish()
     .refine(
       (value) => !value || isAllowedLumaUrl(value),
       "External ticket URL must be a valid https:// URL",
-    )
-    .optional(),
+    ),
+  maxAttendees: z.number().nullish(),
   meetingUrl: z
     .string()
-    .refine((value) => !value || isAllowedMeetingUrl(value), "meetingUrl host not allowed")
-    .optional(),
+    .nullish()
+    .refine((value) => !value || isAllowedMeetingUrl(value), "meetingUrl host not allowed"),
+  rsvpEnabled: z.boolean().optional(),
+  startTime: z.string().nullish(),
   timezone: z
     .string()
-    .refine((value) => !value || isValidTimezone(value), "Invalid timezone")
-    .optional(),
+    .nullish()
+    .refine((value) => !value || isValidTimezone(value), "Invalid timezone"),
   title: z
     .string()
-    .refine((value) => value.length >= 1 && value.length <= 200, "title required (1-200 chars)")
-    .optional(),
+    .nullish()
+    .refine(
+      (value) =>
+        value === null || value === undefined || (value.length >= 1 && value.length <= 200),
+      "title required (1-200 chars)",
+    ),
 });
-
-export type EventWriteInputParsed = z.infer<typeof eventWriteInput>;

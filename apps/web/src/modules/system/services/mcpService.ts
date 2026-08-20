@@ -32,7 +32,7 @@ import {
   setEventActive,
   updateEvent as updateEventService,
 } from "@/modules/events/services/eventsService";
-import type { EventCreateBody, EventUpdateBody } from "@/modules/events/types";
+import type { EventDetail, EventWriteInput } from "@/modules/events/types";
 import {
   getOwnProfile,
   listUsers as listUsersService,
@@ -105,16 +105,23 @@ async function openRegistry(ctx: McpDispatchContext): Promise<Result<{ registry:
   return ok({ registry: await ctx.openRegistry() });
 }
 
-function eventBody(args: McpArgs): EventCreateBody | EventUpdateBody {
+/**
+ * MCP wire contract: clients have always sent and received the event cover
+ * image as `imageUrl`, while the events module's canonical name is `coverUrl`
+ * (it matches the `events.cover_url` column). `eventBody` (in) and
+ * `toMcpEvent` (out) are the only two places the two names meet — never
+ * translate inside the events module.
+ */
+function eventBody(args: McpArgs): EventWriteInput {
   return {
     city: str(args, "city"),
+    coverUrl: str(args, "imageUrl"),
     description: str(args, "description"),
     endTime: str(args, "endTime"),
     eventType: str(args, "eventType"),
     feedbackUrl: str(args, "feedbackUrl"),
     footerText: str(args, "footerText"),
     headerText: str(args, "headerText"),
-    imageUrl: str(args, "imageUrl"),
     isActive: bool(args, "isActive"),
     isOnline: bool(args, "isOnline"),
     location: str(args, "location"),
@@ -126,6 +133,15 @@ function eventBody(args: McpArgs): EventCreateBody | EventUpdateBody {
     timezone: str(args, "timezone"),
     title: str(args, "title"),
   };
+}
+
+/** See `eventBody` — restores the MCP-facing `imageUrl` on the way out. */
+function toMcpEvent({ coverUrl, ...event }: EventDetail): Record<string, unknown> {
+  return { ...event, imageUrl: coverUrl };
+}
+
+function mcpEvent(result: Result<{ event: EventDetail }>): Result<object> {
+  return result.ok ? ok({ event: toMcpEvent(result.event) }) : result;
 }
 
 function speakerBody(args: McpArgs): SpeakerInput {
@@ -240,12 +256,14 @@ const HANDLERS: Record<string, Handler> = {
     if (!startTime.ok) {
       return startTime;
     }
-    return createEventService(opened.store, ctx.actor, {
-      ...eventBody(args),
-      isActive: bool(args, "isActive") ?? false,
-      startTime: startTime.value,
-      title: title.value,
-    });
+    return mcpEvent(
+      await createEventService(opened.store, ctx.actor, {
+        ...eventBody(args),
+        isActive: bool(args, "isActive") ?? false,
+        startTime: startTime.value,
+        title: title.value,
+      }),
+    );
   },
 
   async createPost(args, ctx) {
@@ -487,9 +505,11 @@ const HANDLERS: Record<string, Handler> = {
     if (!eventId.ok) {
       return eventId;
     }
-    return getEventService(opened.store, eventId.value, {
-      includeInactive: hasPermission(ctx.actor.permissions, "events.view"),
-    });
+    return mcpEvent(
+      await getEventService(opened.store, eventId.value, {
+        includeInactive: hasPermission(ctx.actor.permissions, "events.view"),
+      }),
+    );
   },
 
   async getEvents(args, ctx) {
@@ -503,15 +523,13 @@ const HANDLERS: Record<string, Handler> = {
     if (!listed.ok) {
       return listed;
     }
-    if (!bool(args, "upcoming")) {
-      return listed;
-    }
     const now = Date.now();
-    return ok({
-      events: listed.events.filter(
-        (event) => event.startTime !== null && new Date(event.startTime).getTime() >= now,
-      ),
-    });
+    const events = bool(args, "upcoming")
+      ? listed.events.filter(
+          (event) => event.startTime !== null && new Date(event.startTime).getTime() >= now,
+        )
+      : listed.events;
+    return ok({ events: events.map(toMcpEvent) });
   },
 
   async getFeed(args, ctx) {
@@ -801,7 +819,7 @@ const HANDLERS: Record<string, Handler> = {
     if (isActive === undefined) {
       return err("bad_request", 400, "isActive is required");
     }
-    return setEventActive(opened.store, ctx.actor, eventId.value, isActive);
+    return mcpEvent(await setEventActive(opened.store, ctx.actor, eventId.value, isActive));
   },
 
   async updateComment(args, ctx) {
@@ -846,7 +864,9 @@ const HANDLERS: Record<string, Handler> = {
     if (!eventId.ok) {
       return eventId;
     }
-    return updateEventService(opened.store, ctx.actor, eventId.value, eventBody(args));
+    return mcpEvent(
+      await updateEventService(opened.store, ctx.actor, eventId.value, eventBody(args)),
+    );
   },
 
   async updateEventSpeaker(args, ctx) {

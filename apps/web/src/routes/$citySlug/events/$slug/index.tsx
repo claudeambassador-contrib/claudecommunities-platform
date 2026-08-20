@@ -3,54 +3,26 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import { getEventBySlugOrId, listPublicAgenda } from "@/modules/events/services/eventsService";
-import type { AgendaItemType } from "@/modules/events/types";
+import type { AgendaItemDetail } from "@/modules/events/types";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { EmptyCard, PageHeader } from "@/shared/ui/page";
-
-interface AgendaRow {
-  description: string | null;
-  endTime: string | null;
-  id: string;
-  startTime: string | null;
-  title: string;
-  type: AgendaItemType;
-}
 
 const getEventPageInput = z.object({ citySlug: z.string().min(1), slug: z.string() });
 
 const getEventPage = createServerFn({ method: "GET" })
   .validator((input: unknown) => getEventPageInput.parse(input))
   .handler(async ({ data }) => {
+    const empty = { agenda: [] as AgendaItemDetail[], event: null };
     const page = await loadCityPage(data.citySlug);
     if (!page.ok) {
-      return { event: null, agenda: [] as AgendaRow[] };
+      return empty;
     }
     const found = await getEventBySlugOrId(page.store, data.slug);
     if (!found.ok) {
-      return { event: null, agenda: [] as AgendaRow[] };
+      return empty;
     }
     const agenda = await listPublicAgenda(page.store, found.event.id);
-    return {
-      event: {
-        description: found.event.description,
-        id: found.event.id,
-        location: found.event.location,
-        rsvpCount: found.event.rsvpCount,
-        slug: found.event.slug,
-        startTime: found.event.startTime,
-        title: found.event.title,
-      },
-      agenda: agenda.ok
-        ? agenda.items.map((item) => ({
-            description: item.description,
-            endTime: item.endTime,
-            id: item.id,
-            startTime: item.startTime,
-            title: item.title ?? "Untitled",
-            type: item.type,
-          }))
-        : [],
-    };
+    return { agenda: agenda.ok ? agenda.items : [], event: found.event };
   });
 
 export const Route = createFileRoute("/$citySlug/events/$slug/")({
@@ -113,7 +85,7 @@ function EventDetailPage(): ReactElement {
               <div className="muted">
                 {formatSlot(item.startTime, item.endTime)} · {item.type}
               </div>
-              <strong>{item.title}</strong>
+              <strong>{item.title ?? "Untitled"}</strong>
               {item.description ? <p className="muted mt-1">{item.description}</p> : null}
             </div>
           ))

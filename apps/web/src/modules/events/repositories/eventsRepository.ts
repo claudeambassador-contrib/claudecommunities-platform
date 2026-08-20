@@ -36,6 +36,7 @@ function eventUpdateSet(patch: Partial<EventWrite>) {
 function toDetail(row: EventRow, rsvpCount = 0): EventDetail {
   return {
     city: row.city ?? null,
+    coverUrl: row.coverUrl ?? null,
     createdAt: row.createdAt.toISOString(),
     description: row.description ?? null,
     endTime: iso(row.endsAt),
@@ -44,7 +45,6 @@ function toDetail(row: EventRow, rsvpCount = 0): EventDetail {
     footerText: row.footerText ?? null,
     headerText: row.headerText ?? null,
     id: row.id,
-    imageUrl: row.coverUrl ?? null,
     isOnline: Boolean(row.isOnline),
     location: row.location ?? null,
     lumaUrl: row.lumaUrl ?? null,

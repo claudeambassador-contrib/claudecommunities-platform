@@ -144,6 +144,51 @@ describe("eventsService", () => {
     }
   });
 
+  it("round-trips the canonical coverUrl through create, read, and update", async () => {
+    const store = openMemoryTenant();
+    const created = await createEvent(store, adminActor(), {
+      coverUrl: "https://images.lumacdn.com/cover.png",
+      startTime: START,
+      title: "Cover art",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    expect(created.event.coverUrl).toBe("https://images.lumacdn.com/cover.png");
+
+    const fetched = await getEvent(store, created.event.id);
+    expect(fetched.ok).toBe(true);
+    if (!fetched.ok) {
+      return;
+    }
+    expect(fetched.event.coverUrl).toBe("https://images.lumacdn.com/cover.png");
+
+    const updated = await updateEvent(store, adminActor(), created.event.id, {
+      coverUrl: "/api/files/sydney/cover.png",
+    });
+    expect(updated.ok).toBe(true);
+    if (!updated.ok) {
+      return;
+    }
+    expect(updated.event.coverUrl).toBe("/api/files/sydney/cover.png");
+  });
+
+  it("rejects a cover image from a disallowed host", async () => {
+    const store = openMemoryTenant();
+    const created = await createEvent(store, adminActor(), {
+      coverUrl: "https://evil.example/cover.png",
+      startTime: START,
+      title: "Bad cover",
+    });
+    expect(created.ok).toBe(false);
+    if (created.ok) {
+      return;
+    }
+    expect(created.error.status).toBe(400);
+    expect(created.error.message).toContain("coverUrl");
+  });
+
   it("lists only published events unless includeInactive is set", async () => {
     const store = openMemoryTenant();
     const live = await createEvent(store, adminActor(), {

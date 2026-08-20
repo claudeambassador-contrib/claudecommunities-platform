@@ -1,53 +1,32 @@
+import type { z } from "zod";
+import type { eventWriteInput } from "@/modules/events/schemas";
+
 export type EventStatus = "draft" | "published" | "cancelled";
 export type RsvpStatus = "going" | "interested" | "not_going";
 export type StoredRsvpStatus = "going" | "interested";
 export type AgendaItemType = "speaker" | "welcome" | "break" | "custom";
 
-export interface EventCreateBody {
-  city?: string | null;
-  description?: string | null;
-  endTime?: string | null;
-  eventType?: string;
-  feedbackUrl?: string | null;
-  footerText?: string | null;
-  headerText?: string | null;
-  imageUrl?: string | null;
-  isActive?: boolean;
-  isOnline?: boolean;
-  location?: string | null;
-  lumaUrl?: string | null;
-  maxAttendees?: number | null;
-  meetingUrl?: string | null;
-  rsvpEnabled?: boolean;
-  startTime: string;
-  timezone?: string | null;
-  title: string;
-}
+/**
+ * The single event write shape, owned by the module's zod schema. Update
+ * bodies use it as-is (every field optional); create bodies additionally
+ * require `startTime` and `title`.
+ */
+export type EventWriteInput = z.infer<typeof eventWriteInput>;
 
-export type EventUpdateBody = Partial<EventCreateBody>;
+export type EventCreateInput = EventWriteInput & { startTime: string; title: string };
 
-/** Persistence write DTO — dates stay as Date only inside the repository. */
-export interface EventWrite {
-  city?: string | null;
-  coverUrl?: string | null;
-  description?: string | null;
+/**
+ * Persistence write DTO — the same write shape after the repo-level
+ * normalizations: dates parsed to `Date`, `isActive` mapped to `status`, and
+ * the slug generated.
+ */
+export type EventWrite = Omit<EventWriteInput, "endTime" | "isActive" | "startTime" | "title"> & {
   endsAt?: Date | null;
-  eventType?: string;
-  feedbackUrl?: string | null;
-  footerText?: string | null;
-  headerText?: string | null;
-  isOnline?: boolean;
-  location?: string | null;
-  lumaUrl?: string | null;
-  maxAttendees?: number | null;
-  meetingUrl?: string | null;
-  rsvpEnabled?: boolean;
   slug: string;
   startsAt: Date;
   status?: EventStatus;
-  timezone?: string | null;
   title: string;
-}
+};
 
 export interface RsvpRow {
   createdAt: string;
@@ -57,6 +36,7 @@ export interface RsvpRow {
 
 export interface EventDetail {
   city: string | null;
+  coverUrl: string | null;
   createdAt: string;
   description: string | null;
   endTime: string | null;
@@ -65,7 +45,6 @@ export interface EventDetail {
   footerText: string | null;
   headerText: string | null;
   id: string;
-  imageUrl: string | null;
   isOnline: boolean;
   location: string | null;
   lumaUrl: string | null;

@@ -6,12 +6,12 @@ import type {
   AgendaItemInput,
   AgendaItemType,
   Clock,
-  EventCreateBody,
+  EventCreateInput,
   EventDetail,
   EventResourceDetail,
   EventResourceInput,
-  EventUpdateBody,
   EventWrite,
+  EventWriteInput,
   LumaWaitlistNotifier,
   ReorderEntry,
   RsvpCounts,
@@ -57,12 +57,14 @@ async function uniqueSlug(store: TenantStore, base: string): Promise<string> {
 }
 
 function toEventWritePatch(
-  input: EventUpdateBody,
+  input: EventWriteInput,
   start?: { date: Date | null },
   end?: { date: Date | null },
 ): Partial<EventWrite> {
   const patch: Partial<EventWrite> = {};
-  if (input.title !== undefined) {
+  // A null title would violate the NOT NULL column, so treat it as "absent"
+  // exactly like the old `input.title !== undefined` guard did.
+  if (input.title !== undefined && input.title !== null) {
     patch.title = input.title;
   }
   if (input.description !== undefined) {
@@ -98,8 +100,8 @@ function toEventWritePatch(
   if (input.lumaUrl !== undefined) {
     patch.lumaUrl = input.lumaUrl;
   }
-  if (input.imageUrl !== undefined) {
-    patch.coverUrl = input.imageUrl;
+  if (input.coverUrl !== undefined) {
+    patch.coverUrl = input.coverUrl;
   }
   if (input.rsvpEnabled !== undefined) {
     patch.rsvpEnabled = input.rsvpEnabled;
@@ -119,14 +121,8 @@ function toEventWritePatch(
   return patch;
 }
 
-function validateInput(input: EventCreateBody | EventUpdateBody): Result<{ valid: true }> {
-  const parsed = eventWriteInput.safeParse({
-    imageUrl: input.imageUrl ?? undefined,
-    lumaUrl: input.lumaUrl ?? undefined,
-    meetingUrl: input.meetingUrl ?? undefined,
-    timezone: input.timezone ?? undefined,
-    title: input.title ?? undefined,
-  });
+function validateInput(input: EventWriteInput): Result<{ valid: true }> {
+  const parsed = eventWriteInput.safeParse(input);
   if (!parsed.success) {
     return err("bad_request", 400, parsed.error.issues[0]?.message ?? "Invalid input");
   }
@@ -184,7 +180,7 @@ export async function getEventBySlugOrId(
 export async function createEvent(
   store: TenantStore,
   actor: Actor,
-  input: EventCreateBody,
+  input: EventCreateInput,
 ): Promise<Result<{ event: EventDetail }>> {
   const perm = ensurePermission(actor, "events.edit");
   if (!perm.ok) {
@@ -209,7 +205,7 @@ export async function createEvent(
   const slug = await uniqueSlug(store, buildDateSlug(input.title, start.date));
   return await eventsRepo.insert(store, {
     city: input.city,
-    coverUrl: input.imageUrl,
+    coverUrl: input.coverUrl,
     description: input.description,
     endsAt: end.date,
     eventType: input.eventType,
@@ -234,7 +230,7 @@ export async function updateEvent(
   store: TenantStore,
   actor: Actor,
   id: string,
-  input: EventUpdateBody,
+  input: EventWriteInput,
   notifier?: LumaWaitlistNotifier,
 ): Promise<Result<{ event: EventDetail }>> {
   const perm = ensurePermission(actor, "events.edit");
