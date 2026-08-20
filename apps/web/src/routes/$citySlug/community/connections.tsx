@@ -7,8 +7,8 @@ import {
   respondToConnection,
 } from "@/modules/connections/services/connectionsService";
 import { listDirectory } from "@/modules/identity/services/usersService";
+import { cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { requireCityActor } from "@/shared/http/cityPage";
-import { guardedMutation } from "@/shared/http/guarded";
 import { EmptyCard, PageHeader, SignInCard } from "@/shared/ui/page";
 import { useFormSubmit } from "@/shared/ui/use-form-submit";
 
@@ -51,16 +51,15 @@ const load = createServerFn({ method: "GET" })
     };
   });
 
-const respondInput = z.object({
-  citySlug: z.string().min(1),
+const respondInput = cityInput({
   connectionId: z.string(),
   status: z.enum(["accepted", "rejected"]),
 });
 
 const respond = createServerFn({ method: "POST" })
   .validator((input: unknown) => respondInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, null, (page) =>
+  .handler(
+    cityMutationHandler((page, data) =>
       respondToConnection(page.store, page.actor, data.connectionId, data.status),
     ),
   );

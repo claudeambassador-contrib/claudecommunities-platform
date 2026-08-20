@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import { z } from "zod";
 import { createCityPost, loadCommunityFeed } from "@/modules/community/services/postsService";
 import type { FeedCard, FeedSpaceOption } from "@/modules/community/types";
-import { guardedMutation } from "@/shared/http/guarded";
+import { cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { EmptyCard, PageHeader, SignInCard } from "@/shared/ui/page";
 import { PostCard } from "@/shared/ui/post-card";
 import { PostComposer } from "@/shared/ui/post-composer";
@@ -26,8 +26,7 @@ const getFeed = createServerFn({ method: "GET" })
     return result;
   });
 
-const submitPostInput = z.object({
-  citySlug: z.string().min(1),
+const submitPostInput = cityInput({
   content: z.string(),
   spaceId: z.string(),
   title: z.string().optional(),
@@ -35,8 +34,8 @@ const submitPostInput = z.object({
 
 const submitPost = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitPostInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, null, () =>
+  .handler(
+    cityMutationHandler((_page, data) =>
       createCityPost(data.citySlug, {
         content: data.content,
         spaceId: data.spaceId,

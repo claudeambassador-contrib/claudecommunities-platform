@@ -7,8 +7,8 @@ import {
   updateEmailPreferences,
 } from "@/modules/identity/services/usersService";
 import { EMAIL_PREF_DEFAULTS, type EmailPreferences } from "@/modules/identity/types";
+import { cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { requireCityActor } from "@/shared/http/cityPage";
-import { guardedMutation } from "@/shared/http/guarded";
 import { PageHeader, SignInCard } from "@/shared/ui/page";
 import { useFormSubmit } from "@/shared/ui/use-form-submit";
 
@@ -57,8 +57,7 @@ const load = createServerFn({ method: "GET" })
     };
   });
 
-const savePrefsInput = z.object({
-  citySlug: z.string().min(1),
+const savePrefsInput = cityInput({
   eventReminders: z.boolean(),
   likes: z.boolean(),
   mentions: z.boolean(),
@@ -69,10 +68,8 @@ const savePrefsInput = z.object({
 
 const savePrefs = createServerFn({ method: "POST" })
   .validator((input: unknown) => savePrefsInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, null, (page) =>
-      updateEmailPreferences(page.registry, page.actor, data),
-    ),
+  .handler(
+    cityMutationHandler((page, data) => updateEmailPreferences(page.registry, page.actor, data)),
   );
 
 export const Route = createFileRoute("/$citySlug/community/settings/notifications")({

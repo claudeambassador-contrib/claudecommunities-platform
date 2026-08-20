@@ -6,8 +6,8 @@ import {
   listNotifications,
   markAllRead,
 } from "@/modules/notifications/services/notificationsService";
+import { cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { requireCityActor } from "@/shared/http/cityPage";
-import { guardedMutation } from "@/shared/http/guarded";
 import { ItemList, PageHeader, SignInCard } from "@/shared/ui/page";
 import { useFormSubmit } from "@/shared/ui/use-form-submit";
 
@@ -36,13 +36,11 @@ const load = createServerFn({ method: "GET" })
     };
   });
 
-const markReadInput = z.object({ citySlug: z.string().min(1) });
+const markReadInput = cityInput();
 
 const markRead = createServerFn({ method: "POST" })
   .validator((input: unknown) => markReadInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, null, (page) => markAllRead(page.store, page.actor)),
-  );
+  .handler(cityMutationHandler((page) => markAllRead(page.store, page.actor)));
 
 function MarkAllReadForm({ citySlug }: { citySlug: string }): ReactElement {
   const { error, handleSubmit, pending } = useFormSubmit({

@@ -3,8 +3,8 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import { getOwnProfile, updateOwnProfile } from "@/modules/identity/services/usersService";
+import { cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { requireCityActor } from "@/shared/http/cityPage";
-import { guardedMutation } from "@/shared/http/guarded";
 import { EmptyCard, PageHeader, SignInCard } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
@@ -32,15 +32,14 @@ const load = createServerFn({ method: "GET" })
     };
   });
 
-const submitProfileInput = z.object({
-  citySlug: z.string().min(1),
+const submitProfileInput = cityInput({
   displayName: z.string(),
 });
 
 const submitProfile = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitProfileInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, null, (page) =>
+  .handler(
+    cityMutationHandler((page, data) =>
       updateOwnProfile(page.registry, page.actor, { displayName: data.displayName }),
     ),
   );
