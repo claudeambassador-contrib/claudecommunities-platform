@@ -4,28 +4,18 @@ import type { ReactElement } from "react";
 import { z } from "zod";
 import { createTier, listTiers } from "@/modules/tiers/services/tiersService";
 import type { TierSummary } from "@/modules/tiers/types";
-import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation } from "@/shared/http/guarded";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadTiersInput = z.object({ citySlug: z.string().min(1) });
+const loadTiersInput = cityInput();
 
 const loadTiers = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadTiersInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "tiers.view", async (page) => {
-      const listed = await listTiers(page.store, page.actor);
-      if (!listed.ok) {
-        return listed;
-      }
-      return ok({ tiers: listed.tiers });
-    }),
-  );
+  .handler(cityHandler(null, (page) => listTiers(page.store, page.actor)));
 
-const submitTierInput = z.object({
-  citySlug: z.string().min(1),
+const submitTierInput = cityInput({
   description: z.string(),
   name: z.string(),
   price: z.number(),
@@ -34,8 +24,8 @@ const submitTierInput = z.object({
 
 const submitTier = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitTierInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "tiers.edit", (page) =>
+  .handler(
+    cityMutationHandler(null, (page, data) =>
       createTier(page.store, page.actor, {
         description: data.description,
         name: data.name,
