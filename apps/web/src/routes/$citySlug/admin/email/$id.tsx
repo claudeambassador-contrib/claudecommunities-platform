@@ -10,6 +10,7 @@ import {
   updateCampaign,
 } from "@/modules/email/services/emailCampaignsService";
 import type { CampaignDetail } from "@/modules/email/types";
+import { workerEnv } from "@/shared/db/env";
 import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
 import { Can } from "@/shared/ui/can";
@@ -56,15 +57,9 @@ const sendNowInput = cityInput({ id: z.string() });
 const sendNow = createServerFn({ method: "POST" })
   .validator((input: unknown) => sendNowInput.parse(input))
   .handler(
-    cityMutationHandler(async (page, data) => {
-      const { workerEnv } = await import("@/shared/db/env");
-      return enqueueCampaignSend(
-        page.store,
-        page.actor,
-        data.id,
-        campaignWorkflowFromEnv(workerEnv()),
-      );
-    }),
+    cityMutationHandler((page, data) =>
+      enqueueCampaignSend(page.store, page.actor, data.id, campaignWorkflowFromEnv(workerEnv())),
+    ),
   );
 
 export const Route = createFileRoute("/$citySlug/admin/email/$id")({

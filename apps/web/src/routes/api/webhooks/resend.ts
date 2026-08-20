@@ -5,14 +5,12 @@ import {
   verifySvixSignature,
 } from "@/modules/email/services/emailWebhookService";
 import { tenants } from "@/modules/tenants/schema.registry";
-import { createRegistryDb, createTenantDb, getD1Binding } from "@/shared/db/client";
-import { tenantStore } from "@/shared/db/tenantStore";
+import { getRegistryDb, openTenantStore, workerEnv } from "@/shared/db/env";
 
 export const Route = createFileRoute("/api/webhooks/resend")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const { workerEnv } = await import("@/shared/db/env");
         const env = workerEnv();
         const secret = String(env.RESEND_WEBHOOK_SECRET ?? "").trim();
         if (!secret) {
@@ -41,13 +39,10 @@ export const Route = createFileRoute("/api/webhooks/resend")({
           return Response.json({ received: true });
         }
 
-        const registry = createRegistryDb(getD1Binding(env, "REGISTRY"));
-        const cities = await registry.select().from(tenants).where(eq(tenants.status, "active"));
+        const registryDb = getRegistryDb();
+        const cities = await registryDb.select().from(tenants).where(eq(tenants.status, "active"));
         for (const city of cities) {
-          const store = tenantStore(createTenantDb(getD1Binding(env, city.d1Binding)), {
-            binding: city.d1Binding,
-            orgId: city.orgId,
-          });
+          const store = openTenantStore(city);
           // biome-ignore lint/performance/noAwaitInLoops: stop after the city that owns the send
           const applied = await applyResendEvent(store, { resendId, type });
           if (applied.ok && applied.updated) {

@@ -1,4 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { actorFromBearer } from "@/modules/system/services/mcpHttp";
+import { storeUpload } from "@/modules/system/services/uploadService";
+import { workerEnv } from "@/shared/db/env";
 import { isStorageConfigured } from "@/shared/storage/r2";
 
 const CORS = {
@@ -23,13 +26,10 @@ export const Route = createFileRoute("/api/upload/mcp")({
         if (!isStorageConfigured()) {
           return withCors(Response.json({ error: "storage_unavailable" }, { status: 503 }));
         }
-        const { actorFromBearer } = await import("@/modules/system/services/mcpHttp");
-        const { workerEnv } = await import("@/shared/db/env");
         const actor = await actorFromBearer(request, workerEnv());
         if (!actor) {
           return withCors(Response.json({ error: "Unauthorized" }, { status: 401 }));
         }
-        const { storeUpload } = await import("@/modules/system/services/uploadService");
         const result = await storeUpload(await request.formData());
         if (!result.ok) {
           return withCors(

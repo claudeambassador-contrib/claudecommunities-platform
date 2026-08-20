@@ -4,10 +4,11 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { listPublicTenants } from "@/modules/tenants/services/publicListService";
 import { isClerkPublishableConfigured } from "@/shared/auth/clerk";
-import { getRegistryDb } from "@/shared/db/env";
+import { loadRegistryPage } from "@/shared/http/registryPage";
 
 const getDirectory = createServerFn({ method: "GET" }).handler(async () => {
-  const result = await listPublicTenants(getRegistryDb());
+  const { registry } = await loadRegistryPage();
+  const result = await listPublicTenants(registry.db);
   if (!result.ok) {
     return { tenants: [] as { slug: string; name: string }[] };
   }

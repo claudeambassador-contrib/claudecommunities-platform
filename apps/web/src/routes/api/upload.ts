@@ -1,4 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { syncSessionUser } from "@/modules/identity/services/sessionService";
+import { storeUpload } from "@/modules/system/services/uploadService";
+import { getRegistryDb } from "@/shared/db/env";
 import { isStorageConfigured } from "@/shared/storage/r2";
 
 export const Route = createFileRoute("/api/upload")({
@@ -8,13 +11,10 @@ export const Route = createFileRoute("/api/upload")({
         if (!isStorageConfigured()) {
           return Response.json({ error: "storage_unavailable" }, { status: 503 });
         }
-        const { getRegistryDb } = await import("@/shared/db/env");
-        const { syncSessionUser } = await import("@/modules/identity/services/sessionService");
         const session = await syncSessionUser(getRegistryDb());
         if (!session.ok) {
           return Response.json({ error: "unauthorized" }, { status: 401 });
         }
-        const { storeUpload } = await import("@/modules/system/services/uploadService");
         const result = await storeUpload(await request.formData());
         if (!result.ok) {
           return Response.json({ error: result.error.code }, { status: result.error.status });

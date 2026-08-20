@@ -4,12 +4,12 @@ import {
   unsubscribeEmail,
   verifyUnsubscribeToken,
 } from "@/modules/email/services/emailWebhookService";
+import { getRegistryStore, workerEnv } from "@/shared/db/env";
 
 export const Route = createFileRoute("/api/email/unsubscribe/$token")({
   server: {
     handlers: {
       GET: async ({ params }) => {
-        const { getRegistryStore, workerEnv } = await import("@/shared/db/env");
         const secret = emailSigningSecret(workerEnv());
         if (!secret) {
           return new Response("Unsubscribe is not configured.", { status: 503 });

@@ -1,6 +1,7 @@
 import { corsHeaders, fetchClerkAuthorizationServerMetadata } from "@clerk/mcp-tools/server";
 import { createFileRoute } from "@tanstack/react-router";
 import { clerkKeysFromRecord } from "@/shared/auth/clerk";
+import { workerEnv } from "@/shared/db/env";
 
 function originOf(request: Request): string {
   const forwardedHost = request.headers.get("x-forwarded-host");
@@ -15,7 +16,6 @@ export const Route = createFileRoute("/.well-known/oauth-authorization-server")(
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const { workerEnv } = await import("@/shared/db/env");
         const publishableKey = clerkKeysFromRecord(workerEnv()).publishable;
         if (!publishableKey) {
           return Response.json({ error: "Clerk is not configured" }, { status: 503 });

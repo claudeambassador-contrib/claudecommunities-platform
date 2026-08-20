@@ -1,6 +1,7 @@
 import { corsHeaders } from "@clerk/mcp-tools/server";
 import { createFileRoute } from "@tanstack/react-router";
 import { clerkKeysFromRecord } from "@/shared/auth/clerk";
+import { workerEnv } from "@/shared/db/env";
 
 const CLERK_API = "https://api.clerk.com/v1/oauth_applications";
 const PROTOCOL = /^https?:\/\//;
@@ -80,7 +81,6 @@ export const Route = createFileRoute("/oauth/register")({
     handlers: {
       OPTIONS: () => new Response(null, { headers: corsHeaders, status: 200 }),
       POST: async ({ request }) => {
-        const { workerEnv } = await import("@/shared/db/env");
         const { secret } = clerkKeysFromRecord(workerEnv());
         if (!secret) {
           return Response.json(

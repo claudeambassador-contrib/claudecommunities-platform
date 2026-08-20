@@ -1,24 +1,17 @@
-import { auth } from "@clerk/tanstack-react-start/server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
-import { syncSessionUser } from "@/modules/identity/services/sessionService";
 import { listPublicTenants, provisionCity } from "@/modules/tenants/services/publicListService";
-import { getRegistryDb } from "@/shared/db/env";
+import { loadRegistryPage } from "@/shared/http/registryPage";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
 const loadPlatform = createServerFn({ method: "GET" }).handler(async () => {
-  const session = await auth();
-  if (!session.isAuthenticated) {
+  const { auth, registry } = await loadRegistryPage();
+  if (!auth?.isSuperAdmin) {
     return { allowed: false as const, tenants: [] as { slug: string; name: string }[] };
   }
-  const registryDb = getRegistryDb();
-  const user = await syncSessionUser(registryDb);
-  if (!(user.ok && user.auth.isSuperAdmin)) {
-    return { allowed: false as const, tenants: [] as { slug: string; name: string }[] };
-  }
-  const list = await listPublicTenants(registryDb);
+  const list = await listPublicTenants(registry.db);
   return {
     allowed: true as const,
     tenants: list.ok ? list.tenants : [],
@@ -34,12 +27,11 @@ const provisionInput = z.object({
 const provision = createServerFn({ method: "POST" })
   .validator((input: unknown) => provisionInput.parse(input))
   .handler(async ({ data }) => {
-    const registryDb = getRegistryDb();
-    const user = await syncSessionUser(registryDb);
-    if (!(user.ok && user.auth.isSuperAdmin)) {
+    const { auth, registry } = await loadRegistryPage();
+    if (!auth?.isSuperAdmin) {
       return { ok: false as const, error: "forbidden" };
     }
-    const result = await provisionCity(registryDb, data);
+    const result = await provisionCity(registry.db, data);
     if (!result.ok) {
       return { ok: false as const, error: result.error.code };
     }

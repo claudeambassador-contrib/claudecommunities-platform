@@ -2,11 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { listPublicTenants } from "@/modules/tenants/services/publicListService";
-import { getRegistryDb } from "@/shared/db/env";
+import { loadRegistryPage } from "@/shared/http/registryPage";
 import { getRegionConfig } from "@/shared/region";
 
 const getSitemap = createServerFn({ method: "GET" }).handler(async () => {
-  const list = await listPublicTenants(getRegistryDb());
+  const { registry } = await loadRegistryPage();
+  const list = await listPublicTenants(registry.db);
   return { tenants: list.ok ? list.tenants : [] };
 });
 
