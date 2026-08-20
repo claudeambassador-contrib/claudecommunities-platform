@@ -195,7 +195,11 @@ export const contentBlockInput = z.object({
   enabled: enabledFlag,
   heading: optStr,
   id: blockId,
-  type: z.literal("richText"),
+  // `message` alone doesn't override `invalid_literal` in zod v3 (only
+  // `invalid_type`/`invalid_enum_value`) — an explicit errorMap is required.
+  type: z.literal("richText", {
+    errorMap: () => ({ message: "only text sections are allowed on content pages" }),
+  }),
 });
 
 export const homeBlocksInput = z

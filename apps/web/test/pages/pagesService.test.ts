@@ -121,11 +121,22 @@ describe("pagesService content pages", () => {
       store,
       adminActor(),
       pageInput({
-        blocks: [{ enabled: true, id: "h1", type: "hero" }],
+        blocks: [
+          textBlock("ok_1"),
+          { body: "x", enabled: true, heading: null, id: "h1", type: "hero" },
+        ],
         slug: "bad-blocks",
       }),
     );
     expect(heroOnContent.ok).toBe(false);
+    if (!heroOnContent.ok) {
+      // second block (index 1) is the offender — message must carry both the
+      // path/index and the domain reason, not just a bare zod string
+      expect(heroOnContent.error.message).toContain("1.type");
+      expect(heroOnContent.error.message).toContain(
+        "only text sections are allowed on content pages",
+      );
+    }
   });
 
   it("loads, updates, and deletes a content page, but not home", async () => {
@@ -307,6 +318,17 @@ describe("pagesService home and public read", () => {
       { enabled: true, id: "x1", type: "mystery" } as unknown as Block,
     ]);
     expect(unknown.ok).toBe(false);
+
+    const badAtIndex = await saveHomeSections(store, adminActor(), [
+      { enabled: true, id: "hero_1", type: "hero" },
+      { enabled: true, id: "x2", type: "mystery" } as unknown as Block,
+    ]);
+    expect(badAtIndex.ok).toBe(false);
+    if (!badAtIndex.ok) {
+      // admin-visible message must show which block (index 1) failed, not
+      // just a bare zod string with no location
+      expect(badAtIndex.error.message).toContain("1.");
+    }
 
     const unsafe = await saveHomeSections(store, adminActor(), [
       {

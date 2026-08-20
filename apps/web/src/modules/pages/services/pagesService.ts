@@ -23,7 +23,12 @@ import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 
 function badInput<T>(parsed: z.SafeParseError<T>): Result<never> {
-  return err("bad_request", 400, parsed.error.issues[0]?.message ?? "Invalid input");
+  const [issue] = parsed.error.issues;
+  if (!issue) {
+    return err("bad_request", 400, "Invalid input");
+  }
+  const at = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
+  return err("bad_request", 400, `${at}${issue.message}`);
 }
 
 export async function listContentPages(
