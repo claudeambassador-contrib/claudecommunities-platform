@@ -13,7 +13,7 @@ import {
   resetStuckPublishing,
   updatePost,
 } from "@/modules/social/services/socialService";
-import type { SocialConnector } from "@/modules/social/types";
+import type { SocialAccountInput, SocialConnector } from "@/modules/social/types";
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 const FUTURE = "2026-12-01T09:00:00.000Z";
@@ -93,6 +93,31 @@ describe("social accounts", () => {
     expect(hidden.ok).toBe(false);
   });
 
+  it("rejects an unknown connector or platform", async () => {
+    const store = openMemoryTenant();
+    const badConnector = await connectAccount(store, adminActor(), {
+      connector: "mastodon" as unknown as SocialAccountInput["connector"],
+      displayName: "Nope",
+      externalId: "x",
+      platform: "linkedin",
+    });
+    expect(badConnector.ok).toBe(false);
+    if (!badConnector.ok) {
+      expect(badConnector.error.status).toBe(400);
+    }
+
+    const badPlatform = await connectAccount(store, adminActor(), {
+      connector: "zernio",
+      displayName: "Nope",
+      externalId: "x",
+      platform: "mastodon" as unknown as SocialAccountInput["platform"],
+    });
+    expect(badPlatform.ok).toBe(false);
+    if (!badPlatform.ok) {
+      expect(badPlatform.error.status).toBe(400);
+    }
+  });
+
   it("disconnects an account", async () => {
     const { account, store } = await seededAccount();
     const removed = await disconnectAccount(store, adminActor(), account.id);
@@ -157,6 +182,19 @@ describe("social posts", () => {
       { connector: testConnector() },
     );
     expect(media.ok).toBe(false);
+
+    const tooFewForMultiImage = await createPost(
+      store,
+      adminActor(),
+      {
+        accountId: account.id,
+        content: "gallery",
+        mediaType: "multi_image",
+        mediaUrls: ["/api/files/one.png"],
+      },
+      { connector: testConnector() },
+    );
+    expect(tooFewForMultiImage.ok).toBe(false);
   });
 
   it("schedules a future post and publishes immediately when asked", async () => {

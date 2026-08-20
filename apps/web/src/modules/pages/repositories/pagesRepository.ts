@@ -1,4 +1,5 @@
 import { and, asc, eq, ne } from "drizzle-orm";
+import { parseStoredContentBlock, parseStoredHomeBlock } from "@/modules/pages/schemas";
 import type {
   Block,
   ContentPageDetail,
@@ -6,7 +7,6 @@ import type {
   ContentPageWrite,
   PublishedPage,
 } from "@/modules/pages/types";
-import { parseStoredContentBlock, parseStoredHomeBlock } from "@/modules/pages/validators";
 import { first } from "@/shared/db/rows";
 import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
@@ -21,7 +21,7 @@ const tables = (store: TenantStore): PagesTables => store.tables;
 
 type PageRow = TenantStore["tables"]["pages"]["$inferSelect"];
 
-function isObj(v: unknown): v is Record<string, unknown> {
+function isPlainRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
 
@@ -35,7 +35,7 @@ function parseBlocks(raw: string, contentOnly: boolean): Block[] {
   let arr: unknown[] | null = null;
   if (Array.isArray(parsed)) {
     arr = parsed;
-  } else if (isObj(parsed) && Array.isArray(parsed.blocks)) {
+  } else if (isPlainRecord(parsed) && Array.isArray(parsed.blocks)) {
     arr = parsed.blocks;
   }
   if (!arr) {

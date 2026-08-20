@@ -156,6 +156,13 @@ describe("pagesService content pages", () => {
     expect(updated.page.slug).toBe("about-team");
     expect(updated.page.status).toBe("published");
 
+    const badStatus = await createContentPage(
+      store,
+      adminActor(),
+      pageInput({ status: "archived" as unknown as ContentPageInput["status"] }),
+    );
+    expect(badStatus.ok).toBe(false);
+
     const other = await createContentPage(store, adminActor(), pageInput({ slug: "taken" }));
     expect(other.ok).toBe(true);
     const taken = await updateContentPage(
@@ -168,6 +175,12 @@ describe("pagesService content pages", () => {
     if (!taken.ok) {
       expect(taken.error.status).toBe(409);
     }
+
+    const badUpdateStatus = await updateContentPage(store, adminActor(), created.page.id, {
+      ...pageInput(),
+      status: "archived" as unknown as ContentPageInput["status"],
+    });
+    expect(badUpdateStatus.ok).toBe(false);
 
     const home = await saveHomeSections(store, adminActor(), [
       { enabled: true, id: "hero_1", type: "hero" },

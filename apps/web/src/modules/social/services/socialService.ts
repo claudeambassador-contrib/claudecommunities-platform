@@ -1,22 +1,24 @@
+import type { z } from "zod";
 // biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
 import * as socialRepo from "@/modules/social/repositories/socialRepository";
+import {
+  connectorIdInput,
+  contentInput,
+  socialMediaInput,
+  socialPlatformInput,
+} from "@/modules/social/schemas";
 import type {
   SocialAccountInput,
   SocialAccountSummary,
   SocialConnector,
   SocialDeps,
+  SocialMediaType,
   SocialPostAction,
   SocialPostInput,
   SocialPostListOptions,
   SocialPostSummary,
   SocialPostUpdate,
 } from "@/modules/social/types";
-import {
-  validateConnector,
-  validateContent,
-  validateMedia,
-  validatePlatform,
-} from "@/modules/social/validators";
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
@@ -26,6 +28,20 @@ const DEFAULT_MAX_TEXT = 3000;
 
 function maxText(deps?: SocialDeps): number {
   return deps?.connector?.capabilities.maxTextLength ?? DEFAULT_MAX_TEXT;
+}
+
+function badInput<T>(parsed: z.SafeParseError<T>): Result<never> {
+  return err("bad_request", 400, parsed.error.issues[0]?.message ?? "Invalid input");
+}
+
+function checkContent(content: string, max: number): Result<Empty> {
+  const parsed = contentInput(max).safeParse(content);
+  return parsed.success ? ok({}) : badInput(parsed);
+}
+
+function checkMedia(mediaType: SocialMediaType, mediaUrls: string[]): Result<Empty> {
+  const parsed = socialMediaInput.safeParse({ mediaType, mediaUrls });
+  return parsed.success ? ok({}) : badInput(parsed);
 }
 
 function parseOptionalDate(value: string | null | undefined): Date | null | undefined {
@@ -98,13 +114,13 @@ export async function connectAccount(
   if (!perm.ok) {
     return perm;
   }
-  const connector = validateConnector(input.connector);
-  if (!connector.ok) {
-    return connector;
+  const connector = connectorIdInput.safeParse(input.connector);
+  if (!connector.success) {
+    return badInput(connector);
   }
-  const platform = validatePlatform(input.platform);
-  if (!platform.ok) {
-    return platform;
+  const platform = socialPlatformInput.safeParse(input.platform);
+  if (!platform.success) {
+    return badInput(platform);
   }
   const displayName = input.displayName.trim();
   if (!displayName) {
@@ -116,11 +132,11 @@ export async function connectAccount(
   return await socialRepo.insertAccount(store, {
     accountType: input.accountType ?? "organization",
     avatarUrl: input.avatarUrl ?? null,
-    connector: connector.connector,
+    connector: connector.data,
     displayName,
     expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
     externalId: input.externalId.trim(),
-    platform: platform.platform,
+    platform: platform.data,
   });
 }
 
@@ -216,11 +232,11 @@ export async function createPost(
   }
   const mediaType = input.mediaType ?? "none";
   const mediaUrls = input.mediaUrls ?? [];
-  const content = validateContent(input.content, maxText(deps));
+  const content = checkContent(input.content, maxText(deps));
   if (!content.ok) {
     return content;
   }
-  const media = validateMedia(mediaType, mediaUrls);
+  const media = checkMedia(mediaType, mediaUrls);
   if (!media.ok) {
     return media;
   }
@@ -276,13 +292,13 @@ export async function updatePost(
     return err("conflict", 409, `Cannot edit a ${existing.post.status} post`);
   }
   if (input.content !== undefined) {
-    const content = validateContent(input.content, maxText(deps));
+    const content = checkContent(input.content, maxText(deps));
     if (!content.ok) {
       return content;
     }
   }
   if (input.mediaType !== undefined || input.mediaUrls !== undefined) {
-    const media = validateMedia(
+    const media = checkMedia(
       input.mediaType ?? existing.post.mediaType,
       input.mediaUrls ?? existing.post.mediaUrls,
     );

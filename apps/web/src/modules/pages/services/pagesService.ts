@@ -1,6 +1,15 @@
+import type { z } from "zod";
 import { DEFAULT_HOME_SECTIONS } from "@/modules/pages/homeDefaults";
 // biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
 import * as pagesRepo from "@/modules/pages/repositories/pagesRepository";
+import {
+  contentBlocksInput,
+  homeBlocksInput,
+  pageSlugInput,
+  pageStatusCreateInput,
+  pageStatusPatchInput,
+  pageTitleInput,
+} from "@/modules/pages/schemas";
 import type {
   Block,
   ContentPageDetail,
@@ -8,17 +17,14 @@ import type {
   ContentPageSummary,
   PublishedPage,
 } from "@/modules/pages/types";
-import {
-  validateContentBlocks,
-  validateHomeBlocks,
-  validateSlug,
-  validateStatus,
-  validateTitle,
-} from "@/modules/pages/validators";
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
+
+function badInput<T>(parsed: z.SafeParseError<T>): Result<never> {
+  return err("bad_request", 400, parsed.error.issues[0]?.message ?? "Invalid input");
+}
 
 export async function listContentPages(
   store: TenantStore,
@@ -52,30 +58,30 @@ export async function createContentPage(
   if (!perm.ok) {
     return perm;
   }
-  const slug = validateSlug(input.slug);
-  if (!slug.ok) {
-    return slug;
+  const slug = pageSlugInput.safeParse(input.slug);
+  if (!slug.success) {
+    return badInput(slug);
   }
-  const title = validateTitle(input.title);
-  if (!title.ok) {
-    return title;
+  const title = pageTitleInput.safeParse(input.title);
+  if (!title.success) {
+    return badInput(title);
   }
-  const blocks = validateContentBlocks(input.blocks);
-  if (!blocks.ok) {
-    return blocks;
+  const blocks = contentBlocksInput.safeParse(input.blocks);
+  if (!blocks.success) {
+    return badInput(blocks);
   }
-  const status = validateStatus(input.status);
-  if (!status.ok) {
-    return status;
+  const status = pageStatusCreateInput.safeParse(input.status);
+  if (!status.success) {
+    return badInput(status);
   }
-  if (await pagesRepo.findBySlug(store, slug.slug)) {
+  if (await pagesRepo.findBySlug(store, slug.data)) {
     return err("conflict", 409, "A page with this path already exists");
   }
   return await pagesRepo.insertContent(store, {
-    blocks: blocks.blocks,
-    slug: slug.slug,
-    status: status.status,
-    title: title.title,
+    blocks: blocks.data as Block[],
+    slug: slug.data,
+    status: status.data,
+    title: title.data,
   });
 }
 
@@ -89,32 +95,30 @@ export async function updateContentPage(
   if (!perm.ok) {
     return perm;
   }
-  const slug = validateSlug(input.slug);
-  if (!slug.ok) {
-    return slug;
+  const slug = pageSlugInput.safeParse(input.slug);
+  if (!slug.success) {
+    return badInput(slug);
   }
-  const title = validateTitle(input.title);
-  if (!title.ok) {
-    return title;
+  const title = pageTitleInput.safeParse(input.title);
+  if (!title.success) {
+    return badInput(title);
   }
-  const blocks = validateContentBlocks(input.blocks);
-  if (!blocks.ok) {
-    return blocks;
+  const blocks = contentBlocksInput.safeParse(input.blocks);
+  if (!blocks.success) {
+    return badInput(blocks);
   }
-  if (input.status !== undefined) {
-    const status = validateStatus(input.status);
-    if (!status.ok) {
-      return status;
-    }
+  const status = pageStatusPatchInput.safeParse(input.status);
+  if (!status.success) {
+    return badInput(status);
   }
-  if (await pagesRepo.findBySlug(store, slug.slug, id)) {
+  if (await pagesRepo.findBySlug(store, slug.data, id)) {
     return err("conflict", 409, "A page with this path already exists");
   }
   return pagesRepo.updateContent(store, id, {
-    blocks: blocks.blocks,
-    slug: slug.slug,
-    status: input.status,
-    title: title.title,
+    blocks: blocks.data as Block[],
+    slug: slug.data,
+    status: status.data,
+    title: title.data,
   });
 }
 
@@ -139,11 +143,11 @@ export async function saveHomeSections(
   if (!perm.ok) {
     return perm;
   }
-  const checked = validateHomeBlocks(blocks);
-  if (!checked.ok) {
-    return checked;
+  const checked = homeBlocksInput.safeParse(blocks);
+  if (!checked.success) {
+    return badInput(checked);
   }
-  return await pagesRepo.upsertHome(store, checked.blocks);
+  return await pagesRepo.upsertHome(store, checked.data as Block[]);
 }
 
 export async function getPublishedPage(
