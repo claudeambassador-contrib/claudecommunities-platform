@@ -1,26 +1,31 @@
-export interface TierInput {
-  color?: string | null;
-  description?: string | null;
-  features?: string[];
-  isActive?: boolean;
-  name: string;
-  order?: number | null;
-  price?: number;
-  slug?: string;
-  yearlyPrice?: number | null;
-}
+import type { z } from "zod";
+import type { tierWriteInput } from "@/modules/tiers/schemas";
 
-export interface TierWrite {
-  color: string | null;
-  description: string | null;
+/**
+ * The single tier write shape, owned by the module's zod schema. Both
+ * create and update bodies use it as-is.
+ *
+ * Uses `z.input` (not `z.infer`/`z.output`): `order`, `price`, and
+ * `yearlyPrice` go through `z.preprocess` to default missing/empty values,
+ * so their *output* type is a required primitive even though callers may
+ * omit them pre-validation. `z.input` reflects what a caller may actually
+ * hand in before `tierWriteInput.safeParse` fills the defaults.
+ */
+export type TierInput = z.input<typeof tierWriteInput>;
+
+/**
+ * Persistence write DTO — the same write shape after
+ * `tierWriteInput.safeParse` (so `order`/`price`/`yearlyPrice` are the
+ * coerced-and-defaulted numbers, not the loose pre-validation `unknown`
+ * from `TierInput`) plus the service-level normalizations on top: `slug`
+ * generated (from `slug ?? name`) and guaranteed non-empty, `features`
+ * filtered to drop falsy entries, `isActive` defaulted to `true`.
+ */
+export type TierWrite = Omit<z.output<typeof tierWriteInput>, "features" | "isActive" | "slug"> & {
   features: string[];
   isActive: boolean;
-  name: string;
-  order: number;
-  price: number;
   slug: string;
-  yearlyPrice: number | null;
-}
+};
 
 export interface TierSummary {
   color: string | null;

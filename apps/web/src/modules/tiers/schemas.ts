@@ -42,5 +42,3 @@ export const tierWriteInput = z.object({
     z.union([z.null(), nonNegativeFiniteNumber("yearlyPrice")]),
   ),
 });
-
-export type TierWriteInputParsed = z.infer<typeof tierWriteInput>;

@@ -4,17 +4,12 @@ import type { ReactElement } from "react";
 import { type ChangeEvent, useCallback, useRef, useState } from "react";
 import { z } from "zod";
 import { createPost, listAccounts, listPosts } from "@/modules/social/services/socialService";
-import type { SocialPostAction } from "@/modules/social/types";
+import type { SocialAccountSummary, SocialPostAction } from "@/modules/social/types";
 import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
-
-interface ComposerAccount {
-  displayName: string;
-  id: string;
-}
 
 const MEDIA_URL_SEPARATOR = /\n|,/;
 
@@ -43,10 +38,7 @@ const loadSocialPosts = createServerFn({ method: "GET" })
         return accountsResult;
       }
       return ok({
-        accounts: accountsResult.accounts.map((account) => ({
-          displayName: account.displayName,
-          id: account.id,
-        })),
+        accounts: accountsResult.accounts,
         posts: postsResult.posts.map((post) => ({
           detail: [post.status, post.platform, post.scheduledAt].filter(Boolean).join(" · "),
           id: post.id,
@@ -122,7 +114,7 @@ function ComposerForm({
   accounts,
   citySlug,
 }: {
-  accounts: ComposerAccount[];
+  accounts: SocialAccountSummary[];
   citySlug: string;
 }): ReactElement {
   const [content, setContent] = useState("");
