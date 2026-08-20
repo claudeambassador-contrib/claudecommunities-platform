@@ -59,4 +59,11 @@ describe("cityInput", () => {
     const schema = cityInput({ name: z.string() });
     expect(() => schema.parse({ citySlug: "", name: "Gold" })).toThrow(z.ZodError);
   });
+
+  it("does not let a route's own citySlug field shadow the min(1) rule", () => {
+    // A route shape that itself declares a permissive `citySlug` must not
+    // win over the module's own min(1) rule — the module's citySlug wins.
+    const schema = cityInput({ citySlug: z.string(), name: z.string() });
+    expect(() => schema.parse({ citySlug: "", name: "Gold" })).toThrow(z.ZodError);
+  });
 });

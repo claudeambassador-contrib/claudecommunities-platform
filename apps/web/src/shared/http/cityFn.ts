@@ -43,7 +43,7 @@ export type CityData<S extends z.ZodRawShape = Record<never, never>> = z.infer<z
 export function cityInput<S extends z.ZodRawShape = Record<never, never>>(
   shape?: S,
 ): z.ZodType<CityData<S>> {
-  return z.object({ citySlug: z.string().min(1), ...(shape ?? {}) }) as unknown as z.ZodType<
+  return z.object({ ...(shape ?? {}), citySlug: z.string().min(1) }) as unknown as z.ZodType<
     CityData<S>
   >;
 }

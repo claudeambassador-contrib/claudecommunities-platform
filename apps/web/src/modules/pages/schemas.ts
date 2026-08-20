@@ -24,7 +24,9 @@ const ALLOWED_ICONS = ["BookOpen", "Code", "LayoutGrid", "Paintbrush", "Star", "
 export function isSafeLink(href: unknown): boolean {
   return (
     typeof href === "string" &&
-    (href.startsWith("/") || href.startsWith("#") || href.startsWith("https://"))
+    ((href.startsWith("/") && !href.startsWith("//")) ||
+      href.startsWith("#") ||
+      href.startsWith("https://"))
   );
 }
 

@@ -346,6 +346,39 @@ describe("pagesService home and public read", () => {
     const listed = await listContentPages(store, memberActor());
     expect(listed.ok).toBe(false);
   });
+
+  it("rejects protocol-relative hrefs but allows normal relative paths", async () => {
+    const store = openMemoryTenant();
+
+    const protocolRelative = await saveHomeSections(store, adminActor(), [
+      {
+        description: "Talk",
+        enabled: true,
+        href: "//evil.com/x",
+        id: "w1",
+        thumbnailUrl: "https://example.com/t.png",
+        title: "Webinar",
+        type: "webinar",
+      },
+    ]);
+    expect(protocolRelative.ok).toBe(false);
+    if (!protocolRelative.ok) {
+      expect(protocolRelative.error.status).toBe(400);
+    }
+
+    const relative = await saveHomeSections(store, adminActor(), [
+      {
+        description: "Talk",
+        enabled: true,
+        href: "/about",
+        id: "w1",
+        thumbnailUrl: "https://example.com/t.png",
+        title: "Webinar",
+        type: "webinar",
+      },
+    ]);
+    expect(relative.ok).toBe(true);
+  });
 });
 
 describe("industriesService", () => {
