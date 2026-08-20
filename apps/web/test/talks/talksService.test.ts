@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isStorageUrl } from "@/modules/talks/schemas";
 import {
   createSpeaker,
   createSpeakerFromSubmission,
@@ -20,7 +21,6 @@ import {
   updateSpeaker,
   updateTalkContent,
 } from "@/modules/talks/services/talksService";
-import { isStorageUrl } from "@/modules/talks/validators";
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 const START = "2026-09-01T09:00:00.000Z";
@@ -185,6 +185,17 @@ describe("talksService submissions", () => {
     expect(emptyName.ok).toBe(false);
     const emptyTitle = await updateTalkContent(store, memberActor(), talk.id, { title: "" });
     expect(emptyTitle.ok).toBe(false);
+  });
+
+  it("rejects an invalid email on update via the module zod schema", async () => {
+    const { store, talk } = await seedTalk();
+    const badEmail = await updateTalkContent(store, memberActor(), talk.id, {
+      email: "not-an-email",
+    });
+    expect(badEmail.ok).toBe(false);
+    if (!badEmail.ok) {
+      expect(badEmail.error.status).toBe(400);
+    }
   });
 
   it("lets an admin set pending, approved, or declined", async () => {

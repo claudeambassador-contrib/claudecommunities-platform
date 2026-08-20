@@ -110,4 +110,40 @@ describe("tiersService", () => {
       expect(gone.tiers).toEqual([]);
     }
   });
+
+  it("rejects invalid write input via the module zod schema", async () => {
+    const store = openMemoryTenant();
+
+    const blankName = await createTier(store, adminActor(), { name: "   ", price: 10 });
+    expect(blankName.ok).toBe(false);
+    if (!blankName.ok) {
+      expect(blankName.error.status).toBe(400);
+    }
+
+    const negativePrice = await createTier(store, adminActor(), { name: "Gold", price: -5 });
+    expect(negativePrice.ok).toBe(false);
+    if (!negativePrice.ok) {
+      expect(negativePrice.error.status).toBe(400);
+    }
+
+    const negativeYearly = await createTier(store, adminActor(), {
+      name: "Gold",
+      price: 10,
+      yearlyPrice: -1,
+    });
+    expect(negativeYearly.ok).toBe(false);
+    if (!negativeYearly.ok) {
+      expect(negativeYearly.error.status).toBe(400);
+    }
+
+    const negativeOrder = await createTier(store, adminActor(), {
+      name: "Gold",
+      order: -1,
+      price: 10,
+    });
+    expect(negativeOrder.ok).toBe(false);
+    if (!negativeOrder.ok) {
+      expect(negativeOrder.error.status).toBe(400);
+    }
+  });
 });

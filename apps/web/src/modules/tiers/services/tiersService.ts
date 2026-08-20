@@ -1,5 +1,6 @@
 // biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
 import * as tiersRepo from "@/modules/tiers/repositories/tiersRepository";
+import { tierWriteInput } from "@/modules/tiers/schemas";
 import type { TierInput, TierSummary, TierWrite } from "@/modules/tiers/types";
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
@@ -7,69 +8,28 @@ import type { TenantStore } from "@/shared/db/tenantStore";
 import { err, ok, type Result } from "@/shared/http/errors";
 import { toSafeSlug } from "@/shared/ids";
 
-function parseNonNegative(value: unknown, field: string): Result<{ value: number }> {
-  if (value === undefined || value === null || value === "") {
-    return ok({ value: 0 });
-  }
-  const parsed = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return err("bad_request", 400, `${field} must be a number ≥ 0`);
-  }
-  return ok({ value: parsed });
-}
-
-function parseOptionalNonNegative(value: unknown, field: string): Result<{ value: number | null }> {
-  if (value === undefined || value === null || value === "") {
-    return ok({ value: null });
-  }
-  const parsed = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return err("bad_request", 400, `${field} must be a number ≥ 0`);
-  }
-  return ok({ value: parsed });
-}
-
 function validateInput(input: TierInput): Result<{ write: TierWrite }> {
-  const name = input.name.trim();
-  if (!name) {
-    return err("bad_request", 400, "Tier name is required");
+  const parsed = tierWriteInput.safeParse(input);
+  if (!parsed.success) {
+    return err("bad_request", 400, parsed.error.issues[0]?.message ?? "Invalid input");
   }
-  const slug = toSafeSlug(input.slug ?? name);
+  const { data } = parsed;
+  const slug = toSafeSlug(data.slug ?? data.name);
   if (!slug) {
     return err("bad_request", 400, "Tier slug is required");
   }
-  const price = parseNonNegative(input.price, "price");
-  if (!price.ok) {
-    return price;
-  }
-  const yearlyPrice = parseOptionalNonNegative(input.yearlyPrice, "yearlyPrice");
-  if (!yearlyPrice.ok) {
-    return yearlyPrice;
-  }
-  if (input.features !== undefined && !Array.isArray(input.features)) {
-    return err("bad_request", 400, "Features must be an array");
-  }
-  const features = (input.features ?? [])
-    .map((feature) => (typeof feature === "string" ? feature.trim() : ""))
-    .filter(Boolean);
-  if (input.isActive !== undefined && typeof input.isActive !== "boolean") {
-    return err("bad_request", 400, "isActive must be a boolean");
-  }
-  const order = input.order ?? 0;
-  if (!Number.isInteger(order) || order < 0) {
-    return err("bad_request", 400, "order must be an integer ≥ 0");
-  }
+  const features = (data.features ?? []).filter(Boolean);
   return ok({
     write: {
-      color: input.color?.trim() || null,
-      description: input.description?.trim() || null,
+      color: data.color || null,
+      description: data.description || null,
       features,
-      isActive: input.isActive ?? true,
-      name,
-      order,
-      price: price.value,
+      isActive: data.isActive ?? true,
+      name: data.name,
+      order: data.order ?? 0,
+      price: data.price,
       slug,
-      yearlyPrice: yearlyPrice.value,
+      yearlyPrice: data.yearlyPrice,
     },
   });
 }

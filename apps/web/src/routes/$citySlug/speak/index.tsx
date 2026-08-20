@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
+import { talkSubmissionCreateInput } from "@/modules/talks/schemas";
 import { createTalkSubmission } from "@/modules/talks/services/talksService";
 import { cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { loadCityPage } from "@/shared/http/cityPage";
@@ -18,11 +19,12 @@ const load = createServerFn({ method: "GET" })
     return { signedIn: page.ok && Boolean(page.actor) };
   });
 
+// `description` stays explicit: talkSubmissionCreateInput declares it
+// `.nullish()` (no rule on it), which would loosen this route's currently
+// required field.
 const submitTalkInput = cityInput({
+  ...talkSubmissionCreateInput.pick({ email: true, name: true, title: true }).shape,
   description: z.string(),
-  email: z.string(),
-  name: z.string(),
-  title: z.string(),
 });
 
 const submitTalk = createServerFn({ method: "POST" })

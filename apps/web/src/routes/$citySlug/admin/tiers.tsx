@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
+import { tierWriteInput } from "@/modules/tiers/schemas";
 import { createTier, listTiers } from "@/modules/tiers/services/tiersService";
 import type { TierSummary } from "@/modules/tiers/types";
 import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
@@ -15,9 +16,15 @@ const loadTiers = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadTiersInput.parse(input))
   .handler(cityHandler((page) => listTiers(page.store, page.actor)));
 
+// price/yearlyPrice/description stay explicit here rather than reused from
+// tierWriteInput: the module schema's `.coerce`/`.default()` on price and
+// yearlyPrice and `.optional()` on description would loosen this route's
+// wire contract (all four fields are always sent, required, by the form).
+// `name` is safe to reuse — its shape only tightens (trim + min length)
+// without changing required-ness.
 const submitTierInput = cityInput({
+  ...tierWriteInput.pick({ name: true }).shape,
   description: z.string(),
-  name: z.string(),
   price: z.number(),
   yearlyPrice: z.number().nullable(),
 });

@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 const ALLOWED_MEETING_HOSTS = [
   "zoom.us",
   "us02web.zoom.us",
@@ -68,3 +70,40 @@ const TIMEZONE_RE = /^[A-Za-z_+\-/0-9]+$/;
 export function isValidTimezone(timezone: string): boolean {
   return TIMEZONE_RE.test(timezone);
 }
+
+/**
+ * The rule-bearing subset of an event write body — the fields
+ * `eventsService.validateInput` used to hand-check one by one. Every field is
+ * optional here on purpose: create and update both call this schema with
+ * only the keys that are present, so a field absent from the input is simply
+ * not validated (matching the old `input.field !== undefined` guards), while
+ * a field present as an empty string is treated as "not provided" too
+ * (matching the old truthy `input.field && ...` guards).
+ */
+export const eventWriteInput = z.object({
+  imageUrl: z
+    .string()
+    .refine((value) => !value || isAllowedImageUrl(value), "imageUrl host not allowed")
+    .optional(),
+  lumaUrl: z
+    .string()
+    .refine(
+      (value) => !value || isAllowedLumaUrl(value),
+      "External ticket URL must be a valid https:// URL",
+    )
+    .optional(),
+  meetingUrl: z
+    .string()
+    .refine((value) => !value || isAllowedMeetingUrl(value), "meetingUrl host not allowed")
+    .optional(),
+  timezone: z
+    .string()
+    .refine((value) => !value || isValidTimezone(value), "Invalid timezone")
+    .optional(),
+  title: z
+    .string()
+    .refine((value) => value.length >= 1 && value.length <= 200, "title required (1-200 chars)")
+    .optional(),
+});
+
+export type EventWriteInputParsed = z.infer<typeof eventWriteInput>;

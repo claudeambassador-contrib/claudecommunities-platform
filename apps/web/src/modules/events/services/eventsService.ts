@@ -1,5 +1,6 @@
 // biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
 import * as eventsRepo from "@/modules/events/repositories/eventsRepository";
+import { eventWriteInput, isAllowedResourceUrl } from "@/modules/events/schemas";
 import type {
   AgendaItemDetail,
   AgendaItemInput,
@@ -18,13 +19,6 @@ import type {
   RsvpStatus,
   StoredRsvpStatus,
 } from "@/modules/events/types";
-import {
-  isAllowedImageUrl,
-  isAllowedLumaUrl,
-  isAllowedMeetingUrl,
-  isAllowedResourceUrl,
-  isValidTimezone,
-} from "@/modules/events/validators";
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
@@ -126,23 +120,15 @@ function toEventWritePatch(
 }
 
 function validateInput(input: EventCreateBody | EventUpdateBody): Result<{ valid: true }> {
-  if (
-    input.title !== undefined &&
-    (!input.title || input.title.length < 1 || input.title.length > 200)
-  ) {
-    return err("bad_request", 400, "title required (1-200 chars)");
-  }
-  if (input.timezone && !isValidTimezone(input.timezone)) {
-    return err("bad_request", 400, "Invalid timezone");
-  }
-  if (input.meetingUrl && !isAllowedMeetingUrl(input.meetingUrl)) {
-    return err("bad_request", 400, "meetingUrl host not allowed");
-  }
-  if (input.lumaUrl && !isAllowedLumaUrl(input.lumaUrl)) {
-    return err("bad_request", 400, "External ticket URL must be a valid https:// URL");
-  }
-  if (input.imageUrl && !isAllowedImageUrl(input.imageUrl)) {
-    return err("bad_request", 400, "imageUrl host not allowed");
+  const parsed = eventWriteInput.safeParse({
+    imageUrl: input.imageUrl ?? undefined,
+    lumaUrl: input.lumaUrl ?? undefined,
+    meetingUrl: input.meetingUrl ?? undefined,
+    timezone: input.timezone ?? undefined,
+    title: input.title ?? undefined,
+  });
+  if (!parsed.success) {
+    return err("bad_request", 400, parsed.error.issues[0]?.message ?? "Invalid input");
   }
   return ok({ valid: true });
 }
@@ -255,11 +241,7 @@ export async function updateEvent(
   if (!perm.ok) {
     return perm;
   }
-  const valid = validateInput({
-    ...input,
-    startTime: input.startTime ?? new Date().toISOString(),
-    title: input.title ?? "placeholder",
-  });
+  const valid = validateInput(input);
   if (!valid.ok) {
     return valid;
   }

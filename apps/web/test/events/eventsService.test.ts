@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  isAllowedImageUrl,
+  isAllowedLumaUrl,
+  isAllowedMeetingUrl,
+  isAllowedResourceUrl,
+} from "@/modules/events/schemas";
+import {
   addAgendaItem,
   addEventResource,
   createEvent,
@@ -23,12 +29,6 @@ import {
   updateAgendaItem,
   updateEvent,
 } from "@/modules/events/services/eventsService";
-import {
-  isAllowedImageUrl,
-  isAllowedLumaUrl,
-  isAllowedMeetingUrl,
-  isAllowedResourceUrl,
-} from "@/modules/events/validators";
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 const START = "2026-09-01T09:00:00.000Z";
@@ -120,6 +120,28 @@ describe("eventsService", () => {
       title: "Bad luma",
     });
     expect(luma.ok).toBe(false);
+  });
+
+  it("rejects an out-of-range title and an invalid timezone via the module zod schema", async () => {
+    const store = openMemoryTenant();
+    const tooLong = await createEvent(store, adminActor(), {
+      startTime: START,
+      title: "x".repeat(201),
+    });
+    expect(tooLong.ok).toBe(false);
+    if (!tooLong.ok) {
+      expect(tooLong.error.status).toBe(400);
+    }
+
+    const badTimezone = await createEvent(store, adminActor(), {
+      startTime: START,
+      timezone: "not a tz!",
+      title: "Bad tz",
+    });
+    expect(badTimezone.ok).toBe(false);
+    if (!badTimezone.ok) {
+      expect(badTimezone.error.status).toBe(400);
+    }
   });
 
   it("lists only published events unless includeInactive is set", async () => {

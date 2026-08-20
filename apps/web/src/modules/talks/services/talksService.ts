@@ -1,5 +1,11 @@
 // biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
 import * as talksRepo from "@/modules/talks/repositories/talksRepository";
+import {
+  speakerCreateInput,
+  speakerPatchInput,
+  talkSubmissionCreateInput,
+  talkSubmissionPatchInput,
+} from "@/modules/talks/schemas";
 import type {
   SpeakerDetail,
   SpeakerInput,
@@ -11,7 +17,6 @@ import type {
   TalkSubmissionInput,
   TalkSubmissionStatus,
 } from "@/modules/talks/types";
-import { isStorageUrl, isValidEmail } from "@/modules/talks/validators";
 import type { Actor } from "@/shared/auth/actor";
 import { ensureOwnerOrPermission, ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
@@ -41,19 +46,6 @@ function requireOwnerOrAdmin(actor: Actor, ownerId: string | null): Result<Empty
   return ensureOwnerOrPermission(actor, ownerId ?? "", "speakers.edit");
 }
 
-function validateStorageUrl(
-  url: string | null | undefined,
-  field: string,
-): Result<{ valid: true }> {
-  if (!url) {
-    return ok({ valid: true });
-  }
-  if (!isStorageUrl(url)) {
-    return err("bad_request", 400, `${field} must be a storage URL`);
-  }
-  return ok({ valid: true });
-}
-
 function nullableSpeakerPatch(input: SpeakerInput): SpeakerInput {
   const patch: SpeakerInput = {};
   for (const field of NULLABLE_SPEAKER_FIELDS) {
@@ -65,27 +57,20 @@ function nullableSpeakerPatch(input: SpeakerInput): SpeakerInput {
 }
 
 function talkContentPatch(input: TalkSubmissionInput): Result<{ patch: TalkPatch }> {
+  const parsed = talkSubmissionPatchInput.safeParse(input);
+  if (!parsed.success) {
+    return err("bad_request", 400, parsed.error.issues[0]?.message ?? "Invalid input");
+  }
+  const { data } = parsed;
   const patch: TalkPatch = {};
-  if (input.name !== undefined) {
-    const name = (input.name ?? "").trim();
-    if (!name) {
-      return err("bad_request", 400, "Name cannot be empty");
-    }
-    patch.name = name;
+  if (data.name !== undefined) {
+    patch.name = data.name;
   }
-  if (input.email !== undefined) {
-    const email = (input.email ?? "").trim().toLowerCase();
-    if (!isValidEmail(email)) {
-      return err("bad_request", 400, "Valid email is required");
-    }
-    patch.email = email;
+  if (data.email !== undefined) {
+    patch.email = data.email;
   }
-  if (input.title !== undefined) {
-    const title = (input.title ?? "").trim();
-    if (!title) {
-      return err("bad_request", 400, "Title cannot be empty");
-    }
-    patch.title = title;
+  if (data.title !== undefined) {
+    patch.title = data.title;
   }
   if (input.description !== undefined) {
     patch.description = input.description?.trim() || null;
@@ -104,25 +89,18 @@ export async function createTalkSubmission(
   actor: Actor,
   input: TalkSubmissionInput,
 ): Promise<Result<{ talk: TalkDetail }>> {
-  const name = (input.name ?? "").trim();
-  if (!name) {
-    return err("bad_request", 400, "Name is required");
+  const parsed = talkSubmissionCreateInput.safeParse(input);
+  if (!parsed.success) {
+    return err("bad_request", 400, parsed.error.issues[0]?.message ?? "Invalid input");
   }
-  const email = (input.email ?? "").trim().toLowerCase();
-  if (!isValidEmail(email)) {
-    return err("bad_request", 400, "Valid email is required");
-  }
-  const title = (input.title ?? "").trim();
-  if (!title) {
-    return err("bad_request", 400, "Talk title is required");
-  }
+  const { data } = parsed;
   return await talksRepo.insertTalk(store, {
-    bio: input.bio?.trim() || null,
-    city: input.city?.trim() || null,
-    description: input.description?.trim() || null,
-    email,
-    name,
-    title,
+    bio: data.bio?.trim() || null,
+    city: data.city?.trim() || null,
+    description: data.description?.trim() || null,
+    email: data.email,
+    name: data.name,
+    title: data.title,
     userId: actor.id,
   });
 }
@@ -299,21 +277,13 @@ export async function createSpeaker(
   if (!(await talksRepo.eventExists(store, eventId))) {
     return err("not_found", 404, "Event not found");
   }
-  const headshot = validateStorageUrl(input.headshotUrl, "headshotUrl");
-  if (!headshot.ok) {
-    return headshot;
-  }
-  const logo = validateStorageUrl(input.companyLogoUrl, "companyLogoUrl");
-  if (!logo.ok) {
-    return logo;
-  }
-  const name = (input.name ?? "").trim();
-  if (!name) {
-    return err("bad_request", 400, "name is required");
+  const parsed = speakerCreateInput.safeParse(input);
+  if (!parsed.success) {
+    return err("bad_request", 400, parsed.error.issues[0]?.message ?? "Invalid input");
   }
   return await talksRepo.insertSpeaker(store, eventId, {
     ...input,
-    name,
+    name: parsed.data.name,
   });
 }
 
@@ -353,25 +323,13 @@ export async function updateSpeaker(
   if (!perm.ok) {
     return perm;
   }
-  if (input.headshotUrl !== undefined) {
-    const headshot = validateStorageUrl(input.headshotUrl, "headshotUrl");
-    if (!headshot.ok) {
-      return headshot;
-    }
-  }
-  if (input.companyLogoUrl !== undefined) {
-    const logo = validateStorageUrl(input.companyLogoUrl, "companyLogoUrl");
-    if (!logo.ok) {
-      return logo;
-    }
+  const parsed = speakerPatchInput.safeParse(input);
+  if (!parsed.success) {
+    return err("bad_request", 400, parsed.error.issues[0]?.message ?? "Invalid input");
   }
   const patch: SpeakerInput = nullableSpeakerPatch(input);
-  if (input.name !== undefined) {
-    const name = (input.name ?? "").trim();
-    if (!name) {
-      return err("bad_request", 400, "name cannot be empty");
-    }
-    patch.name = name;
+  if (parsed.data.name !== undefined) {
+    patch.name = parsed.data.name;
   }
   return await talksRepo.updateSpeakerById(store, speakerId, patch);
 }
