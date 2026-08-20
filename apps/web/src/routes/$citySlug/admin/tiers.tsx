@@ -13,7 +13,7 @@ const loadTiersInput = cityInput();
 
 const loadTiers = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadTiersInput.parse(input))
-  .handler(cityHandler(null, (page) => listTiers(page.store, page.actor)));
+  .handler(cityHandler((page) => listTiers(page.store, page.actor)));
 
 const submitTierInput = cityInput({
   description: z.string(),
@@ -25,7 +25,7 @@ const submitTierInput = cityInput({
 const submitTier = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitTierInput.parse(input))
   .handler(
-    cityMutationHandler(null, (page, data) =>
+    cityMutationHandler((page, data) =>
       createTier(page.store, page.actor, {
         description: data.description,
         name: data.name,

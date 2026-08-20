@@ -23,9 +23,22 @@ export type CityData<S extends z.ZodRawShape = Record<never, never>> = z.infer<z
  * createServerFn({ method: "POST" }).validator((raw: unknown) => input.parse(raw))
  * ```
  *
- * This file must stay importable from the client bundle for the *schema* half,
- * so `cityHandler` / `cityMutationHandler` may only ever be referenced inside a
- * `.handler(...)` argument (which the TanStack Start compiler strips).
+ * This file must stay importable from the client bundle for the *schema* half:
+ * routes import `cityInput` and it is evaluated in the client graph. That means
+ * cityFn.ts is itself a client module — it imports `guarded` / `guardedMutation`
+ * as values, so nothing about the TanStack Start compiler's `.handler(...)`
+ * stripping is what keeps the server chain out of the browser bundle.
+ *
+ * What actually keeps it out is Rollup tree-shaking: once the compiler has
+ * stripped the `.handler(...)` bodies from the routes, `cityHandler` and
+ * `cityMutationHandler` are unreferenced exports, so the whole
+ * `guarded -> cityPage -> cloudflare:workers env` chain is dropped. That only
+ * holds while every module in that chain is side-effect-free at module scope.
+ * Add a module-scope side effect anywhere along `guarded -> cityPage -> env`
+ * (a top-level `env` read, a client init call, a registry `.push(...)`) and
+ * Rollup must keep the module — the server chain lands in the client bundle
+ * and the build breaks on `cloudflare:workers`. If that happens, the side
+ * effect is the cause, not the compiler.
  */
 export function cityInput<S extends z.ZodRawShape = Record<never, never>>(
   shape?: S,
@@ -40,21 +53,28 @@ export function cityInput<S extends z.ZodRawShape = Record<never, never>>(
  * optional permission) and returns the `Guarded<T>` shape the route's
  * `DeniedCard` branch already understands.
  *
- * Pass `permission` only when the service the handler calls is deliberately
- * public (e.g. `listPublicTiers`) and the route still needs a gate — otherwise
- * the permission check lives in the module service (`ensurePermission`).
+ * Pass a `permission` only when the service the handler calls does NOT call
+ * `ensurePermission` itself — i.e. the service is deliberately unguarded
+ * (e.g. `listPublicTiers`) and the route still needs a gate. When the service
+ * already enforces its own permission, omit the argument.
+ *
+ * ```ts
+ * .handler(cityHandler((page) => listTiers(page.store, page.actor)))
+ * .handler(cityHandler((page) => listPublicTiers(page.store), "tiers.view"))
+ * ```
  */
 export function cityHandler<D extends { citySlug: string }, T extends object>(
-  permission: Permission | null,
   fn: (page: GuardedPage, data: D) => Promise<Result<T>>,
+  permission?: Permission,
 ): (ctx: { data: D }) => Promise<Guarded<T>> {
-  return (ctx) => guarded(ctx.data.citySlug, permission, (page) => fn(page, ctx.data));
+  return (ctx) => guarded(ctx.data.citySlug, permission ?? null, (page) => fn(page, ctx.data));
 }
 
 /** The mutation twin of `cityHandler`, returning the `Mutated<T>` shape. */
 export function cityMutationHandler<D extends { citySlug: string }, T extends object>(
-  permission: Permission | null,
   fn: (page: GuardedPage, data: D) => Promise<Result<T>>,
+  permission?: Permission,
 ): (ctx: { data: D }) => Promise<Mutated<T>> {
-  return (ctx) => guardedMutation(ctx.data.citySlug, permission, (page) => fn(page, ctx.data));
+  return (ctx) =>
+    guardedMutation(ctx.data.citySlug, permission ?? null, (page) => fn(page, ctx.data));
 }
