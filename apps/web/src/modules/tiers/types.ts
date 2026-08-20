@@ -4,7 +4,7 @@ export interface TierInput {
   features?: string[];
   isActive?: boolean;
   name: string;
-  order?: number;
+  order?: number | null;
   price?: number;
   slug?: string;
   yearlyPrice?: number | null;

@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
-import { tierWriteInput } from "@/modules/tiers/schemas";
 import { createTier, listTiers } from "@/modules/tiers/services/tiersService";
 import type { TierSummary } from "@/modules/tiers/types";
 import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
@@ -16,15 +15,16 @@ const loadTiers = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadTiersInput.parse(input))
   .handler(cityHandler((page) => listTiers(page.store, page.actor)));
 
-// price/yearlyPrice/description stay explicit here rather than reused from
-// tierWriteInput: the module schema's `.coerce`/`.default()` on price and
-// yearlyPrice and `.optional()` on description would loosen this route's
-// wire contract (all four fields are always sent, required, by the form).
-// `name` is safe to reuse — its shape only tightens (trim + min length)
-// without changing required-ness.
+// Kept permissive on purpose: the route validator only needs to shape the
+// wire payload, not enforce business rules (trim/min-length/etc). Running
+// the module's stricter zod schema here would THROW on invalid input
+// (e.g. whitespace-only name) before it ever reaches tiersService, which
+// useFormSubmit surfaces as a generic "Something went wrong." instead of
+// the service's message-bearing 400. The service (tierWriteInput) is the
+// source of truth for validation; this stays a thin wire-shape check.
 const submitTierInput = cityInput({
-  ...tierWriteInput.pick({ name: true }).shape,
   description: z.string(),
+  name: z.string(),
   price: z.number(),
   yearlyPrice: z.number().nullable(),
 });

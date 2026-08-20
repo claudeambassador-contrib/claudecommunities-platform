@@ -21,12 +21,12 @@ function validateInput(input: TierInput): Result<{ write: TierWrite }> {
   const features = (data.features ?? []).filter(Boolean);
   return ok({
     write: {
-      color: data.color || null,
-      description: data.description || null,
+      color: data.color,
+      description: data.description,
       features,
       isActive: data.isActive ?? true,
       name: data.name,
-      order: data.order ?? 0,
+      order: data.order,
       price: data.price,
       slug,
       yearlyPrice: data.yearlyPrice,

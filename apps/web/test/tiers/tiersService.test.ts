@@ -145,5 +145,53 @@ describe("tiersService", () => {
     if (!negativeOrder.ok) {
       expect(negativeOrder.error.status).toBe(400);
     }
+
+    const infinitePrice = await createTier(store, adminActor(), {
+      name: "Gold",
+      price: Number.POSITIVE_INFINITY,
+    });
+    expect(infinitePrice.ok).toBe(false);
+    if (!infinitePrice.ok) {
+      expect(infinitePrice.error.status).toBe(400);
+    }
+
+    const hugeStringPrice = await createTier(store, adminActor(), {
+      name: "Gold",
+      price: "1e999" as any,
+    });
+    expect(hugeStringPrice.ok).toBe(false);
+    if (!hugeStringPrice.ok) {
+      expect(hugeStringPrice.error.status).toBe(400);
+    }
+  });
+
+  it("accepts type-legal null for color/description/order", async () => {
+    const store = openMemoryTenant();
+    const created = await createTier(store, adminActor(), {
+      color: null,
+      description: null,
+      name: "Gold",
+      order: null,
+      price: 10,
+    });
+    expect(created.ok).toBe(true);
+    if (created.ok) {
+      expect(created.tier.color).toBe(null);
+      expect(created.tier.description).toBe(null);
+      expect(created.tier.order).toBe(0);
+    }
+  });
+
+  it("restores '' -> null semantics for yearlyPrice on write", async () => {
+    const store = openMemoryTenant();
+    const created = await createTier(store, adminActor(), {
+      name: "Gold",
+      price: 10,
+      yearlyPrice: "" as any,
+    });
+    expect(created.ok).toBe(true);
+    if (created.ok) {
+      expect(created.tier.yearlyPrice).toBe(null);
+    }
   });
 });
