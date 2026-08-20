@@ -36,7 +36,7 @@
 
 The current `sessionService.ts` hard-binds Clerk (`auth()`, `clerkClient()`), `cloudflare:workers` env (via `@/shared/db/env`), and two module-level 60s memos — so its ban re-check and memo-staleness logic (the riskiest auth code in the app) has zero unit tests, and vitest can't even import the file (top-level `cloudflare:workers` import chain).
 
-- [ ] **Step 1: Create `sessionCore.ts`** — move ALL logic out of `sessionService.ts` into a dependency-injected core. No imports of `@clerk/*` or `@/shared/db/env` in this file. Shape:
+- [x] **Step 1: Create `sessionCore.ts`** — move ALL logic out of `sessionService.ts` into a dependency-injected core. No imports of `@clerk/*` or `@/shared/db/env` in this file. Shape:
 
 ```typescript
 import type { Actor } from "@/shared/auth/actor";
@@ -81,7 +81,7 @@ Port the existing logic **verbatim in behavior**: memo-hit path re-checks `isBan
 
 Also move the pure helpers `actorFromAuth`, `requirePermission`, `hasAnyAdminPermission` into `sessionCore.ts` unchanged.
 
-- [ ] **Step 2: Rewrite `sessionService.ts` as the prod adapter.** It keeps every current export name/signature so `cityPage.ts` and all other importers compile untouched:
+- [x] **Step 2: Rewrite `sessionService.ts` as the prod adapter.** It keeps every current export name/signature so `cityPage.ts` and all other importers compile untouched:
 
 ```typescript
 import { auth, clerkClient } from "@clerk/tanstack-react-start/server";
@@ -130,7 +130,7 @@ export function buildCityRouteContext(citySlug: string) {
 
 Grep first: `grep -rn "from \"@/modules/identity/services/sessionService\"" src/ test/` — every current importer must still compile with zero edits (if one imports something you moved, re-export it from `sessionService.ts`).
 
-- [ ] **Step 3: Write the failing tests** in `test/identity/sessionCore.test.ts` using `openMemoryRegistry()` and a `makeDeps(overrides)` helper that returns real `ttlMemo`s + stub `getProfile`/`getSessionUserId`. Seed users through `usersRepo.upsertFromClerk` and flip flags with drizzle updates on `registry.tables.users`. Required cases (each an `it`):
+- [x] **Step 3: Write the failing tests** in `test/identity/sessionCore.test.ts` using `openMemoryRegistry()` and a `makeDeps(overrides)` helper that returns real `ttlMemo`s + stub `getProfile`/`getSessionUserId`. Seed users through `usersRepo.upsertFromClerk` and flip flags with drizzle updates on `registry.tables.users`. Required cases (each an `it`):
   1. fresh sign-in upserts the user and returns `AuthContext` with `role: null` permissions
   2. banned user on **fresh** sync → `err("banned", 403)` and nothing cached
   3. banned user on **memo hit** → `err("banned", 403)` AND the memo entry is evicted (subsequent call with unbanned row does a full re-sync — assert `getProfile` called again)
@@ -144,9 +144,9 @@ Grep first: `grep -rn "from \"@/modules/identity/services/sessionService\"" src/
 
   For case 9/10 you need a city row in the registry — inspect `resolveCityContext` and `registrySchema.ts` to seed the minimal rows it queries. Stub `openTenantStore` to return `openMemoryTenant()` from `test/helpers/tenant.ts`.
 
-- [ ] **Step 4: Run the new tests, watch them fail** (before Step 1–2 are complete — do Steps 3→1→2→5 in TDD order if you prefer; either order is fine as long as you observe a red run first): `bun run test test/identity/sessionCore.test.ts`
-- [ ] **Step 5: Make them pass**, then run the full gates: `bun run test && bun run check`
-- [ ] **Step 6: Commit** — `refactor(web): extract injectable sessionCore seam with ban/memo tests`
+- [x] **Step 4: Run the new tests, watch them fail** (before Step 1–2 are complete — do Steps 3→1→2→5 in TDD order if you prefer; either order is fine as long as you observe a red run first): `bun run test test/identity/sessionCore.test.ts`
+- [x] **Step 5: Make them pass**, then run the full gates: `bun run test && bun run check`
+- [x] **Step 6: Commit** — `refactor(web): extract injectable sessionCore seam with ban/memo tests`
 
 ---
 
@@ -163,8 +163,8 @@ Grep first: `grep -rn "from \"@/modules/identity/services/sessionService\"" src/
 
 Today the same `ServiceError` renders three ways: `guarded` (GET) leaks the raw code to users (`not_found`, `forbidden` shown verbatim in `DeniedCard`), `guardedMutation` (POST) shows `message ?? code`, and client-side throws collapse to a generic string.
 
-- [ ] **Step 1: Write failing tests** for `presentError`: explicit `message` wins; known code without message maps to its table entry (`forbidden` → "You don't have permission to do that.", `unauthenticated` → "Sign in to continue.", `not_found` → "That page or record doesn't exist.", `banned` → "This account has been suspended.", `bad_request`/`invalid_input` → "That input couldn't be saved. Check the fields and try again.", `conflict` → "That already exists — pick a different name.") ; unknown code without message → "Something went wrong. Please try again."
-- [ ] **Step 2: Implement:**
+- [x] **Step 1: Write failing tests** for `presentError`: explicit `message` wins; known code without message maps to its table entry (`forbidden` → "You don't have permission to do that.", `unauthenticated` → "Sign in to continue.", `not_found` → "That page or record doesn't exist.", `banned` → "This account has been suspended.", `bad_request`/`invalid_input` → "That input couldn't be saved. Check the fields and try again.", `conflict` → "That already exists — pick a different name.") ; unknown code without message → "Something went wrong. Please try again."
+- [x] **Step 2: Implement:**
 
 ```typescript
 import type { ServiceError } from "./errors";
@@ -184,9 +184,9 @@ export function presentError(error: ServiceError): string {
 }
 ```
 
-- [ ] **Step 3: Wire it into `guarded.ts`.** `Denied` becomes `{ allowed: false; code: string; reason: string }` where `code` is the machine code (old `reason` value) and `reason` is now `presentError(error)`. All four early-return sites in `guarded` populate both. `guardedMutation`'s error string becomes `presentError(result.error)` (and `presentError({code:"unauthenticated",status:401})` for the auth short-circuit). **First grep for client code that branches on the old codes**: `grep -rn "\.reason ===\|reason ===" src/routes src/shared/ui` — switch any match to `.code ===`. `DeniedCard` keeps rendering `reason` (now human).
-- [ ] **Step 4: Run gates:** `bun run test && bun run check`
-- [ ] **Step 5: Commit** — `feat(web): present service errors through one message table`
+- [x] **Step 3: Wire it into `guarded.ts`.** `Denied` becomes `{ allowed: false; code: string; reason: string }` where `code` is the machine code (old `reason` value) and `reason` is now `presentError(error)`. All four early-return sites in `guarded` populate both. `guardedMutation`'s error string becomes `presentError(result.error)` (and `presentError({code:"unauthenticated",status:401})` for the auth short-circuit). **First grep for client code that branches on the old codes**: `grep -rn "\.reason ===\|reason ===" src/routes src/shared/ui` — switch any match to `.code ===`. `DeniedCard` keeps rendering `reason` (now human).
+- [x] **Step 4: Run gates:** `bun run test && bun run check`
+- [x] **Step 5: Commit** — `feat(web): present service errors through one message table`
 
 ---
 
@@ -219,8 +219,8 @@ The shape `zod object with citySlug → createServerFn → .validator → guarde
 
 **⚠ Load-bearing risk — TanStack Start compilation.** `createServerFn(...).handler(...)` calls are compiler-extracted so server-only code is stripped from the client bundle. Calling `.handler()` inside `cityFn.ts` with a closure passed from a route file may defeat that stripping. This task's job is to settle it empirically:
 
-- [ ] **Step 1: Implement the full factory** in `cityFn.ts`: build `z.object({ citySlug: z.string().min(1), ...(opts.input ?? {}) })`, then `createServerFn({ method: "GET" }).validator((input: unknown) => schema.parse(input)).handler(({ data }) => guarded(data.citySlug, opts.permission ?? null, (page) => opts.handler(page, data)))` (POST + `guardedMutation` for `cityMutation`).
-- [ ] **Step 2: Convert `tiers.tsx`** to it. Target shape (this is the worked example every batch task copies — note the permission ruling from Global Constraints: no `permission:` option, because `listTiers`/`createTier` already call `ensurePermission` internally):
+- [x] **Step 1: Implement the full factory** in `cityFn.ts`: build `z.object({ citySlug: z.string().min(1), ...(opts.input ?? {}) })`, then `createServerFn({ method: "GET" }).validator((input: unknown) => schema.parse(input)).handler(({ data }) => guarded(data.citySlug, opts.permission ?? null, (page) => opts.handler(page, data)))` (POST + `guardedMutation` for `cityMutation`).
+- [x] **Step 2: Convert `tiers.tsx`** to it. Target shape (this is the worked example every batch task copies — note the permission ruling from Global Constraints: no `permission:` option, because `listTiers`/`createTier` already call `ensurePermission` internally):
 
 ```typescript
 const loadTiers = cityQuery({
@@ -245,10 +245,10 @@ const submitTier = cityMutation({
 ```
 
   The loader call site (`loadTiers({ data: { citySlug: params.citySlug } })`) and the component stay as-is. Where the old handler re-wrapped a service result in `ok({...})` just to rename nothing, return the service result directly.
-- [ ] **Step 3: Verify the compilation risk.** `bun run build` must succeed. Then inspect the **client** assets for server leakage: `grep -rl "tiersRepository\|drizzle\|cloudflare:workers" dist/client/ .output/public/ 2>/dev/null || true` (locate the client output dir first; also confirm the tiers page JS chunk doesn't grow suspiciously). Run `bun run test && bun run check`, then a dev smoke: `timeout 30 bun run dev` long enough to confirm boot without errors is NOT required if build+tests pass — skip dev smoke if `bun run build` is green.
-- [ ] **Step 4 (fallback, only if Step 3 fails):** keep `createServerFn` in the route file and reduce the factory to two helpers exported from `cityFn.ts`: `cityInput<S>(shape: S)` returning the merged zod object, and `cityHandler(permission, fn)` returning the `({ data }) => guarded(...)` handler body. Convert `tiers.tsx` to that instead, and record in your report that the fallback shape won — batch tasks will follow whichever shape this task lands.
-- [ ] **Step 5: Unit-test the schema merge** (extra input fields required, citySlug always required, bad input throws ZodError).
-- [ ] **Step 6: Commit** — `feat(web): cityQuery/cityMutation server-fn factory, tiers as pilot`
+- [x] **Step 3: Verify the compilation risk.** `bun run build` must succeed. Then inspect the **client** assets for server leakage: `grep -rl "tiersRepository\|drizzle\|cloudflare:workers" dist/client/ .output/public/ 2>/dev/null || true` (locate the client output dir first; also confirm the tiers page JS chunk doesn't grow suspiciously). Run `bun run test && bun run check`, then a dev smoke: `timeout 30 bun run dev` long enough to confirm boot without errors is NOT required if build+tests pass — skip dev smoke if `bun run build` is green.
+- [x] **Step 4 (fallback, only if Step 3 fails):** keep `createServerFn` in the route file and reduce the factory to two helpers exported from `cityFn.ts`: `cityInput<S>(shape: S)` returning the merged zod object, and `cityHandler(permission, fn)` returning the `({ data }) => guarded(...)` handler body. Convert `tiers.tsx` to that instead, and record in your report that the fallback shape won — batch tasks will follow whichever shape this task lands.
+- [x] **Step 5: Unit-test the schema merge** (extra input fields required, citySlug always required, bad input throws ZodError).
+- [x] **Step 6: Commit** — `feat(web): cityQuery/cityMutation server-fn factory, tiers as pilot`
 
 ---
 
@@ -266,10 +266,10 @@ Recipe per file:
 3. Drop now-unused imports (`createServerFn`, `guarded`, `ok` where no longer used, the standalone `z.object` input consts). Keep `z` where `input:` uses it.
 4. Do not restructure components, forms, or loaders beyond the server-fn block.
 
-- [ ] **Step 1: Convert all files** per the recipe (work through the directory alphabetically; run `bun run typecheck` every ~8 files to catch drift early)
-- [ ] **Step 2: Run gates:** `bun run test && bun run check`
-- [ ] **Step 3: Verify no stragglers in the batch:** `grep -rln "guarded(\|guardedMutation(" src/routes/\$citySlug/admin/` → must be empty
-- [ ] **Step 4: Commit** — `refactor(web): admin routes onto cityQuery/cityMutation, permissions single-sourced in services`
+- [x] **Step 1: Convert all files** per the recipe (work through the directory alphabetically; run `bun run typecheck` every ~8 files to catch drift early)
+- [x] **Step 2: Run gates:** `bun run test && bun run check`
+- [x] **Step 3: Verify no stragglers in the batch:** `grep -rln "guarded(\|guardedMutation(" src/routes/\$citySlug/admin/` → must be empty
+- [x] **Step 4: Commit** — `refactor(web): admin routes onto cityQuery/cityMutation, permissions single-sourced in services`
 
 ---
 
@@ -280,10 +280,10 @@ Recipe per file:
 
 Same recipe, same permission audit, same interfaces as Task 4 (read `cityFn.ts` + `tiers.tsx` first). Community routes serve signed-in members rather than admins — expect more `permission: null`-style public/list service calls; the audit rule still applies: the service owns the check, or the route keeps an explicit `permission:` with a report note.
 
-- [ ] **Step 1: Enumerate + convert** all matched files
-- [ ] **Step 2: Run gates:** `bun run test && bun run check`
-- [ ] **Step 3: Verify:** `grep -rln "guarded(\|guardedMutation(" <the batch dirs>` → empty
-- [ ] **Step 4: Commit** — `refactor(web): community/profile routes onto cityFn factory`
+- [x] **Step 1: Enumerate + convert** all matched files
+- [x] **Step 2: Run gates:** `bun run test && bun run check`
+- [x] **Step 3: Verify:** `grep -rln "guarded(\|guardedMutation(" <the batch dirs>` → empty
+- [x] **Step 4: Commit** — `refactor(web): community/profile routes onto cityFn factory`
 
 ---
 
@@ -294,10 +294,10 @@ Same recipe, same permission audit, same interfaces as Task 4 (read `cityFn.ts` 
 
 Same recipe and audit as Task 4. These are mostly public/member-facing pages that already pass `null` permissions — the conversion is mechanical.
 
-- [ ] **Step 1: Enumerate + convert**
-- [ ] **Step 2: Run gates:** `bun run test && bun run check`
-- [ ] **Step 3: Verify:** `grep -rln "guarded(\|guardedMutation(" src/routes/` → empty (only `cityFn.ts` may import guarded now)
-- [ ] **Step 4: Commit** — `refactor(web): remaining city routes onto cityFn factory`
+- [x] **Step 1: Enumerate + convert**
+- [x] **Step 2: Run gates:** `bun run test && bun run check`
+- [x] **Step 3: Verify:** `grep -rln "guarded(\|guardedMutation(" src/routes/` → empty (only `cityFn.ts` may import guarded now)
+- [x] **Step 4: Commit** — `refactor(web): remaining city routes onto cityFn factory`
 
 ---
 
@@ -334,11 +334,11 @@ Service side: `const parsed = tierWriteInput.safeParse(input); if (!parsed.succe
 
 For events/talks: translate the hand-rolled `validators.ts` checks (URL allow-lists etc.) into zod (`z.string().url().refine(...)`), keeping identical accept/reject behavior; delete the old validator file; update importers.
 
-- [ ] **Step 1: tiers** — schema, service swap, red-green on new invalid-input tests, route `input:` reuse in `tiers.tsx`
-- [ ] **Step 2: events** — port `events/validators.ts` to `events/schemas.ts`, update `eventsService` callers, delete old file
-- [ ] **Step 3: talks** — same
-- [ ] **Step 4: Run gates:** `bun run test && bun run check`
-- [ ] **Step 5: Commit** — `refactor(web): module-owned zod write schemas for tiers/events/talks`
+- [x] **Step 1: tiers** — schema, service swap, red-green on new invalid-input tests, route `input:` reuse in `tiers.tsx`
+- [x] **Step 2: events** — port `events/validators.ts` to `events/schemas.ts`, update `eventsService` callers, delete old file
+- [x] **Step 3: talks** — same
+- [x] **Step 4: Run gates:** `bun run test && bun run check`
+- [x] **Step 5: Commit** — `refactor(web): module-owned zod write schemas for tiers/events/talks`
 
 ---
 
@@ -351,10 +351,10 @@ For events/talks: translate the hand-rolled `validators.ts` checks (URL allow-li
 
 Same convention as Task 7. These two are the largest hand-rolled validators; translate rule-for-rule (nullable vs optional, string trimming, enum sets, media constraints) — behavior-preserving, verified by the existing service tests. Where a validator function returned a discriminated result consumed by the service, keep the service's external `Result` behavior identical.
 
-- [ ] **Step 1: pages** — port, swap, delete
-- [ ] **Step 2: social** — port, swap, delete
-- [ ] **Step 3: Run gates:** `bun run test && bun run check` (also `grep -rn "isOptStr\|isObj(" src/modules` → empty)
-- [ ] **Step 4: Commit** — `refactor(web): pages/social validation onto zod module schemas`
+- [x] **Step 1: pages** — port, swap, delete
+- [x] **Step 2: social** — port, swap, delete
+- [x] **Step 3: Run gates:** `bun run test && bun run check` (also `grep -rn "isOptStr\|isObj(" src/modules` → empty)
+- [x] **Step 4: Commit** — `refactor(web): pages/social validation onto zod module schemas`
 
 ---
 
@@ -366,10 +366,10 @@ Same convention as Task 7. These two are the largest hand-rolled validators; tra
 
 Today `types.ts` declares the same concept three ways — `EventCreateBody`, `EventWrite`, `EventDetail` — and they drift: the cover image is `imageUrl` in `EventCreateBody`/`EventDetail` but `coverUrl` in `EventWrite`, hand-remapped in `eventsService.ts` (`coverUrl: input.imageUrl`). Tracing one field (`footerText`) touches 15 sites in 5 files.
 
-- [ ] **Step 1: Pick the canonical field name from the DB column** in `schema.tenant.ts` (whichever of `coverUrl`/`imageUrl` the events table actually uses) and rename the other everywhere in the module, `mcpService`, routes, and tests. **Exception:** if the name is exposed through the MCP tool input schema (external contract), keep the MCP-facing name at the MCP layer with a single explicit translation and a comment — do not silently break MCP clients.
-- [ ] **Step 2: Collapse the input types.** `EventCreateBody` and `EventWrite` merge into one write type derived from the Task 7 zod schema (`z.infer<typeof eventWriteInput>` + repo-level normalizations). `EventDetail` stays but must be produced in exactly ONE place (the repo's `toDetail`), and every route consumes it as-is — delete the route-local `AgendaRow` interface + field-by-field remap in `events/$slug/index.tsx`, using the module's published agenda type instead. Same for any other events route re-projection.
-- [ ] **Step 3: Run gates:** `bun run test && bun run check`
-- [ ] **Step 4: Commit** — `refactor(web): single write type + canonical field names for events`
+- [x] **Step 1: Pick the canonical field name from the DB column** in `schema.tenant.ts` (whichever of `coverUrl`/`imageUrl` the events table actually uses) and rename the other everywhere in the module, `mcpService`, routes, and tests. **Exception:** if the name is exposed through the MCP tool input schema (external contract), keep the MCP-facing name at the MCP layer with a single explicit translation and a comment — do not silently break MCP clients.
+- [x] **Step 2: Collapse the input types.** `EventCreateBody` and `EventWrite` merge into one write type derived from the Task 7 zod schema (`z.infer<typeof eventWriteInput>` + repo-level normalizations). `EventDetail` stays but must be produced in exactly ONE place (the repo's `toDetail`), and every route consumes it as-is — delete the route-local `AgendaRow` interface + field-by-field remap in `events/$slug/index.tsx`, using the module's published agenda type instead. Same for any other events route re-projection.
+- [x] **Step 3: Run gates:** `bun run test && bun run check`
+- [x] **Step 4: Commit** — `refactor(web): single write type + canonical field names for events`
 
 ---
 
@@ -381,10 +381,10 @@ Today `types.ts` declares the same concept three ways — `EventCreateBody`, `Ev
 
 Apply the Task 9 pattern: `TierInput` (pre-validation) is replaced by the Task 7 zod-inferred type; `TierWrite` remains only if the repo genuinely needs a normalized shape distinct from the parsed input — if its fields are identical, delete it and use the parsed type. Grep for remaining route-local `interface` declarations that mirror a module DTO (`grep -rn "^interface \|^type .*= {" src/routes/ | grep -v Props`) and remove any that duplicate a published module type; list survivors (genuinely view-specific shapes) in your report.
 
-- [ ] **Step 1: tiers types merge**
-- [ ] **Step 2: social/index.tsx re-projection removal + sweep**
-- [ ] **Step 3: Run gates:** `bun run test && bun run check`
-- [ ] **Step 4: Commit** — `refactor(web): collapse tier type triple, drop route DTO re-projections`
+- [x] **Step 1: tiers types merge**
+- [x] **Step 2: social/index.tsx re-projection removal + sweep**
+- [x] **Step 3: Run gates:** `bun run test && bun run check`
+- [x] **Step 4: Commit** — `refactor(web): collapse tier type triple, drop route DTO re-projections`
 
 ---
 
@@ -408,7 +408,7 @@ export async function loadRegistryPage(): Promise<RegistryPageContext>;
 
 The 14 non-`$citySlug` sites currently each reconstruct their own context (`getRegistryDb()`/`workerEnv()` directly, lazy `await import("@/shared/db/env")`, a hand-built `TenantStore` in the resend webhook). `loadRegistryPage` = `getRegistryStore()` + `syncSessionUser` (unauthenticated → `auth: null`, banned → propagate as null too for public pages — the page-level admin gate re-checks). Migrate the page routes onto it. For `api/webhooks/resend.ts`: replace the hand-built tenant store with the existing `openTenantStore(tenant)` from `@/shared/db/env` (it already accepts `Pick<TenantContext, "orgId" | "d1Binding">`); webhook auth (secret verification) stays exactly as-is. API routes with genuinely different transport needs (upload, mcp, files) keep direct access but must go through named helpers in `@/shared/db/env` — no inline `env` poking; add a small helper there if one is missing.
 
-- [ ] **Step 1: Implement + test `loadRegistryPage`**
-- [ ] **Step 2: Migrate the page routes + webhook store**
-- [ ] **Step 3: Run gates:** `bun run test && bun run check`; verify `grep -rln "await import(\"@/shared/db/env\")" src/routes/` → empty
-- [ ] **Step 4: Commit** — `refactor(web): loadRegistryPage unifies the registry-plane routes`
+- [x] **Step 1: Implement + test `loadRegistryPage`**
+- [x] **Step 2: Migrate the page routes + webhook store**
+- [x] **Step 3: Run gates:** `bun run test && bun run check`; verify `grep -rln "await import(\"@/shared/db/env\")" src/routes/` → empty
+- [x] **Step 4: Commit** — `refactor(web): loadRegistryPage unifies the registry-plane routes`
