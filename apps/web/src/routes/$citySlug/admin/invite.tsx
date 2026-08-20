@@ -19,7 +19,7 @@ const loadInvite = createServerFn({ method: "GET" })
       return ok({
         invites: listed.ok ? listed.invites : ([] as InviteRecord[]),
       });
-    }),
+    }, "users.invite"),
   );
 
 const submitInviteInput = cityInput({

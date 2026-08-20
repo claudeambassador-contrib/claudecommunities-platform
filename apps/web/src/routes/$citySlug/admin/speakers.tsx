@@ -22,7 +22,7 @@ const loadSpeakers = createServerFn({ method: "GET" })
             }))
           : [],
       });
-    }),
+    }, "speakers.view"),
   );
 
 export const Route = createFileRoute("/$citySlug/admin/speakers")({
