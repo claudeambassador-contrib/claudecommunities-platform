@@ -62,6 +62,13 @@ export interface EventDetail {
 
 export type EventListItem = EventDetail;
 
+/**
+ * What an unauthenticated visitor may see. `meetingUrl` is the private join
+ * link — it is the one `EventDetail` field that must never reach a public
+ * payload, so public loaders ship this type instead of the full detail.
+ */
+export type PublicEventDetail = Omit<EventDetail, "meetingUrl">;
+
 export interface AgendaItemInput {
   description?: string | null;
   endTime?: string | null;

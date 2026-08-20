@@ -25,6 +25,7 @@ import {
   reorderAgenda,
   rsvpToEvent,
   setEventActive,
+  toPublicEventDetail,
   unregisterLumaInterest,
   updateAgendaItem,
   updateEvent,
@@ -187,6 +188,53 @@ describe("eventsService", () => {
     }
     expect(created.error.status).toBe(400);
     expect(created.error.message).toContain("coverUrl");
+  });
+
+  it("omits the private meetingUrl from the public event payload", async () => {
+    const store = openMemoryTenant();
+    const created = await createEvent(store, adminActor(), {
+      isOnline: true,
+      meetingUrl: "https://zoom.us/j/123",
+      startTime: START,
+      title: "Online meetup",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    expect(created.event.meetingUrl).toBe("https://zoom.us/j/123");
+
+    const publicEvent = toPublicEventDetail(created.event);
+    expect(Object.hasOwn(publicEvent, "meetingUrl")).toBe(false);
+    expect(JSON.stringify(publicEvent)).not.toContain("zoom.us");
+    // The rest of EventDetail stays public page content.
+    expect(publicEvent.title).toBe("Online meetup");
+    expect(publicEvent.isOnline).toBe(true);
+  });
+
+  it("treats a null eventType on update as absent instead of writing NULL", async () => {
+    const store = openMemoryTenant();
+    const created = await createEvent(store, adminActor(), {
+      eventType: "workshop",
+      startTime: START,
+      title: "Typed",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    expect(created.event.eventType).toBe("workshop");
+
+    const updated = await updateEvent(store, adminActor(), created.event.id, {
+      description: "Updated",
+      eventType: null,
+    });
+    expect(updated.ok).toBe(true);
+    if (!updated.ok) {
+      return;
+    }
+    expect(updated.event.eventType).toBe("workshop");
+    expect(updated.event.description).toBe("Updated");
   });
 
   it("lists only published events unless includeInactive is set", async () => {

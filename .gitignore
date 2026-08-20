@@ -68,6 +68,9 @@ apps/web/node_modules/
 # Claude Code
 .claude/worktrees
 
+# Agent session handovers (written by ~/.claude/hooks/save-handover.py)
+.handover/
+
 # mcp-ui generated artifacts
 /mcp-ui/dist/
 /mcp-ui/node_modules/

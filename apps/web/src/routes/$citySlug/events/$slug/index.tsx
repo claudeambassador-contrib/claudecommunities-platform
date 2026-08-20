@@ -2,7 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
-import { getEventBySlugOrId, listPublicAgenda } from "@/modules/events/services/eventsService";
+import {
+  getEventBySlugOrId,
+  listPublicAgenda,
+  toPublicEventDetail,
+} from "@/modules/events/services/eventsService";
 import type { AgendaItemDetail } from "@/modules/events/types";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { EmptyCard, PageHeader } from "@/shared/ui/page";
@@ -22,7 +26,9 @@ const getEventPage = createServerFn({ method: "GET" })
       return empty;
     }
     const agenda = await listPublicAgenda(page.store, found.event.id);
-    return { agenda: agenda.ok ? agenda.items : [], event: found.event };
+    // This route is unauthenticated, so the payload must be the public
+    // projection: `toPublicEventDetail` drops the private `meetingUrl`.
+    return { agenda: agenda.ok ? agenda.items : [], event: toPublicEventDetail(found.event) };
   });
 
 export const Route = createFileRoute("/$citySlug/events/$slug/")({

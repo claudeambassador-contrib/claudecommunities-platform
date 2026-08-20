@@ -13,6 +13,7 @@ import type {
   EventWrite,
   EventWriteInput,
   LumaWaitlistNotifier,
+  PublicEventDetail,
   ReorderEntry,
   RsvpCounts,
   RsvpStats,
@@ -26,6 +27,18 @@ import { err, ok, type Result } from "@/shared/http/errors";
 import { toSafeSlug } from "@/shared/ids";
 
 const AGENDA_TYPES: AgendaItemType[] = ["speaker", "welcome", "break", "custom"];
+
+/**
+ * Strip the fields an unauthenticated visitor must not receive before an
+ * `EventDetail` is serialized into a public page payload. Only `meetingUrl`
+ * qualifies today: it is the private join link, handed out to attendees
+ * through the RSVP flow rather than the public event page. Everything else on
+ * `EventDetail` is already public page content.
+ */
+export function toPublicEventDetail(event: EventDetail): PublicEventDetail {
+  const { meetingUrl: _meetingUrl, ...publicEvent } = event;
+  return publicEvent;
+}
 
 function parseDate(value: string | null | undefined, field: string): Result<{ date: Date | null }> {
   if (!value) {
@@ -56,17 +69,29 @@ async function uniqueSlug(store: TenantStore, base: string): Promise<string> {
   return candidate;
 }
 
+/**
+ * `title` and `eventType` back NOT NULL columns, so an explicit null is
+ * treated as "absent" (the field is left unchanged) rather than copied into
+ * the UPDATE — matching the old `!== undefined` guards and the insert path's
+ * `input.eventType ?? "meetup"` default.
+ */
+function toNotNullPatch(input: EventWriteInput): Partial<EventWrite> {
+  const patch: Partial<EventWrite> = {};
+  if (input.title !== undefined && input.title !== null) {
+    patch.title = input.title;
+  }
+  if (input.eventType !== undefined && input.eventType !== null) {
+    patch.eventType = input.eventType;
+  }
+  return patch;
+}
+
 function toEventWritePatch(
   input: EventWriteInput,
   start?: { date: Date | null },
   end?: { date: Date | null },
 ): Partial<EventWrite> {
-  const patch: Partial<EventWrite> = {};
-  // A null title would violate the NOT NULL column, so treat it as "absent"
-  // exactly like the old `input.title !== undefined` guard did.
-  if (input.title !== undefined && input.title !== null) {
-    patch.title = input.title;
-  }
+  const patch: Partial<EventWrite> = toNotNullPatch(input);
   if (input.description !== undefined) {
     patch.description = input.description;
   }
@@ -78,9 +103,6 @@ function toEventWritePatch(
   }
   if (input.timezone !== undefined) {
     patch.timezone = input.timezone;
-  }
-  if (input.eventType !== undefined) {
-    patch.eventType = input.eventType;
   }
   if (start !== undefined) {
     patch.startsAt = start.date ?? undefined;
