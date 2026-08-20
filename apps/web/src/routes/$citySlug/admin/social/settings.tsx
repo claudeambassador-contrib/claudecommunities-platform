@@ -3,18 +3,18 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import { connectAccount, listAccounts } from "@/modules/social/services/socialService";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadAccountsInput = z.object({ citySlug: z.string().min(1) });
+const loadAccountsInput = cityInput();
 
 const loadAccounts = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadAccountsInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "social.view", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const result = await listAccounts(page.store, page.actor);
       if (!result.ok) {
         return result;
@@ -29,9 +29,8 @@ const loadAccounts = createServerFn({ method: "GET" })
     }),
   );
 
-const submitAccountInput = z.object({
+const submitAccountInput = cityInput({
   accountType: z.enum(["organization", "person"]),
-  citySlug: z.string().min(1),
   connector: z.enum(["linkedin", "zernio"]),
   displayName: z.string(),
   externalId: z.string(),
@@ -40,8 +39,8 @@ const submitAccountInput = z.object({
 
 const submitAccount = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitAccountInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "social.manage", (page) =>
+  .handler(
+    cityMutationHandler((page, data) =>
       connectAccount(page.store, page.actor, {
         accountType: data.accountType,
         connector: data.connector,

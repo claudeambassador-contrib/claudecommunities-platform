@@ -10,18 +10,18 @@ import {
   updateCampaign,
 } from "@/modules/email/services/emailCampaignsService";
 import type { CampaignDetail } from "@/modules/email/types";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadInput = z.object({ citySlug: z.string().min(1), id: z.string() });
+const loadInput = cityInput({ id: z.string() });
 
 const load = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "email.view", async (page) => {
+  .handler(
+    cityHandler(async (page, data) => {
       const found = await getCampaign(page.store, page.actor, data.id);
       if (!found.ok) {
         return found;
@@ -30,9 +30,8 @@ const load = createServerFn({ method: "GET" })
     }),
   );
 
-const saveInput = z.object({
+const saveInput = cityInput({
   bodyHtml: z.string(),
-  citySlug: z.string().min(1),
   id: z.string(),
   name: z.string(),
   scheduledAt: z.string(),
@@ -41,8 +40,8 @@ const saveInput = z.object({
 
 const save = createServerFn({ method: "POST" })
   .validator((input: unknown) => saveInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "email.edit", (page) =>
+  .handler(
+    cityMutationHandler((page, data) =>
       updateCampaign(page.store, page.actor, data.id, {
         bodyHtml: data.bodyHtml,
         name: data.name,
@@ -52,12 +51,12 @@ const save = createServerFn({ method: "POST" })
     ),
   );
 
-const sendNowInput = z.object({ citySlug: z.string().min(1), id: z.string() });
+const sendNowInput = cityInput({ id: z.string() });
 
 const sendNow = createServerFn({ method: "POST" })
   .validator((input: unknown) => sendNowInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "email.send", async (page) => {
+  .handler(
+    cityMutationHandler(async (page, data) => {
       const { workerEnv } = await import("@/shared/db/env");
       return enqueueCampaignSend(
         page.store,

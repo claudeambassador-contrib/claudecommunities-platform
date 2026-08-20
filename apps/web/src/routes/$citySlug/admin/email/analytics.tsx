@@ -1,18 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
-import { z } from "zod";
 import { getEmailAnalytics } from "@/modules/email/services/emailOpsService";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
-const loadEmailAnalyticsInput = z.object({ citySlug: z.string().min(1) });
+const loadEmailAnalyticsInput = cityInput();
 
 const loadEmailAnalytics = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadEmailAnalyticsInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "email.view", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const loaded = await getEmailAnalytics(page.store, page.actor);
       if (!loaded.ok) {
         return loaded;

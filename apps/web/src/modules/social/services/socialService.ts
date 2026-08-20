@@ -5,6 +5,7 @@ import type {
   SocialAccountSummary,
   SocialConnector,
   SocialDeps,
+  SocialPostAction,
   SocialPostInput,
   SocialPostListOptions,
   SocialPostSummary,
@@ -170,13 +171,42 @@ export async function getPost(
   return await socialRepo.getPostById(store, id);
 }
 
+function ensureCreatePostPermission(actor: Actor, action: SocialPostAction): Result<Empty> {
+  const perm = ensurePermission(actor, "social.edit");
+  if (!perm.ok) {
+    return perm;
+  }
+  if (action === "publish") {
+    return ensurePermission(actor, "social.publish");
+  }
+  return ok({});
+}
+
+function resolveScheduledAt(scheduledAtInput: string | null | undefined): Result<{
+  scheduledAt: Date | null;
+  status: "draft" | "scheduled";
+}> {
+  if (!scheduledAtInput) {
+    return err("bad_request", 400, "scheduledAt is required for scheduled posts");
+  }
+  const scheduledAt = new Date(scheduledAtInput);
+  if (Number.isNaN(scheduledAt.getTime())) {
+    return err("bad_request", 400, "Invalid scheduledAt");
+  }
+  if (scheduledAt.getTime() < Date.now() - 60_000) {
+    return err("bad_request", 400, "scheduledAt must be in the future");
+  }
+  return ok({ scheduledAt, status: "scheduled" });
+}
+
 export async function createPost(
   store: TenantStore,
   actor: Actor,
   input: SocialPostInput,
   deps?: SocialDeps,
 ): Promise<Result<{ post: SocialPostSummary }>> {
-  const perm = ensurePermission(actor, "social.edit");
+  const action = input.action ?? "draft";
+  const perm = ensureCreatePostPermission(actor, action);
   if (!perm.ok) {
     return perm;
   }
@@ -195,21 +225,14 @@ export async function createPost(
     return media;
   }
 
-  const action = input.action ?? "draft";
   let status: "draft" | "scheduled" = "draft";
   let scheduledAt: Date | null = null;
   if (action === "scheduled") {
-    if (!input.scheduledAt) {
-      return err("bad_request", 400, "scheduledAt is required for scheduled posts");
+    const resolved = resolveScheduledAt(input.scheduledAt);
+    if (!resolved.ok) {
+      return resolved;
     }
-    scheduledAt = new Date(input.scheduledAt);
-    if (Number.isNaN(scheduledAt.getTime())) {
-      return err("bad_request", 400, "Invalid scheduledAt");
-    }
-    if (scheduledAt.getTime() < Date.now() - 60_000) {
-      return err("bad_request", 400, "scheduledAt must be in the future");
-    }
-    status = "scheduled";
+    ({ status, scheduledAt } = resolved);
   }
 
   const created = await socialRepo.insertPost(store, {

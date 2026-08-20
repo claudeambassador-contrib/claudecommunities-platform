@@ -2,17 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { type FormEvent, useCallback, useState } from "react";
-import { z } from "zod";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 import { RemoteImage } from "@/shared/ui/remote-image";
 
-const loadQrInput = z.object({ citySlug: z.string().min(1) });
+const loadQrInput = cityInput();
 
 const loadQr = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadQrInput.parse(input))
-  .handler(({ data }) => guarded(data.citySlug, "tools.use", () => Promise.resolve(ok({}))));
+  .handler(cityHandler(() => Promise.resolve(ok({})), "tools.use"));
 
 export const Route = createFileRoute("/$citySlug/admin/tools/qr-generator")({
   loader: ({ params }) => loadQr({ data: { citySlug: params.citySlug } }),

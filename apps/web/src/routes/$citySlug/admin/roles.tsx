@@ -1,18 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
-import { z } from "zod";
 import { getPermissionCatalog, listRoles } from "@/modules/roles/services/rolesService";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, ItemList, PageHeader } from "@/shared/ui/page";
 
-const loadRolesInput = z.object({ citySlug: z.string().min(1) });
+const loadRolesInput = cityInput();
 
 const loadRoles = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadRolesInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "roles.view", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const result = await listRoles(page.store, page.actor);
       if (!result.ok) {
         return result;

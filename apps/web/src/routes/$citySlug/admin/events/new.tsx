@@ -3,19 +3,18 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import { createEvent } from "@/modules/events/services/eventsService";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadNewEventInput = z.object({ citySlug: z.string().min(1) });
+const loadNewEventInput = cityInput();
 
 const loadNewEvent = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadNewEventInput.parse(input))
-  .handler(({ data }) => guarded(data.citySlug, "events.edit", async () => ok({})));
+  .handler(cityHandler(async () => ok({}), "events.edit"));
 
-const submitEventInput = z.object({
-  citySlug: z.string().min(1),
+const submitEventInput = cityInput({
   location: z.string(),
   startTime: z.string(),
   title: z.string(),
@@ -23,8 +22,8 @@ const submitEventInput = z.object({
 
 const submitEvent = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitEventInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "events.edit", async (page) => {
+  .handler(
+    cityMutationHandler(async (page, data) => {
       const result = await createEvent(page.store, page.actor, {
         location: data.location || null,
         startTime: data.startTime,

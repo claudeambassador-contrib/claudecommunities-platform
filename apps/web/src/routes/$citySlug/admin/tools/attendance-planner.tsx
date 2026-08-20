@@ -6,30 +6,29 @@ import { z } from "zod";
 import { heuristicEvaluator, parseCandidateCsv } from "@/modules/attendance/heuristic";
 import { evaluateCandidates } from "@/modules/attendance/services/attendanceEvaluatorService";
 import type { Evaluation } from "@/modules/attendance/types";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadPlannerInput = z.object({ citySlug: z.string().min(1) });
+const loadPlannerInput = cityInput();
 
 const loadPlanner = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadPlannerInput.parse(input))
-  .handler(({ data }) => guarded(data.citySlug, "tools.use", () => Promise.resolve(ok({}))));
+  .handler(cityHandler(() => Promise.resolve(ok({})), "tools.use"));
 
-const runPlannerInput = z.object({
+const runPlannerInput = cityInput({
   candidates: z.string(),
-  citySlug: z.string().min(1),
   prompt: z.string(),
 });
 
 const runPlanner = createServerFn({ method: "POST" })
   .validator((input: unknown) => runPlannerInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "tools.use", () => {
+  .handler(
+    cityMutationHandler((_page, data) => {
       const candidates = parseCandidateCsv(data.candidates);
       return evaluateCandidates(data.prompt, candidates, heuristicEvaluator);
-    }),
+    }, "tools.use"),
   );
 
 export const Route = createFileRoute("/$citySlug/admin/tools/attendance-planner")({

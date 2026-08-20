@@ -3,27 +3,27 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import { createContentPage } from "@/modules/pages/services/pagesService";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation, type Mutated } from "@/shared/http/guarded";
+import type { Mutated } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadNewPageInput = z.object({ citySlug: z.string().min(1) });
+const loadNewPageInput = cityInput();
 
 const loadNewPage = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadNewPageInput.parse(input))
-  .handler(({ data }) => guarded(data.citySlug, "pages.edit", async () => ok({})));
+  .handler(cityHandler(async () => ok({}), "pages.edit"));
 
-const submitPageInput = z.object({
-  citySlug: z.string().min(1),
+const submitPageInput = cityInput({
   slug: z.string(),
   title: z.string(),
 });
 
 const submitPage = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitPageInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "pages.edit", async (page) => {
+  .handler(
+    cityMutationHandler(async (page, data) => {
       const result = await createContentPage(page.store, page.actor, {
         blocks: [],
         slug: data.slug,

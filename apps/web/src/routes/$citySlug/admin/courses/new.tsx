@@ -3,27 +3,27 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import { createCourse } from "@/modules/courses/services/coursesService";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation, type Mutated } from "@/shared/http/guarded";
+import type { Mutated } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadNewCourseInput = z.object({ citySlug: z.string().min(1) });
+const loadNewCourseInput = cityInput();
 
 const loadNewCourse = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadNewCourseInput.parse(input))
-  .handler(({ data }) => guarded(data.citySlug, "courses.edit", async () => ok({})));
+  .handler(cityHandler(async () => ok({}), "courses.edit"));
 
-const submitCourseInput = z.object({
-  citySlug: z.string().min(1),
+const submitCourseInput = cityInput({
   slug: z.string(),
   title: z.string(),
 });
 
 const submitCourse = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitCourseInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "courses.edit", async (page) => {
+  .handler(
+    cityMutationHandler(async (page, data) => {
       const result = await createCourse(page.store, page.actor, {
         slug: data.slug,
         title: data.title,

@@ -1,27 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
-import { z } from "zod";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 
-const loadSettingsInput = z.object({ citySlug: z.string().min(1) });
+const loadSettingsInput = cityInput();
 
 const loadSettings = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadSettingsInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "tenant.settings", (page) =>
-      Promise.resolve(
-        ok({
-          tenant: {
-            name: page.tenant.name,
-            region: page.tenant.region,
-            slug: page.tenant.slug,
-            timezone: page.tenant.timezone,
-          },
-        }),
-      ),
+  .handler(
+    cityHandler(
+      (page) =>
+        Promise.resolve(
+          ok({
+            tenant: {
+              name: page.tenant.name,
+              region: page.tenant.region,
+              slug: page.tenant.slug,
+              timezone: page.tenant.timezone,
+            },
+          }),
+        ),
+      "tenant.settings",
     ),
   );
 

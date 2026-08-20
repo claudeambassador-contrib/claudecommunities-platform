@@ -401,4 +401,27 @@ describe("social posts", () => {
     });
     expect(denied.ok).toBe(false);
   });
+
+  it("requires social.publish (not just social.edit) to create with action publish", async () => {
+    const { account, store } = await seededAccount();
+    const editorOnly = adminActor({
+      permissions: new Set(["social.edit", "social.view"]),
+    });
+    const draft = await createPost(store, editorOnly, {
+      accountId: account.id,
+      content: "Draft is fine",
+    });
+    expect(draft.ok).toBe(true);
+
+    const denied = await createPost(
+      store,
+      editorOnly,
+      { accountId: account.id, action: "publish", content: "Not allowed" },
+      { connector: testConnector() },
+    );
+    expect(denied.ok).toBe(false);
+    if (!denied.ok) {
+      expect(denied.error.status).toBe(403);
+    }
+  });
 });

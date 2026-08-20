@@ -6,32 +6,29 @@ import { z } from "zod";
 import { getHomeSections, saveHomeSections } from "@/modules/pages/services/pagesService";
 import type { Block } from "@/modules/pages/types";
 import { HomeSectionsEditor } from "@/modules/pages/ui/home-sections-editor";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 
-const loadHomeInput = z.object({ citySlug: z.string().min(1) });
+const loadHomeInput = cityInput();
 
 const loadHome = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadHomeInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "pages.view", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const home = await getHomeSections(page.store);
       return ok({ blocks: home.ok ? home.blocks : [] });
-    }),
+    }, "pages.view"),
   );
 
-const saveHomeInput = z.object({
+const saveHomeInput = cityInput({
   blocks: z.custom<Block[]>((value) => Array.isArray(value)),
-  citySlug: z.string().min(1),
 });
 
 const saveHome = createServerFn({ method: "POST" })
   .validator((input: unknown) => saveHomeInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "pages.edit", (page) =>
-      saveHomeSections(page.store, page.actor, data.blocks),
-    ),
+  .handler(
+    cityMutationHandler((page, data) => saveHomeSections(page.store, page.actor, data.blocks)),
   );
 
 export const Route = createFileRoute("/$citySlug/admin/pages/home")({

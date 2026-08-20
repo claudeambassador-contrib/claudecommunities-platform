@@ -1,18 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
-import { z } from "zod";
 import { listFeed } from "@/modules/community/services/communityService";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
-const loadPostsInput = z.object({ citySlug: z.string().min(1) });
+const loadPostsInput = cityInput();
 
 const loadPosts = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadPostsInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "posts.view", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const result = await listFeed(page.store);
       if (!result.ok) {
         return result;
@@ -24,7 +23,7 @@ const loadPosts = createServerFn({ method: "GET" })
           title: post.title || post.content.slice(0, 80) || "Untitled post",
         })),
       });
-    }),
+    }, "posts.view"),
   );
 
 export const Route = createFileRoute("/$citySlug/admin/posts")({

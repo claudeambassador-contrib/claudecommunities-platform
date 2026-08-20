@@ -3,16 +3,16 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import { getContentPage } from "@/modules/pages/services/pagesService";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 
-const loadPageInput = z.object({ citySlug: z.string().min(1), id: z.string() });
+const loadPageInput = cityInput({ id: z.string() });
 
 const loadPage = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadPageInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "pages.view", async (page) => {
+  .handler(
+    cityHandler(async (page, data) => {
       const result = await getContentPage(page.store, page.actor, data.id);
       if (!result.ok) {
         return result;

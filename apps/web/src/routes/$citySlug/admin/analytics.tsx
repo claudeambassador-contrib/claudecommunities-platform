@@ -1,18 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
-import { z } from "zod";
 import { listActivity } from "@/modules/activity/services/activityService";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, ItemList, PageHeader } from "@/shared/ui/page";
 
-const loadAnalyticsInput = z.object({ citySlug: z.string().min(1) });
+const loadAnalyticsInput = cityInput();
 
 const loadAnalytics = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadAnalyticsInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "analytics.view", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const result = await listActivity(page.store);
       if (!result.ok) {
         return result;
@@ -29,7 +28,7 @@ const loadAnalytics = createServerFn({ method: "GET" })
         })),
         total: result.activities.length,
       });
-    }),
+    }, "analytics.view"),
   );
 
 export const Route = createFileRoute("/$citySlug/admin/analytics")({

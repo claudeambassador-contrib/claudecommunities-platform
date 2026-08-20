@@ -4,23 +4,24 @@ import type { ReactElement } from "react";
 import { z } from "zod";
 import { importMembers, parseMemberCsv } from "@/modules/identity/services/usersService";
 import type { ImportMemberResult } from "@/modules/identity/types";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation, type Mutated } from "@/shared/http/guarded";
+import type { Mutated } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadImportInput = z.object({ citySlug: z.string().min(1) });
+const loadImportInput = cityInput();
 
 const loadImport = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadImportInput.parse(input))
-  .handler(({ data }) => guarded(data.citySlug, "users.import", () => Promise.resolve(ok({}))));
+  .handler(cityHandler(() => Promise.resolve(ok({})), "users.import"));
 
-const submitImportInput = z.object({ citySlug: z.string().min(1), csv: z.string() });
+const submitImportInput = cityInput({ csv: z.string() });
 
 const submitImport = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitImportInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "users.import", async (page) => {
+  .handler(
+    cityMutationHandler(async (page, data) => {
       const rows = parseMemberCsv(data.csv);
       const result = await importMembers(page.registry, page.actor, page.tenant.orgId, rows);
       if (!result.ok) {

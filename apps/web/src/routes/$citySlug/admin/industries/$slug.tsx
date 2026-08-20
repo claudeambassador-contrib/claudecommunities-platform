@@ -3,18 +3,18 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import { getIndustry, saveIndustry } from "@/modules/pages/services/industriesService";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadIndustryInput = z.object({ citySlug: z.string().min(1), slug: z.string() });
+const loadIndustryInput = cityInput({ slug: z.string() });
 
 const loadIndustry = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadIndustryInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "pages.view", async (page) => {
+  .handler(
+    cityHandler(async (page, data) => {
       const found = await getIndustry(page.store, page.actor, data.slug);
       if (!found.ok) {
         return found;
@@ -23,17 +23,16 @@ const loadIndustry = createServerFn({ method: "GET" })
     }),
   );
 
-const submitIndustryInput = z.object({
+const submitIndustryInput = cityInput({
   body: z.string(),
-  citySlug: z.string().min(1),
   slug: z.string(),
   title: z.string(),
 });
 
 const submitIndustry = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitIndustryInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "pages.edit", (page) =>
+  .handler(
+    cityMutationHandler((page, data) =>
       saveIndustry(page.store, page.actor, {
         body: data.body,
         slug: data.slug,

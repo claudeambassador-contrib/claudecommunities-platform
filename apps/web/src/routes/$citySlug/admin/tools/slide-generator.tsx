@@ -9,8 +9,8 @@ import {
   listPresets,
   putState,
 } from "@/modules/slides/services/slideGeneratorService";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 import { SlideCanvas } from "@/shared/ui/slide-canvas";
@@ -31,12 +31,12 @@ function parseJsonField(raw: string): { error: string; ok: false } | { ok: true;
   }
 }
 
-const loadSlideGeneratorInput = z.object({ citySlug: z.string().min(1), scope: z.string() });
+const loadSlideGeneratorInput = cityInput({ scope: z.string() });
 
 const loadSlideGenerator = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadSlideGeneratorInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "tools.use", async (page) => {
+  .handler(
+    cityHandler(async (page, data) => {
       const presetsResult = await listPresets(page.store, page.actor);
       if (!presetsResult.ok) {
         return presetsResult;
@@ -57,30 +57,26 @@ const loadSlideGenerator = createServerFn({ method: "GET" })
     }),
   );
 
-const saveWorkingStateInput = z.object({
-  citySlug: z.string().min(1),
+const saveWorkingStateInput = cityInput({
   data: z.unknown(),
   scope: z.string(),
 });
 
 const saveWorkingState = createServerFn({ method: "POST" })
   .validator((input: unknown) => saveWorkingStateInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "tools.use", (page) =>
-      putState(page.store, page.actor, data.scope, data.data),
-    ),
+  .handler(
+    cityMutationHandler((page, data) => putState(page.store, page.actor, data.scope, data.data)),
   );
 
-const submitPresetInput = z.object({
-  citySlug: z.string().min(1),
+const submitPresetInput = cityInput({
   data: z.unknown(),
   name: z.string(),
 });
 
 const submitPreset = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitPresetInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "tools.use", (page) =>
+  .handler(
+    cityMutationHandler((page, data) =>
       createPreset(page.store, page.actor, {
         data: data.data,
         name: data.name,

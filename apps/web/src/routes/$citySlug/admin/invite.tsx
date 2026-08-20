@@ -4,17 +4,17 @@ import type { ReactElement } from "react";
 import { z } from "zod";
 import { inviteMember, listInvites } from "@/modules/identity/services/usersService";
 import type { InviteRecord } from "@/modules/identity/types";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadInviteInput = z.object({ citySlug: z.string().min(1) });
+const loadInviteInput = cityInput();
 
 const loadInvite = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadInviteInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "users.invite", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const listed = await listInvites(page.registry, page.actor, page.tenant.orgId);
       return ok({
         invites: listed.ok ? listed.invites : ([] as InviteRecord[]),
@@ -22,16 +22,15 @@ const loadInvite = createServerFn({ method: "GET" })
     }),
   );
 
-const submitInviteInput = z.object({
-  citySlug: z.string().min(1),
+const submitInviteInput = cityInput({
   displayName: z.string(),
   email: z.string(),
 });
 
 const submitInvite = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitInviteInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "users.invite", (page) =>
+  .handler(
+    cityMutationHandler((page, data) =>
       inviteMember(page.registry, page.actor, page.tenant.orgId, {
         displayName: data.displayName,
         email: data.email,

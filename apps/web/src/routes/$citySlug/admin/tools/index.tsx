@@ -1,17 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
-import { z } from "zod";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
-const loadToolsInput = z.object({ citySlug: z.string().min(1) });
+const loadToolsInput = cityInput();
 
 const loadTools = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadToolsInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "tools.use", (page) => {
+  .handler(
+    cityHandler((page) => {
       const base = `/${page.tenant.slug}/admin/tools`;
       return Promise.resolve(
         ok({
@@ -43,7 +42,7 @@ const loadTools = createServerFn({ method: "GET" })
           ],
         }),
       );
-    }),
+    }, "tools.use"),
   );
 
 export const Route = createFileRoute("/$citySlug/admin/tools/")({

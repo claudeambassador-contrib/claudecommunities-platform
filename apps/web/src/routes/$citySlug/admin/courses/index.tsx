@@ -1,18 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
-import { z } from "zod";
 import { listAllAdmin } from "@/modules/courses/services/coursesService";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
-const loadCoursesInput = z.object({ citySlug: z.string().min(1) });
+const loadCoursesInput = cityInput();
 
 const loadCourses = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadCoursesInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "courses.view", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const result = await listAllAdmin(page.store, page.actor);
       if (!result.ok) {
         return result;

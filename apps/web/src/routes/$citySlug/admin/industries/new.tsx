@@ -3,28 +3,28 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import { saveIndustry } from "@/modules/pages/services/industriesService";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation, type Mutated } from "@/shared/http/guarded";
+import type { Mutated } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadNewIndustryInput = z.object({ citySlug: z.string().min(1) });
+const loadNewIndustryInput = cityInput();
 
 const loadNewIndustry = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadNewIndustryInput.parse(input))
-  .handler(({ data }) => guarded(data.citySlug, "pages.edit", () => Promise.resolve(ok({}))));
+  .handler(cityHandler(() => Promise.resolve(ok({})), "pages.edit"));
 
-const submitIndustryInput = z.object({
+const submitIndustryInput = cityInput({
   body: z.string(),
-  citySlug: z.string().min(1),
   slug: z.string(),
   title: z.string(),
 });
 
 const submitIndustry = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitIndustryInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "pages.edit", async (page) => {
+  .handler(
+    cityMutationHandler(async (page, data) => {
       const result = await saveIndustry(page.store, page.actor, {
         body: data.body,
         slug: data.slug,

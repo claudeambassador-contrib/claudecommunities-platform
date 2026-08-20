@@ -4,17 +4,17 @@ import type { ReactElement } from "react";
 import { z } from "zod";
 import { getEmailSettings, saveEmailSettings } from "@/modules/email/services/emailOpsService";
 import type { EmailSettingsDetail } from "@/modules/email/types";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadEmailSettingsInput = z.object({ citySlug: z.string().min(1) });
+const loadEmailSettingsInput = cityInput();
 
 const loadEmailSettings = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadEmailSettingsInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "email.settings", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const loaded = await getEmailSettings(page.store, page.actor);
       if (!loaded.ok) {
         return loaded;
@@ -23,8 +23,7 @@ const loadEmailSettings = createServerFn({ method: "GET" })
     }),
   );
 
-const submitEmailSettingsInput = z.object({
-  citySlug: z.string().min(1),
+const submitEmailSettingsInput = cityInput({
   senderEmail: z.string(),
   senderName: z.string(),
   trackClicks: z.boolean(),
@@ -33,8 +32,8 @@ const submitEmailSettingsInput = z.object({
 
 const submitEmailSettings = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitEmailSettingsInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "email.settings", (page) =>
+  .handler(
+    cityMutationHandler((page, data) =>
       saveEmailSettings(page.store, page.actor, {
         senderEmail: data.senderEmail,
         senderName: data.senderName,

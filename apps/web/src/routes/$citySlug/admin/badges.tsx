@@ -1,18 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
-import { z } from "zod";
 import { listBadges } from "@/modules/badges/services/badgesService";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
-const loadBadgesInput = z.object({ citySlug: z.string().min(1) });
+const loadBadgesInput = cityInput();
 
 const loadBadges = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadBadgesInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "badges.view", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const result = await listBadges(page.store);
       if (!result.ok) {
         return result;
@@ -24,7 +23,7 @@ const loadBadges = createServerFn({ method: "GET" })
           title: badge.name,
         })),
       });
-    }),
+    }, "badges.view"),
   );
 
 export const Route = createFileRoute("/$citySlug/admin/badges")({

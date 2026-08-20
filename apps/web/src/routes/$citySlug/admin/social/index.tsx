@@ -5,8 +5,8 @@ import { type ChangeEvent, useCallback, useRef, useState } from "react";
 import { z } from "zod";
 import { createPost, listAccounts, listPosts } from "@/modules/social/services/socialService";
 import type { SocialPostAction } from "@/modules/social/types";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
@@ -28,12 +28,12 @@ function statusMessageForAction(action: SocialPostAction): string {
   return "Draft saved.";
 }
 
-const loadSocialPostsInput = z.object({ citySlug: z.string().min(1) });
+const loadSocialPostsInput = cityInput();
 
 const loadSocialPosts = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadSocialPostsInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "social.view", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const postsResult = await listPosts(page.store, page.actor);
       if (!postsResult.ok) {
         return postsResult;
@@ -56,10 +56,9 @@ const loadSocialPosts = createServerFn({ method: "GET" })
     }),
   );
 
-const submitSocialPostInput = z.object({
+const submitSocialPostInput = cityInput({
   accountId: z.string(),
   action: z.enum(["draft", "scheduled", "publish"]),
-  citySlug: z.string().min(1),
   content: z.string(),
   mediaType: z.enum(["none", "image"]),
   mediaUrls: z.array(z.string()),
@@ -68,19 +67,16 @@ const submitSocialPostInput = z.object({
 
 const submitSocialPost = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitSocialPostInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(
-      data.citySlug,
-      data.action === "publish" ? "social.publish" : "social.edit",
-      (page) =>
-        createPost(page.store, page.actor, {
-          accountId: data.accountId,
-          action: data.action,
-          content: data.content,
-          mediaType: data.mediaType,
-          mediaUrls: data.mediaUrls,
-          scheduledAt: data.scheduledAt,
-        }),
+  .handler(
+    cityMutationHandler((page, data) =>
+      createPost(page.store, page.actor, {
+        accountId: data.accountId,
+        action: data.action,
+        content: data.content,
+        mediaType: data.mediaType,
+        mediaUrls: data.mediaUrls,
+        scheduledAt: data.scheduledAt,
+      }),
     ),
   );
 

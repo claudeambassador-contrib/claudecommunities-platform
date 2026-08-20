@@ -3,21 +3,21 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import { createCampaign } from "@/modules/email/services/emailCampaignsService";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation, type Mutated } from "@/shared/http/guarded";
+import type { Mutated } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
-const loadInput = z.object({ citySlug: z.string().min(1) });
+const loadInput = cityInput();
 
 const load = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadInput.parse(input))
-  .handler(({ data }) => guarded(data.citySlug, "email.view", async () => ok({})));
+  .handler(cityHandler(async () => ok({}), "email.view"));
 
-const submitInput = z.object({
+const submitInput = cityInput({
   bodyHtml: z.string(),
-  citySlug: z.string().min(1),
   name: z.string(),
   scheduledAt: z.string(),
   subject: z.string(),
@@ -25,8 +25,8 @@ const submitInput = z.object({
 
 const submit = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "email.edit", async (page) => {
+  .handler(
+    cityMutationHandler(async (page, data) => {
       const result = await createCampaign(page.store, page.actor, {
         bodyHtml: data.bodyHtml,
         name: data.name,

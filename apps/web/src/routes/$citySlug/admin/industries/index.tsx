@@ -1,19 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
-import { z } from "zod";
 import { listIndustries } from "@/modules/pages/services/industriesService";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 
-const loadIndustriesInput = z.object({ citySlug: z.string().min(1) });
+const loadIndustriesInput = cityInput();
 
 const loadIndustries = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadIndustriesInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "pages.view", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const listed = await listIndustries(page.store, page.actor);
       if (!listed.ok) {
         return listed;

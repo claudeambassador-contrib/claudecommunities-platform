@@ -1,18 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
-import { z } from "zod";
 import { listCampaigns } from "@/modules/email/services/emailCampaignsService";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
-const loadCampaignsInput = z.object({ citySlug: z.string().min(1) });
+const loadCampaignsInput = cityInput();
 
 const loadCampaigns = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadCampaignsInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "email.view", async (page) => {
+  .handler(
+    cityHandler(async (page, data) => {
       const result = await listCampaigns(page.store, page.actor);
       if (!result.ok) {
         return result;

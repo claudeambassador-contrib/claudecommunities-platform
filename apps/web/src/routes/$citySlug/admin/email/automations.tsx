@@ -13,8 +13,8 @@ import {
   type AutomationDetail,
   type AutomationLiveStatus,
 } from "@/modules/email/types";
+import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded, guardedMutation } from "@/shared/http/guarded";
 import { Can } from "@/shared/ui/can";
 import { DeniedCard, EmptyCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
@@ -25,12 +25,12 @@ const TRIGGER_OPTIONS = [
   { label: "Manual", value: "manual" },
 ] as const;
 
-const loadAutomationsInput = z.object({ citySlug: z.string().min(1) });
+const loadAutomationsInput = cityInput();
 
 const loadAutomations = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadAutomationsInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "email.view", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const listed = await listAutomations(page.store, page.actor);
       if (!listed.ok) {
         return listed;
@@ -39,16 +39,15 @@ const loadAutomations = createServerFn({ method: "GET" })
     }),
   );
 
-const submitAutomationInput = z.object({
-  citySlug: z.string().min(1),
+const submitAutomationInput = cityInput({
   name: z.string(),
   triggerType: z.string(),
 });
 
 const submitAutomation = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitAutomationInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "email.edit", (page) =>
+  .handler(
+    cityMutationHandler((page, data) =>
       createAutomation(page.store, page.actor, {
         name: data.name,
         triggerType: data.triggerType,
@@ -56,16 +55,15 @@ const submitAutomation = createServerFn({ method: "POST" })
     ),
   );
 
-const submitAutomationStatusInput = z.object({
-  citySlug: z.string().min(1),
+const submitAutomationStatusInput = cityInput({
   id: z.string(),
   status: z.enum(AUTOMATION_LIVE_STATUSES),
 });
 
 const submitAutomationStatus = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitAutomationStatusInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "email.edit", (page) =>
+  .handler(
+    cityMutationHandler((page, data) =>
       setAutomationStatus(page.store, page.actor, data.id, data.status),
     ),
   );

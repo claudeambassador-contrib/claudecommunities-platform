@@ -1,18 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
-import { z } from "zod";
 import { listEvents } from "@/modules/events/services/eventsService";
+import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
-import { guarded } from "@/shared/http/guarded";
 import { DeniedCard, ItemList, PageHeader } from "@/shared/ui/page";
 
-const loadEventsInput = z.object({ citySlug: z.string().min(1) });
+const loadEventsInput = cityInput();
 
 const loadEvents = createServerFn({ method: "GET" })
   .validator((input: unknown) => loadEventsInput.parse(input))
-  .handler(({ data }) =>
-    guarded(data.citySlug, "events.view", async (page) => {
+  .handler(
+    cityHandler(async (page) => {
       const result = await listEvents(page.store, { includeInactive: true });
       if (!result.ok) {
         return result;
@@ -30,7 +29,7 @@ const loadEvents = createServerFn({ method: "GET" })
           title: event.title,
         })),
       });
-    }),
+    }, "events.view"),
   );
 
 export const Route = createFileRoute("/$citySlug/admin/events/")({
