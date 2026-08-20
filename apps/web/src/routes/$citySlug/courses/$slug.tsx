@@ -8,8 +8,8 @@ import {
   getPublishedBySlug,
   getScheduledCourse,
 } from "@/modules/courses/services/coursesService";
+import { cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { loadCityPage } from "@/shared/http/cityPage";
-import { guardedMutation } from "@/shared/http/guarded";
 import { EmptyCard, ItemList, PageHeader, SignInCard } from "@/shared/ui/page";
 import { useFormSubmit } from "@/shared/ui/use-form-submit";
 
@@ -98,14 +98,12 @@ const load = createServerFn({ method: "GET" })
     return { kind: "missing" };
   });
 
-const enrollInput = z.object({ citySlug: z.string().min(1), courseId: z.string() });
+const enrollInput = cityInput({ courseId: z.string() });
 
 const enroll = createServerFn({ method: "POST" })
   .validator((input: unknown) => enrollInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, null, (page) =>
-      enrollInCourse(page.store, page.actor, data.courseId),
-    ),
+  .handler(
+    cityMutationHandler((page, data) => enrollInCourse(page.store, page.actor, data.courseId)),
   );
 
 export const Route = createFileRoute("/$citySlug/courses/$slug")({

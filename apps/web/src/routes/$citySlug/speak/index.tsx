@@ -3,8 +3,8 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import { createTalkSubmission } from "@/modules/talks/services/talksService";
+import { cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { loadCityPage } from "@/shared/http/cityPage";
-import { guardedMutation } from "@/shared/http/guarded";
 import { getRegionConfig } from "@/shared/region";
 import { PageHeader, SignInCard } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
@@ -18,8 +18,7 @@ const load = createServerFn({ method: "GET" })
     return { signedIn: page.ok && Boolean(page.actor) };
   });
 
-const submitTalkInput = z.object({
-  citySlug: z.string().min(1),
+const submitTalkInput = cityInput({
   description: z.string(),
   email: z.string(),
   name: z.string(),
@@ -28,8 +27,8 @@ const submitTalkInput = z.object({
 
 const submitTalk = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitTalkInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, null, (page) =>
+  .handler(
+    cityMutationHandler((page, data) =>
       createTalkSubmission(page.store, page.actor, {
         city: page.tenant.name,
         description: data.description,

@@ -5,8 +5,8 @@ import { z } from "zod";
 import { addEventResource, listEventResources } from "@/modules/events/services/eventsService";
 import type { EventResourceDetail } from "@/modules/events/types";
 import { hasPermission } from "@/shared/auth/permissions";
+import { cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { loadCityPage } from "@/shared/http/cityPage";
-import { guardedMutation } from "@/shared/http/guarded";
 import { EmptyCard, PageHeader } from "@/shared/ui/page";
 import { formString, useFormSubmit } from "@/shared/ui/use-form-submit";
 
@@ -34,8 +34,7 @@ const getResources = createServerFn({ method: "GET" })
     };
   });
 
-const submitResourceInput = z.object({
-  citySlug: z.string().min(1),
+const submitResourceInput = cityInput({
   description: z.string(),
   fileUrl: z.string(),
   slug: z.string(),
@@ -44,8 +43,8 @@ const submitResourceInput = z.object({
 
 const submitResource = createServerFn({ method: "POST" })
   .validator((input: unknown) => submitResourceInput.parse(input))
-  .handler(({ data }) =>
-    guardedMutation(data.citySlug, "events.edit", (page) =>
+  .handler(
+    cityMutationHandler((page, data) =>
       addEventResource(page.store, page.actor, data.slug, {
         description: data.description,
         fileUrl: data.fileUrl,
