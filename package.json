@@ -6,20 +6,20 @@
   "author": "Dominik Fretz, Rye Smith, Claude Community Australia",
   "type": "module",
   "scripts": {
-    "build": "bun --cwd apps/web run build",
-    "check": "bun --cwd apps/web run check",
-    "check:fix": "bun --cwd apps/web run lint:fix && bun --cwd apps/web run format",
-    "deploy:staging": "bun --cwd apps/web run deploy:staging",
-    "dev": "bun --cwd apps/web run dev",
-    "format": "bun --cwd apps/web run format",
-    "format:check": "bun --cwd apps/web run format:check",
-    "lint": "bun --cwd apps/web run lint",
+    "build": "bun run --cwd apps/web build",
+    "check": "bun run --cwd apps/web check",
+    "check:fix": "bun run --cwd apps/web lint:fix && bun run --cwd apps/web format",
+    "deploy:staging": "bun run --cwd apps/web deploy:staging",
+    "dev": "bun run --cwd apps/web dev",
+    "format": "bun run --cwd apps/web format",
+    "format:check": "bun run --cwd apps/web format:check",
+    "lint": "bun run --cwd apps/web lint",
     "prepare": "git config core.hooksPath .githooks || true",
-    "preview": "bun --cwd apps/web run preview",
-    "test": "bun --cwd apps/web run test",
-    "test:e2e": "bun --cwd apps/web run test:e2e",
-    "test:iso": "bun --cwd apps/web run test:iso",
-    "typecheck": "bun --cwd apps/web run typecheck"
+    "preview": "bun run --cwd apps/web preview",
+    "test": "bun run --cwd apps/web test",
+    "test:e2e": "bun run --cwd apps/web test:e2e",
+    "test:iso": "bun run --cwd apps/web test:iso",
+    "typecheck": "bun run --cwd apps/web typecheck"
   },
   "engines": {
     "node": ">=20.19"

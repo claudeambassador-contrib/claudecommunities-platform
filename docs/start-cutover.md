@@ -27,8 +27,18 @@ Remote D1s (clean-slate, not the old Next `claudecommunity-staging`):
 | `TENANT_MELBOURNE` | `claudecommunity-melbourne-staging` | `c90ab59c-6dc2-4dcf-aeb4-f2d6f90d2878` |
 
 `STORAGE` reuses existing `claudecommunity-uploads-staging`. Public `/`,
-`/sydney`, `/sydney/events`, `/login` return 200. Worker secrets are still
-empty — put them on **this** Worker (`--env staging`), not `ccau-staging`.
+`/sydney` (seeded home), `/sydney/events`, `/login`, `/signup` return 200
+with Clerk `pk_test` in the bundle.
+
+On the Start Worker (`--env staging`, not `ccau-staging`):
+
+- Set: `CLERK_SECRET_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_JWT_ISSUER_DOMAIN`
+- Still owed: `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `RENDER_SIGNING_SECRET`,
+  `ZERNIO_API_KEY`
+
+Allow `https://claudecommunities-start-staging.claudecommunityau.workers.dev`
+as a Clerk origin before a real sign-in smoke. Seed Sydney with
+`bun scripts/seed-city.ts sydney --remote --email <owner>`.
 
 Vite + Wrangler must see `CLOUDFLARE_ENV=staging` at **build** time or the
 deploy flattens to local D1 ids. `bun run deploy:staging` sets that.

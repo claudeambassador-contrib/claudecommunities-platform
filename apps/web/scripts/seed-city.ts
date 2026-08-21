@@ -18,6 +18,7 @@ const APP = resolve(import.meta.dirname, "..");
 interface Args {
   dryRun: boolean;
   ownerEmail: string | null;
+  remote: boolean;
   slug: string;
 }
 
@@ -30,10 +31,15 @@ function parseArgs(argv: string[]): Args {
   let slug = "sydney";
   let ownerEmail = process.env.SEED_OWNER_EMAIL?.trim() || null;
   let dryRun = false;
+  let remote = false;
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--dry-run") {
       dryRun = true;
+      continue;
+    }
+    if (arg === "--remote") {
+      remote = true;
       continue;
     }
     if (arg === "--email") {
@@ -52,6 +58,7 @@ function parseArgs(argv: string[]): Args {
   return {
     dryRun,
     ownerEmail,
+    remote,
     slug: slug
       .trim()
       .toLowerCase()
@@ -83,10 +90,14 @@ function parseTenantRow(raw: string): TenantRow {
       return { d1_binding: row.d1_binding, org_id: row.org_id };
     }
   }
-  throw new Error("City is not provisioned in local REGISTRY");
+  throw new Error("City is not provisioned in REGISTRY");
 }
 
-function lookupTenant(slug: string): TenantRow {
+function wranglerLocationArgs(remote: boolean): string[] {
+  return remote ? ["--remote", "--env", "staging"] : ["--local"];
+}
+
+function lookupTenant(slug: string, remote: boolean): TenantRow {
   const raw = execFileSync(
     "bunx",
     [
@@ -94,7 +105,7 @@ function lookupTenant(slug: string): TenantRow {
       "d1",
       "execute",
       "REGISTRY",
-      "--local",
+      ...wranglerLocationArgs(remote),
       "--config",
       "wrangler.jsonc",
       "--json",
@@ -108,27 +119,39 @@ function lookupTenant(slug: string): TenantRow {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `${message}. Run: bun run db:provision:city -- ${slug} "${slug}" && bunx wrangler d1 execute REGISTRY --local --file=scripts/.provision-${slug}.sql`,
+      `${message}. Run: bun run db:provision:city -- ${slug} "${slug}" && bunx wrangler d1 execute REGISTRY ${remote ? "--remote --env staging" : "--local"} --file=scripts/.provision-${slug}.sql`,
       { cause: error },
     );
   }
 }
 
-function applySql(binding: string, file: string): void {
+function applySql(binding: string, file: string, remote: boolean): void {
   execFileSync(
     "bunx",
-    ["wrangler", "d1", "execute", binding, "--local", "--config", "wrangler.jsonc", "--file", file],
+    [
+      "wrangler",
+      "d1",
+      "execute",
+      binding,
+      ...wranglerLocationArgs(remote),
+      "--config",
+      "wrangler.jsonc",
+      "--file",
+      file,
+    ],
     { cwd: APP, stdio: "inherit" },
   );
 }
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.slug) {
-  console.error("Usage: bun scripts/seed-city.ts [slug] [--email you@example.com] [--dry-run]");
+  console.error(
+    "Usage: bun scripts/seed-city.ts [slug] [--email you@example.com] [--remote] [--dry-run]",
+  );
   process.exit(1);
 }
 
-const tenant = lookupTenant(args.slug);
+const tenant = lookupTenant(args.slug, args.remote);
 const seed = buildCitySeed({
   now: Date.now(),
   orgId: tenant.org_id,
@@ -155,6 +178,9 @@ if (args.dryRun) {
   process.exit(0);
 }
 
-applySql(tenant.d1_binding, tenantFile);
-applySql("REGISTRY", registryFile);
-console.log(`Seeded ${args.slug}. Try http://localhost:3001/${args.slug}/events`);
+applySql(tenant.d1_binding, tenantFile, args.remote);
+applySql("REGISTRY", registryFile, args.remote);
+const host = args.remote
+  ? "https://claudecommunities-start-staging.claudecommunityau.workers.dev"
+  : "http://localhost:3001";
+console.log(`Seeded ${args.slug}. Try ${host}/${args.slug}/events`);
