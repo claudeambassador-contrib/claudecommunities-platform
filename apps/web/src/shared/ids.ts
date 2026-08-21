@@ -11,13 +11,13 @@ export function toSafeSlug(input: string): string {
   return input
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/^-+|-+$/g, "")
     .slice(0, 48);
 }
 
 export function toD1Binding(slug: string): string {
-  return `TENANT_${slug.replace(/-/g, "_").toUpperCase()}`;
+  return `TENANT_${slug.replaceAll("-", "_").toUpperCase()}`;
 }
 
 export function generateOrgId(): string {

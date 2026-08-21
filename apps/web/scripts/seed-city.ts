@@ -9,11 +9,11 @@
  */
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
+
 import { buildCitySeed } from "../src/modules/tenants/seed/citySeed";
 
-const APP = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const APP = resolve(import.meta.dirname, "..");
 
 interface Args {
   dryRun: boolean;
@@ -55,8 +55,8 @@ function parseArgs(argv: string[]): Args {
     slug: slug
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, ""),
+      .replaceAll(/[^a-z0-9]+/g, "-")
+      .replaceAll(/^-+|-+$/g, ""),
   };
 }
 
@@ -99,9 +99,9 @@ function lookupTenant(slug: string): TenantRow {
       "wrangler.jsonc",
       "--json",
       "--command",
-      `SELECT org_id, d1_binding FROM tenants WHERE slug = '${slug.replace(/'/g, "''")}'`,
+      `SELECT org_id, d1_binding FROM tenants WHERE slug = '${slug.replaceAll("'", "''")}'`,
     ],
-    { cwd: APP, encoding: "utf8" },
+    { cwd: APP, encoding: "utf-8" },
   );
   try {
     return parseTenantRow(raw);

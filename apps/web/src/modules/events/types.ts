@@ -1,4 +1,5 @@
 import type { z } from "zod";
+
 import type { eventWriteInput } from "@/modules/events/schemas";
 
 export type EventStatus = "draft" | "published" | "cancelled";

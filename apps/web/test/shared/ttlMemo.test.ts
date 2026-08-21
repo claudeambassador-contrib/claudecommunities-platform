@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { ttlMemo } from "@/shared/ttlMemo";
 
-describe("ttlMemo", () => {
+describe(ttlMemo, () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 

@@ -1,4 +1,4 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as eventsRepo from "@/modules/events/repositories/eventsRepository";
 import { eventWriteInput, isAllowedResourceUrl } from "@/modules/events/schemas";
 import type {
@@ -23,10 +23,11 @@ import type {
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import { toSafeSlug } from "@/shared/ids";
 
-const AGENDA_TYPES: AgendaItemType[] = ["speaker", "welcome", "break", "custom"];
+const AGENDA_TYPES = new Set<AgendaItemType>(["speaker", "welcome", "break", "custom"]);
 
 /**
  * Strip the fields an unauthenticated visitor must not receive before an
@@ -61,7 +62,7 @@ async function uniqueSlug(store: TenantStore, base: string): Promise<string> {
   let candidate = base;
   let n = 1;
   // Sequential lookup: each candidate depends on the previous miss.
-  // biome-ignore lint/performance/noAwaitInLoops: uniqueness is checked one slug at a time
+  // oxlint-disable-next-line no-await-in-loop -- uniqueness is checked one slug at a time
   while (await eventsRepo.findBySlug(store, candidate)) {
     n += 1;
     candidate = `${base}-${n}`;
@@ -446,7 +447,7 @@ export async function addAgendaItem(
     return found;
   }
   const type = input.type ?? "custom";
-  if (!AGENDA_TYPES.includes(type)) {
+  if (!AGENDA_TYPES.has(type)) {
     return err("bad_request", 400, `Invalid agenda item type: ${type}`);
   }
   const start = parseDate(input.startTime, "startTime");
@@ -480,7 +481,7 @@ export async function updateAgendaItem(
   if (!perm.ok) {
     return perm;
   }
-  if (input.type && !AGENDA_TYPES.includes(input.type)) {
+  if (input.type && !AGENDA_TYPES.has(input.type)) {
     return err("bad_request", 400, `Invalid agenda item type: ${input.type}`);
   }
   const start = input.startTime === undefined ? undefined : parseDate(input.startTime, "startTime");
@@ -539,7 +540,7 @@ export async function reorderAgenda(
       return end;
     }
     // D1 has no interactive transaction — apply order one row at a time.
-    // biome-ignore lint/performance/noAwaitInLoops: sequential D1 writes
+    // oxlint-disable-next-line no-await-in-loop -- sequential D1 writes
     const updated = await eventsRepo.updateAgendaItem(store, entry.id, {
       sortOrder: index,
       ...(start ? { startsAt: start.date } : {}),
@@ -627,13 +628,14 @@ export async function notifyLumaWaitlist(
     try {
       // Stamp only after a successful fan-out so a missing or failed
       // notifier cannot burn the waitlist.
-      // biome-ignore lint/performance/noAwaitInLoops: notify-then-stamp is sequential
+      // oxlint-disable-next-line no-await-in-loop -- notify-then-stamp is sequential
       await notifier.notify({
         eventId,
         lumaUrl: found.event.lumaUrl,
         title: found.event.title,
         userId: row.userId,
       });
+      // oxlint-disable-next-line no-await-in-loop -- notify-then-stamp is sequential
       await eventsRepo.stampLumaNotified(store, row.id);
       notified += 1;
     } catch {

@@ -3,10 +3,12 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 const WHSEC_PREFIX = /^whsec_/;
 
 import { eq } from "drizzle-orm";
+
 import { unsubscribeByEmail } from "@/modules/identity/services/usersService";
 import type { RegistryStore } from "@/shared/db/registryStore";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 export function emailSigningSecret(env: Record<string, unknown>): string | null {
   const secret = String(env.RENDER_SIGNING_SECRET ?? env.RESEND_API_KEY ?? "").trim();
@@ -15,7 +17,7 @@ export function emailSigningSecret(env: Record<string, unknown>): string | null 
 
 export function signUnsubscribeToken(email: string, secret: string): string {
   const normalized = email.trim().toLowerCase();
-  const payload = Buffer.from(normalized, "utf8").toString("base64url");
+  const payload = Buffer.from(normalized, "utf-8").toString("base64url");
   const sig = createHmac("sha256", secret).update(normalized).digest("base64url");
   return `${payload}.${sig}`;
 }
@@ -27,7 +29,7 @@ export function verifyUnsubscribeToken(token: string, secret: string): string | 
   }
   let email: string;
   try {
-    email = Buffer.from(payload, "base64url").toString("utf8").trim().toLowerCase();
+    email = Buffer.from(payload, "base64url").toString("utf-8").trim().toLowerCase();
   } catch {
     return null;
   }

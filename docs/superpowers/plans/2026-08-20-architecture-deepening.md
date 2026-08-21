@@ -26,11 +26,13 @@
 ### Task 1: Injectable session seam (`sessionCore`) + tests
 
 **Files:**
+
 - Create: `apps/web/src/modules/identity/services/sessionCore.ts`
 - Modify: `apps/web/src/modules/identity/services/sessionService.ts` (becomes the prod adapter, same exports)
 - Test: `apps/web/test/identity/sessionCore.test.ts`
 
 **Interfaces:**
+
 - Consumes: `ttlMemo` (`@/shared/ttlMemo`), `usersRepo` (`findByClerkId`, `upsertFromClerk`, `findMembership`), `resolveCityContext` (`@/modules/tenants/services/publicListService`), `openMemoryRegistry` (`test/helpers/registry.ts`).
 - Produces: `createSessionService(deps: SessionDeps): SessionService` and types `SessionDeps`, `ClerkProfile`, `SessionService` from `sessionCore.ts`. `sessionService.ts` keeps exporting `syncSessionUser`, `buildCityRouteContext`, `actorFromAuth`, `requirePermission`, `hasAnyAdminPermission` with **unchanged signatures** so no caller changes.
 
@@ -70,11 +72,16 @@ export interface SessionDeps {
 }
 
 export interface SessionService {
-  buildCityRouteContext(registryDb: RegistryDb, citySlug: string): Promise<Result<{ ctx: RouteContext }>>;
+  buildCityRouteContext(
+    registryDb: RegistryDb,
+    citySlug: string,
+  ): Promise<Result<{ ctx: RouteContext }>>;
   syncSessionUser(db: RegistryDb): Promise<Result<{ auth: AuthContext }>>;
 }
 
-export function createSessionService(deps: SessionDeps): SessionService { /* moved logic */ }
+export function createSessionService(deps: SessionDeps): SessionService {
+  /* moved logic */
+}
 ```
 
 Port the existing logic **verbatim in behavior**: memo-hit path re-checks `isBanned`/`isSuperAdmin` against the registry and evicts on ban; vanished-row falls through to full re-sync; missing email → `err("missing_email", 400)`; `buildCityRouteContext` runs tenant resolution and session sync in parallel and maps role → permissions (`isSuperAdmin` ⇒ `permissionsForRole("owner")`). `readClerkUser`/`resolveTenant` become internal functions using `deps.getProfile` / `deps.cityMemo`. Note the one signature change: the core's `buildCityRouteContext` takes `registryDb` as a parameter (the prod adapter supplies it) — this is what makes the core importable in vitest.
@@ -86,8 +93,12 @@ Also move the pure helpers `actorFromAuth`, `requirePermission`, `hasAnyAdminPer
 ```typescript
 import { auth, clerkClient } from "@clerk/tanstack-react-start/server";
 import {
-  actorFromAuth, type ClerkProfile, createSessionService, hasAnyAdminPermission,
-  requirePermission, type SessionService,
+  actorFromAuth,
+  type ClerkProfile,
+  createSessionService,
+  hasAnyAdminPermission,
+  requirePermission,
+  type SessionService,
 } from "@/modules/identity/services/sessionCore";
 import { isClerkServerConfigured } from "@/shared/auth/clerk";
 import { getRegistryDb, openTenantStore, workerEnv } from "@/shared/db/env";
@@ -107,13 +118,17 @@ function prodService(): SessionService {
       try {
         const client = await clerkClient();
         return (await client.users.getUser(userId)) as unknown as ClerkProfile;
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     },
     async getSessionUserId() {
       try {
         const session = await auth();
         return session.isAuthenticated && session.userId ? session.userId : null;
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     },
     isConfigured: () => isClerkServerConfigured(workerEnv()),
     openTenantStore,
@@ -122,7 +137,9 @@ function prodService(): SessionService {
   return service;
 }
 
-export function syncSessionUser(db: RegistryDb) { return prodService().syncSessionUser(db); }
+export function syncSessionUser(db: RegistryDb) {
+  return prodService().syncSessionUser(db);
+}
 export function buildCityRouteContext(citySlug: string) {
   return prodService().buildCityRouteContext(getRegistryDb(), citySlug);
 }
@@ -153,11 +170,13 @@ Grep first: `grep -rn "from \"@/modules/identity/services/sessionService\"" src/
 ### Task 2: One error-presentation table (`presentError`)
 
 **Files:**
+
 - Create: `apps/web/src/shared/http/presentError.ts`
 - Modify: `apps/web/src/shared/http/guarded.ts`, `apps/web/src/shared/ui/page.tsx` (DeniedCard), any client code branching on `data.reason`
 - Test: `apps/web/test/shared/presentError.test.ts`, extend `apps/web/test/shared/guarded.test.ts`
 
 **Interfaces:**
+
 - Consumes: `ServiceError` from `@/shared/http/errors`.
 - Produces: `presentError(error: ServiceError): string`; `Denied` gains `code: string` while `reason` becomes the human message. Later tasks rely on `guarded`/`guardedMutation` both routing through `presentError`.
 
@@ -193,11 +212,13 @@ export function presentError(error: ServiceError): string {
 ### Task 3: `cityQuery` / `cityMutation` factory — prototype on the tiers route
 
 **Files:**
+
 - Create: `apps/web/src/shared/http/cityFn.ts`
 - Modify: `apps/web/src/routes/$citySlug/admin/tiers.tsx`
 - Test: `apps/web/test/shared/cityFn.test.ts` (schema-merging unit tests; the guarded path is already covered)
 
 **Interfaces:**
+
 - Consumes: `guarded`, `guardedMutation`, `GuardedPage` from `@/shared/http/guarded`; zod.
 - Produces (later batch tasks rely on these exact signatures):
 
@@ -244,7 +265,8 @@ const submitTier = cityMutation({
 });
 ```
 
-  The loader call site (`loadTiers({ data: { citySlug: params.citySlug } })`) and the component stay as-is. Where the old handler re-wrapped a service result in `ok({...})` just to rename nothing, return the service result directly.
+The loader call site (`loadTiers({ data: { citySlug: params.citySlug } })`) and the component stay as-is. Where the old handler re-wrapped a service result in `ok({...})` just to rename nothing, return the service result directly.
+
 - [x] **Step 3: Verify the compilation risk.** `bun run build` must succeed. Then inspect the **client** assets for server leakage: `grep -rl "tiersRepository\|drizzle\|cloudflare:workers" dist/client/ .output/public/ 2>/dev/null || true` (locate the client output dir first; also confirm the tiers page JS chunk doesn't grow suspiciously). Run `bun run test && bun run check`, then a dev smoke: `timeout 30 bun run dev` long enough to confirm boot without errors is NOT required if build+tests pass — skip dev smoke if `bun run build` is green.
 - [x] **Step 4 (fallback, only if Step 3 fails):** keep `createServerFn` in the route file and reduce the factory to two helpers exported from `cityFn.ts`: `cityInput<S>(shape: S)` returning the merged zod object, and `cityHandler(permission, fn)` returning the `({ data }) => guarded(...)` handler body. Convert `tiers.tsx` to that instead, and record in your report that the fallback shape won — batch tasks will follow whichever shape this task lands.
 - [x] **Step 5: Unit-test the schema merge** (extra input fields required, citySlug always required, bad input throws ZodError).
@@ -255,12 +277,15 @@ const submitTier = cityMutation({
 ### Task 4: Migrate `$citySlug/admin/**` routes to the factory (batch 1, ~30 files)
 
 **Files:**
+
 - Modify: every `apps/web/src/routes/$citySlug/admin/**/*.tsx` (list them with `ls`), except `tiers.tsx` (done in Task 3)
 
 **Interfaces:**
+
 - Consumes: `cityQuery`/`cityMutation` exactly as landed by Task 3 (read `apps/web/src/shared/http/cityFn.ts` and `tiers.tsx` first — they are the authoritative shape, including whether the fallback form won).
 
 Recipe per file:
+
 1. Replace each `createServerFn(...).validator(...).handler(({data}) => guarded(...))` with `cityQuery({ input?, handler })`; POST + `guardedMutation` → `cityMutation`. Extra zod fields (everything except `citySlug`) move into `input:`.
 2. **Permission audit (Global Constraints ruling):** the old second argument to `guarded` was a permission. Open every service function the handler calls and confirm it starts with `ensurePermission(actor, <same or stronger permission>)`. If yes → omit `permission:`. If a called service function has NO check but the route had one → add `ensurePermission` to that service function (matching the route's old permission) and extend that module's service test with a `memberActor()` forbidden case. If the service is deliberately public (name starts with `listPublic`/serves visitor pages) and the route still gated it → keep `permission:` in the factory options and note it in your report.
 3. Drop now-unused imports (`createServerFn`, `guarded`, `ok` where no longer used, the standalone `z.object` input consts). Keep `z` where `input:` uses it.
@@ -276,6 +301,7 @@ Recipe per file:
 ### Task 5: Migrate `$citySlug/community/**` + `$citySlug/profile*` + `$citySlug/settings*` routes (batch 2)
 
 **Files:**
+
 - Modify: every remaining factory-eligible file in `apps/web/src/routes/$citySlug/community/**`, plus profile/settings routes under `$citySlug/` (enumerate with `grep -rln "createServerFn" src/routes/\$citySlug/community src/routes/\$citySlug/profile* src/routes/\$citySlug/settings* 2>/dev/null`)
 
 Same recipe, same permission audit, same interfaces as Task 4 (read `cityFn.ts` + `tiers.tsx` first). Community routes serve signed-in members rather than admins — expect more `permission: null`-style public/list service calls; the audit rule still applies: the service owns the check, or the route keeps an explicit `permission:` with a report note.
@@ -290,6 +316,7 @@ Same recipe, same permission audit, same interfaces as Task 4 (read `cityFn.ts` 
 ### Task 6: Migrate all remaining `$citySlug/**` routes (batch 3: events, courses, impact-lab, talks, index, everything left)
 
 **Files:**
+
 - Modify: every file left in `apps/web/src/routes/$citySlug/**` still importing `guarded`/`guardedMutation` directly (enumerate with `grep -rln "from \"@/shared/http/guarded\"" src/routes/\$citySlug/`)
 
 Same recipe and audit as Task 4. These are mostly public/member-facing pages that already pass `null` permissions — the conversion is mechanical.
@@ -304,11 +331,13 @@ Same recipe and audit as Task 4. These are mostly public/member-facing pages tha
 ### Task 7: Module-owned zod write schemas — tiers, events, talks
 
 **Files:**
+
 - Create: `apps/web/src/modules/tiers/schemas.ts`, `apps/web/src/modules/events/schemas.ts`, `apps/web/src/modules/talks/schemas.ts`
 - Modify: `apps/web/src/modules/tiers/services/tiersService.ts` (delete `parseNonNegative`/`parseOptionalNonNegative`/`validateInput`), `apps/web/src/modules/events/validators.ts` → fold into `schemas.ts` and delete, `apps/web/src/modules/talks/validators.ts` → same; the routes whose `input:` shapes duplicate these fields
 - Test: extend `apps/web/test/tiers/tiersService.test.ts` (and events/talks equivalents) with invalid-input cases hitting the zod path
 
 **Interfaces:**
+
 - Produces the convention later tasks and modules follow: each module exports `<entity>WriteInput` (a `z.ZodObject`) and `type <Entity>WriteInput = z.infer<...>` from `modules/<x>/schemas.ts`. Services call `safeParse` and map failure to `err("bad_request", 400, firstIssueMessage)`. Routes reuse the module schema's fields in the factory's `input:` (e.g. `input: tierWriteInput.shape` or a `.pick()` of it) instead of restating them.
 
 Worked example for tiers (port `validateInput`'s exact rules — trim, non-negative, optional yearly, features array of trimmed strings, `order` non-negative int; keep `toSafeSlug` derivation in the service after parse):
@@ -325,7 +354,11 @@ export const tierWriteInput = z.object({
   order: z.number().int().min(0, "order must be an integer ≥ 0").optional(),
   price: z.coerce.number().min(0, "price must be a number ≥ 0").default(0),
   slug: z.string().optional(),
-  yearlyPrice: z.coerce.number().min(0, "yearlyPrice must be a number ≥ 0").nullable().default(null),
+  yearlyPrice: z.coerce
+    .number()
+    .min(0, "yearlyPrice must be a number ≥ 0")
+    .nullable()
+    .default(null),
 });
 export type TierWriteInputParsed = z.infer<typeof tierWriteInput>;
 ```
@@ -345,6 +378,7 @@ For events/talks: translate the hand-rolled `validators.ts` checks (URL allow-li
 ### Task 8: Module-owned zod schemas — pages + social (delete the hand-rolled predicate files)
 
 **Files:**
+
 - Create: `apps/web/src/modules/pages/schemas.ts`, `apps/web/src/modules/social/schemas.ts`
 - Modify/Delete: `apps/web/src/modules/pages/validators.ts` (269 L of `isObj`/`isOptStr` predicates — delete after porting), `apps/web/src/modules/social/validators.ts` (same), their service callers, any route `input:` duplication
 - Test: existing `test/pages/*` and `test/social/*` suites must keep passing; add one invalid-input case per ported schema if none exists
@@ -361,6 +395,7 @@ Same convention as Task 7. These two are the largest hand-rolled validators; tra
 ### Task 9: Collapse duplicate entity types — events pilot (kill the imageUrl/coverUrl drift)
 
 **Files:**
+
 - Modify: `apps/web/src/modules/events/types.ts`, `apps/web/src/modules/events/services/eventsService.ts`, `apps/web/src/modules/events/repositories/eventsRepository.ts`, `apps/web/src/modules/system/services/mcpService.ts` (events tools), `apps/web/src/routes/$citySlug/events/$slug/index.tsx` (delete route-local `AgendaRow`), other events routes as needed
 - Test: `apps/web/test/events/*` updated to renamed fields
 
@@ -376,6 +411,7 @@ Today `types.ts` declares the same concept three ways — `EventCreateBody`, `Ev
 ### Task 10: Collapse duplicate types — tiers, and delete the social route re-projection
 
 **Files:**
+
 - Modify: `apps/web/src/modules/tiers/types.ts` (merge `TierInput`/`TierWrite`; `TierSummary` produced only by the repo), `tiersService.ts`, `tiersRepository.ts`, `apps/web/src/routes/$citySlug/admin/social/index.tsx` (delete local `ComposerAccount` + remap, consume the social module's published summary type)
 - Test: `apps/web/test/tiers/*` updated
 
@@ -391,16 +427,18 @@ Apply the Task 9 pattern: `TierInput` (pre-validation) is replaced by the Task 7
 ### Task 11: One registry-plane entry path
 
 **Files:**
+
 - Create: `apps/web/src/shared/http/registryPage.ts`
 - Modify: `apps/web/src/routes/index.tsx`, `apps/web/src/routes/pricing.tsx`, `apps/web/src/routes/sitemap.tsx`, `apps/web/src/routes/admin/index.tsx`, `apps/web/src/routes/oauth/register.ts`, `apps/web/src/routes/api/webhooks/resend.ts` (use `openTenantStore` instead of the hand-built store), other `src/routes` (non-`$citySlug`) files importing `@/shared/db/env` directly — enumerate with `grep -rln "shared/db/env" src/routes/`
 - Test: `apps/web/test/shared/registryPage.test.ts` (context shape with/without session, via injected deps or `vi.mock` of `sessionService` — match the existing `guarded.test.ts` style)
 
 **Interfaces:**
+
 - Produces:
 
 ```typescript
 export interface RegistryPageContext {
-  auth: AuthContext | null;   // null when signed out — never an error for public pages
+  auth: AuthContext | null; // null when signed out — never an error for public pages
   registry: RegistryStore;
 }
 export async function loadRegistryPage(): Promise<RegistryPageContext>;

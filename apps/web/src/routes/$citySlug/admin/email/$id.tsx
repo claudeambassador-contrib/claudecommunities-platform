@@ -1,8 +1,8 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import type { ReactElement } from "react";
-import { type FormEvent, useCallback, useMemo, useState } from "react";
+import { type ReactElement, type FormEvent, useCallback, useMemo, useState } from "react";
 import { z } from "zod";
+
 import {
   campaignWorkflowFromEnv,
   enqueueCampaignSend,
@@ -205,7 +205,7 @@ function CampaignBuilder({
       <div className="card stack">
         <strong>Preview</strong>
         <div
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: admin-authored campaign preview
+          // oxlint-disable-next-line react/no-danger -- admin-authored campaign preview
           dangerouslySetInnerHTML={{ __html: previewDoc }}
         />
       </div>

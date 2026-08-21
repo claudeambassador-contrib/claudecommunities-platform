@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { formatTimeAgo } from "@/shared/ui/timeAgo";
 
 const NOW = Date.parse("2026-08-19T12:00:00.000Z");
@@ -7,7 +8,7 @@ function isoBefore(ms: number): string {
   return new Date(NOW - ms).toISOString();
 }
 
-describe("formatTimeAgo", () => {
+describe(formatTimeAgo, () => {
   it("returns 'just now' under a minute", () => {
     expect(formatTimeAgo(isoBefore(0), NOW)).toBe("just now");
     expect(formatTimeAgo(isoBefore(59_000), NOW)).toBe("just now");

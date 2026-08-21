@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+
 import {
   createNotification,
   listNotifications,
   markAllRead,
 } from "@/modules/notifications/services/notificationsService";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 describe("notificationsService", () => {
@@ -23,7 +25,7 @@ describe("notificationsService", () => {
     });
 
     const listed = await listNotifications(store, memberActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
@@ -42,12 +44,12 @@ describe("notificationsService", () => {
       userId: actor.id,
     });
     const marked = await markAllRead(store, actor);
-    expect(marked.ok).toBe(true);
+    expect(marked.ok).toBeTruthy();
     const listed = await listNotifications(store, actor, { unreadOnly: true });
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (listed.ok) {
       expect(listed.unreadCount).toBe(0);
-      expect(listed.notifications).toEqual([]);
+      expect(listed.notifications).toStrictEqual([]);
     }
 
     const bad = await createNotification(store, {
@@ -56,7 +58,7 @@ describe("notificationsService", () => {
       type: "nope",
       userId: actor.id,
     });
-    expect(bad.ok).toBe(false);
+    expect(bad.ok).toBeFalsy();
     if (!bad.ok) {
       expect(bad.error.status).toBe(400);
     }

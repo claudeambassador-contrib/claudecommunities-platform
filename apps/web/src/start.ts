@@ -1,5 +1,6 @@
 import { clerkMiddleware } from "@clerk/tanstack-react-start/server";
 import { createMiddleware, createStart } from "@tanstack/react-start";
+
 import { clerkKeysFromRecord, isClerkServerConfigured } from "./shared/auth/clerk";
 import { maintenanceMiddleware } from "./shared/middleware/maintenance";
 import { tenantRequestMiddleware } from "./shared/middleware/tenant";

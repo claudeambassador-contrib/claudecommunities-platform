@@ -1,10 +1,11 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as pollsRepo from "@/modules/polls/repositories/pollsRepository";
 import type { PollDetail, PollInput } from "@/modules/polls/types";
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 function parseEndsAt(value?: string | null): Result<{ endsAt: Date | null }> {
   if (!value) {

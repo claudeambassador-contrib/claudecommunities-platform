@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import type { ReactElement } from "react";
-import { type FormEvent, useCallback, useState } from "react";
+import { type ReactElement, type FormEvent, useCallback, useState } from "react";
+
 import { cityHandler, cityInput } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
 import { DeniedCard, PageHeader } from "@/shared/ui/page";

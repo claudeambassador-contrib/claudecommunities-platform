@@ -1,22 +1,26 @@
 import { and, eq, sql } from "drizzle-orm";
+
 import {
   AUTOMATION_LIVE_STATUSES,
   AUTOMATION_TRIGGERS,
-  type AutomationCreateBody,
-  type AutomationDetail,
-  type AutomationLiveStatus,
-  type AutomationStatus,
-  type AutomationTrigger,
   EMAIL_SETTINGS_DEFAULTS,
-  type EmailAnalytics,
-  type EmailSettingsDetail,
-  type EmailSettingsInput,
+} from "@/modules/email/types";
+import type {
+  AutomationCreateBody,
+  AutomationDetail,
+  AutomationLiveStatus,
+  AutomationStatus,
+  AutomationTrigger,
+  EmailAnalytics,
+  EmailSettingsDetail,
+  EmailSettingsInput,
 } from "@/modules/email/types";
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import { first } from "@/shared/db/rows";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
 const UNIQUE_CONSTRAINT = /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i;

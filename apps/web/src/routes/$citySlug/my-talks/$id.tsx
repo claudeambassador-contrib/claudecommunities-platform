@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
+
 import { getTalk } from "@/modules/talks/services/talksService";
 import { requireCityActor } from "@/shared/http/cityPage";
 import { DeniedCard, EmptyCard, PageHeader, SignInCard } from "@/shared/ui/page";

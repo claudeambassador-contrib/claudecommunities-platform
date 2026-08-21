@@ -55,7 +55,7 @@ export function ItemList({
   empty,
 }: {
   empty: string;
-  items: Array<{ detail?: string; href?: string; id: string; title: string }>;
+  items: { detail?: string; href?: string; id: string; title: string }[];
 }): ReactElement {
   if (items.length === 0) {
     return <EmptyCard>{empty}</EmptyCard>;

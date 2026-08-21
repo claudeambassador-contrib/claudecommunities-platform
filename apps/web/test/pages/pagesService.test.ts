@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { DEFAULT_HOME_SECTIONS } from "@/modules/pages/homeDefaults";
 import { listIndustries, saveIndustry } from "@/modules/pages/services/industriesService";
 import {
@@ -13,6 +14,7 @@ import {
   updateContentPage,
 } from "@/modules/pages/services/pagesService";
 import type { Block, ContentPageInput, RichTextBlock } from "@/modules/pages/types";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 function textBlock(id: string, body = "Hello", heading: string | null = null): RichTextBlock {
@@ -32,7 +34,7 @@ describe("pagesService content pages", () => {
   it("creates a content page and lists it without the home row", async () => {
     const store = openMemoryTenant();
     const created = await createContentPage(store, adminActor(), pageInput({ slug: "zeta" }));
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -46,42 +48,42 @@ describe("pagesService content pages", () => {
     ]);
 
     const listed = await listContentPages(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
-    expect(listed.pages.map((p) => p.slug)).toEqual(["alpha", "zeta"]);
+    expect(listed.pages.map((p) => p.slug)).toStrictEqual(["alpha", "zeta"]);
 
     await updateContentPage(store, adminActor(), created.page.id, {
       ...pageInput({ slug: "zeta", title: "Zeta live" }),
       status: "published",
     });
     const published = await listPublishedPages(store);
-    expect(published.ok && published.pages.map((page) => page.slug)).toEqual(["zeta"]);
+    expect(published.ok && published.pages.map((page) => page.slug)).toStrictEqual(["zeta"]);
   });
 
   it("rejects create without pages.edit, reserved home slug, and duplicates", async () => {
     const store = openMemoryTenant();
     const denied = await createContentPage(store, memberActor(), pageInput());
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
     if (!denied.ok) {
       expect(denied.error.status).toBe(403);
     }
 
     const reserved = await createContentPage(store, adminActor(), pageInput({ slug: "home" }));
-    expect(reserved.ok).toBe(false);
+    expect(reserved.ok).toBeFalsy();
     if (!reserved.ok) {
       expect(reserved.error.status).toBe(400);
     }
 
     const first = await createContentPage(store, adminActor(), pageInput({ slug: "dup" }));
-    expect(first.ok).toBe(true);
+    expect(first.ok).toBeTruthy();
     const clash = await createContentPage(
       store,
       adminActor(),
       pageInput({ slug: "dup", title: "B" }),
     );
-    expect(clash.ok).toBe(false);
+    expect(clash.ok).toBeFalsy();
     if (!clash.ok) {
       expect(clash.error.status).toBe(409);
     }
@@ -94,28 +96,28 @@ describe("pagesService content pages", () => {
       adminActor(),
       pageInput({ slug: "About Us" }),
     );
-    expect(badSegment.ok).toBe(false);
+    expect(badSegment.ok).toBeFalsy();
 
     const tooDeep = await createContentPage(
       store,
       adminActor(),
       pageInput({ slug: "a/b/c/d/e/f" }),
     );
-    expect(tooDeep.ok).toBe(false);
+    expect(tooDeep.ok).toBeFalsy();
 
     const nested = await createContentPage(
       store,
       adminActor(),
       pageInput({ slug: "/Guides/Getting-Started/" }),
     );
-    expect(nested.ok).toBe(true);
+    expect(nested.ok).toBeTruthy();
     if (!nested.ok) {
       return;
     }
     expect(nested.page.slug).toBe("guides/getting-started");
 
     const emptyTitle = await createContentPage(store, adminActor(), pageInput({ title: "  " }));
-    expect(emptyTitle.ok).toBe(false);
+    expect(emptyTitle.ok).toBeFalsy();
 
     const heroOnContent = await createContentPage(
       store,
@@ -128,7 +130,7 @@ describe("pagesService content pages", () => {
         slug: "bad-blocks",
       }),
     );
-    expect(heroOnContent.ok).toBe(false);
+    expect(heroOnContent.ok).toBeFalsy();
     if (!heroOnContent.ok) {
       // second block (index 1) is the offender — message must carry both the
       // path/index and the domain reason, not just a bare zod string
@@ -142,17 +144,17 @@ describe("pagesService content pages", () => {
   it("loads, updates, and deletes a content page, but not home", async () => {
     const store = openMemoryTenant();
     const created = await createContentPage(store, adminActor(), pageInput());
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
 
     const loaded = await getContentPage(store, adminActor(), created.page.id);
-    expect(loaded.ok).toBe(true);
+    expect(loaded.ok).toBeTruthy();
     if (!loaded.ok) {
       return;
     }
-    expect(loaded.page.blocks).toEqual([textBlock("blk_1", "Welcome")]);
+    expect(loaded.page.blocks).toStrictEqual([textBlock("blk_1", "Welcome")]);
 
     const updated = await updateContentPage(store, adminActor(), created.page.id, {
       blocks: [textBlock("blk_2", "Updated", "Heading")],
@@ -160,7 +162,7 @@ describe("pagesService content pages", () => {
       status: "published",
       title: "About the team",
     });
-    expect(updated.ok).toBe(true);
+    expect(updated.ok).toBeTruthy();
     if (!updated.ok) {
       return;
     }
@@ -172,17 +174,17 @@ describe("pagesService content pages", () => {
       adminActor(),
       pageInput({ status: "archived" as unknown as ContentPageInput["status"] }),
     );
-    expect(badStatus.ok).toBe(false);
+    expect(badStatus.ok).toBeFalsy();
 
     const other = await createContentPage(store, adminActor(), pageInput({ slug: "taken" }));
-    expect(other.ok).toBe(true);
+    expect(other.ok).toBeTruthy();
     const taken = await updateContentPage(
       store,
       adminActor(),
       created.page.id,
       pageInput({ slug: "taken" }),
     );
-    expect(taken.ok).toBe(false);
+    expect(taken.ok).toBeFalsy();
     if (!taken.ok) {
       expect(taken.error.status).toBe(409);
     }
@@ -191,26 +193,26 @@ describe("pagesService content pages", () => {
       ...pageInput(),
       status: "archived" as unknown as ContentPageInput["status"],
     });
-    expect(badUpdateStatus.ok).toBe(false);
+    expect(badUpdateStatus.ok).toBeFalsy();
 
     const home = await saveHomeSections(store, adminActor(), [
       { enabled: true, id: "hero_1", type: "hero" },
     ]);
-    expect(home.ok).toBe(true);
+    expect(home.ok).toBeTruthy();
     const publishedHome = await getPublishedPage(store, "home");
-    expect(publishedHome.ok).toBe(true);
+    expect(publishedHome.ok).toBeTruthy();
     if (!(publishedHome.ok && publishedHome.page)) {
       return;
     }
     const asContent = await getContentPage(store, adminActor(), publishedHome.page.id);
-    expect(asContent.ok).toBe(false);
+    expect(asContent.ok).toBeFalsy();
     const deleteHome = await deleteContentPage(store, adminActor(), publishedHome.page.id);
-    expect(deleteHome.ok).toBe(false);
+    expect(deleteHome.ok).toBeFalsy();
 
     const removed = await deleteContentPage(store, adminActor(), created.page.id);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
     const gone = await getContentPage(store, adminActor(), created.page.id);
-    expect(gone.ok).toBe(false);
+    expect(gone.ok).toBeFalsy();
   });
 });
 
@@ -218,10 +220,10 @@ describe("pagesService home and public read", () => {
   it("saves home sections and only serves published pages publicly", async () => {
     const store = openMemoryTenant();
     const draft = await createContentPage(store, adminActor(), pageInput({ slug: "city" }));
-    expect(draft.ok).toBe(true);
+    expect(draft.ok).toBeTruthy();
 
     const hidden = await getPublishedPage(store, "city");
-    expect(hidden.ok).toBe(true);
+    expect(hidden.ok).toBeTruthy();
     if (!hidden.ok) {
       return;
     }
@@ -235,7 +237,7 @@ describe("pagesService home and public read", () => {
       status: "published",
     });
     const live = await getPublishedPage(store, "city");
-    expect(live.ok).toBe(true);
+    expect(live.ok).toBeTruthy();
     if (!live.ok) {
       return;
     }
@@ -247,26 +249,26 @@ describe("pagesService home and public read", () => {
       { enabled: true, id: "ev_1", type: "events" },
     ];
     const saved = await saveHomeSections(store, adminActor(), blocks);
-    expect(saved.ok).toBe(true);
+    expect(saved.ok).toBeTruthy();
     if (!saved.ok) {
       return;
     }
-    expect(saved.blocks).toEqual(blocks);
+    expect(saved.blocks).toStrictEqual(blocks);
 
     const home = await getPublishedPage(store, "home");
-    expect(home.ok).toBe(true);
+    expect(home.ok).toBeTruthy();
     if (!home.ok) {
       return;
     }
     expect(home.page?.slug).toBe("home");
-    expect(home.page?.blocks).toEqual(blocks);
+    expect(home.page?.blocks).toStrictEqual(blocks);
 
     const again = await saveHomeSections(store, adminActor(), [
       { enabled: true, heading: "Updated home", id: "hero_2", type: "hero" },
     ]);
-    expect(again.ok).toBe(true);
+    expect(again.ok).toBeTruthy();
     const reread = await getPublishedPage(store, "home");
-    expect(reread.ok).toBe(true);
+    expect(reread.ok).toBeTruthy();
     if (!reread.ok) {
       return;
     }
@@ -276,9 +278,9 @@ describe("pagesService home and public read", () => {
   it("returns code default home sections when no published home exists", async () => {
     const store = openMemoryTenant();
     const missing = await getHomeSections(store);
-    expect(missing.ok).toBe(true);
+    expect(missing.ok).toBeTruthy();
     if (missing.ok) {
-      expect(missing.blocks).toEqual(DEFAULT_HOME_SECTIONS);
+      expect(missing.blocks).toStrictEqual(DEFAULT_HOME_SECTIONS);
     }
   });
 
@@ -298,13 +300,13 @@ describe("pagesService home and public read", () => {
       updatedAt: now,
     });
     const loaded = await getHomeSections(store);
-    expect(loaded.ok).toBe(true);
+    expect(loaded.ok).toBeTruthy();
     if (!loaded.ok) {
       return;
     }
     expect(loaded.blocks[0]).toMatchObject({ cards: [], id: "benefits", type: "benefits" });
     const saved = await saveHomeSections(store, adminActor(), loaded.blocks);
-    expect(saved.ok).toBe(true);
+    expect(saved.ok).toBeTruthy();
   });
 
   it("rejects unknown home blocks, unsafe links, and member home edits", async () => {
@@ -312,18 +314,18 @@ describe("pagesService home and public read", () => {
     const denied = await saveHomeSections(store, memberActor(), [
       { enabled: true, id: "hero_1", type: "hero" },
     ]);
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const unknown = await saveHomeSections(store, adminActor(), [
       { enabled: true, id: "x1", type: "mystery" } as unknown as Block,
     ]);
-    expect(unknown.ok).toBe(false);
+    expect(unknown.ok).toBeFalsy();
 
     const badAtIndex = await saveHomeSections(store, adminActor(), [
       { enabled: true, id: "hero_1", type: "hero" },
       { enabled: true, id: "x2", type: "mystery" } as unknown as Block,
     ]);
-    expect(badAtIndex.ok).toBe(false);
+    expect(badAtIndex.ok).toBeFalsy();
     if (!badAtIndex.ok) {
       // admin-visible message must show which block (index 1) failed, not
       // just a bare zod string with no location
@@ -341,10 +343,10 @@ describe("pagesService home and public read", () => {
         type: "webinar",
       },
     ]);
-    expect(unsafe.ok).toBe(false);
+    expect(unsafe.ok).toBeFalsy();
 
     const listed = await listContentPages(store, memberActor());
-    expect(listed.ok).toBe(false);
+    expect(listed.ok).toBeFalsy();
   });
 
   it("rejects protocol-relative hrefs but allows normal relative paths", async () => {
@@ -361,7 +363,7 @@ describe("pagesService home and public read", () => {
         type: "webinar",
       },
     ]);
-    expect(protocolRelative.ok).toBe(false);
+    expect(protocolRelative.ok).toBeFalsy();
     if (!protocolRelative.ok) {
       expect(protocolRelative.error.status).toBe(400);
     }
@@ -377,7 +379,7 @@ describe("pagesService home and public read", () => {
         type: "webinar",
       },
     ]);
-    expect(relative.ok).toBe(true);
+    expect(relative.ok).toBeTruthy();
   });
 });
 
@@ -385,23 +387,23 @@ describe("industriesService", () => {
   it("lists built-ins and saves an override page", async () => {
     const store = openMemoryTenant();
     const listed = await listIndustries(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
-    expect(listed.industries.some((row) => row.slug === "saas" && !row.custom)).toBe(true);
+    expect(listed.industries.some((row) => row.slug === "saas" && !row.custom)).toBeTruthy();
 
     const saved = await saveIndustry(store, adminActor(), {
       body: "SaaS teams ship faster.",
       slug: "saas",
       title: "SaaS override",
     });
-    expect(saved.ok).toBe(true);
+    expect(saved.ok).toBeTruthy();
     const again = await listIndustries(store, adminActor());
-    expect(again.ok).toBe(true);
+    expect(again.ok).toBeTruthy();
     if (again.ok) {
       const saas = again.industries.find((row) => row.slug === "saas");
-      expect(saas?.custom).toBe(true);
+      expect(saas?.custom).toBeTruthy();
       expect(saas?.title).toBe("SaaS override");
     }
   });

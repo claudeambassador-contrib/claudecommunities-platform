@@ -1,6 +1,8 @@
-import { type Actor, ensurePermission } from "@/shared/auth/actor";
+import { ensurePermission } from "@/shared/auth/actor";
+import type { Actor } from "@/shared/auth/actor";
 import type { Permission } from "@/shared/auth/permissions";
-import { type CityPageContext, loadCityPage } from "@/shared/http/cityPage";
+import { loadCityPage } from "@/shared/http/cityPage";
+import type { CityPageContext } from "@/shared/http/cityPage";
 import type { Empty, Result } from "@/shared/http/errors";
 import { presentError } from "@/shared/http/presentError";
 

@@ -5,7 +5,7 @@ export function clerkPublishableKey(): string {
     return (process.env.VITE_CLERK_PUBLISHABLE_KEY ?? "").trim();
   }
   const fromImport =
-    typeof import.meta === "undefined"
+    import.meta === undefined
       ? undefined
       : (import.meta as ImportMeta & { env?: { VITE_CLERK_PUBLISHABLE_KEY?: string } }).env
           ?.VITE_CLERK_PUBLISHABLE_KEY;

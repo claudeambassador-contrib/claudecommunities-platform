@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { z } from "zod";
+
 import { heuristicEvaluator, parseCandidateCsv } from "@/modules/attendance/heuristic";
 import { evaluateCandidates } from "@/modules/attendance/services/attendanceEvaluatorService";
 import type { Evaluation } from "@/modules/attendance/types";
@@ -90,7 +91,7 @@ function PlannerForm({ citySlug }: { citySlug: string }): ReactElement {
           <textarea
             className="field w-full"
             name="candidates"
-            placeholder={"name,email,role,company,interests,experience"}
+            placeholder="name,email,role,company,interests,experience"
             required
             rows={8}
           />
@@ -104,8 +105,7 @@ function PlannerForm({ citySlug }: { citySlug: string }): ReactElement {
         <EmptyCard>Run a ranking to see scores.</EmptyCard>
       ) : (
         <div className="stack">
-          {evaluations
-            .slice()
+          {[...evaluations]
             .sort((left, right) => right.fitScore - left.fitScore)
             .map((row) => (
               <article className="card" key={row.email}>

@@ -1,4 +1,4 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as badgesRepo from "@/modules/badges/repositories/badgesRepository";
 import type {
   AwardedBadge,
@@ -10,7 +10,8 @@ import type {
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 function validateInput(input: BadgeInput): Result<{ write: BadgeWrite }> {
   const name = input.name.trim();

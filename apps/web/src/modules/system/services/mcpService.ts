@@ -81,7 +81,8 @@ import { ensurePermission } from "@/shared/auth/actor";
 import { hasPermission } from "@/shared/auth/permissions";
 import type { RegistryStore } from "@/shared/db/registryStore";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 type Handler = (args: McpArgs, ctx: McpDispatchContext) => Promise<Result<object>> | Result<object>;
 

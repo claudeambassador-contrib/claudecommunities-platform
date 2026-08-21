@@ -1,6 +1,7 @@
 import { mkdir, readdir, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 
 export interface Persona {
@@ -129,10 +130,10 @@ export async function finalizePresentation(
   };
 
   const resultsPath = join(artifacts.rootDir, "results.json");
-  await writeFile(resultsPath, JSON.stringify(results, null, 2), "utf8");
+  await writeFile(resultsPath, JSON.stringify(results, null, 2), "utf-8");
 
   const htmlPath = join(artifacts.rootDir, "presentation.html");
-  await writeFile(htmlPath, renderHtml(results), "utf8");
+  await writeFile(htmlPath, renderHtml(results), "utf-8");
 
   return { htmlPath, resultsPath };
 }

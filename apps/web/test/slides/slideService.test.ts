@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   getSlideExportJobStatus,
   listExportJobs,
@@ -19,6 +20,7 @@ import type {
   SlideRenderCache,
   StartExportInput,
 } from "@/modules/slides/types";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 const TEMPLATE = { accent: "#d97757", name: "Talk card" };
@@ -44,17 +46,17 @@ describe("slideGeneratorService", () => {
   it("returns empty state for an unused scope and rejects members", async () => {
     const store = openMemoryTenant();
     const denied = await getState(store, memberActor(), "global");
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
     if (!denied.ok) {
       expect(denied.error.status).toBe(403);
     }
 
     const empty = await getState(store, adminActor(), "global");
-    expect(empty.ok).toBe(true);
+    expect(empty.ok).toBeTruthy();
     if (!empty.ok) {
       return;
     }
-    expect(empty.state).toEqual({ data: null, scope: "global", updatedAt: null });
+    expect(empty.state).toStrictEqual({ data: null, scope: "global", updatedAt: null });
   });
 
   it("upserts generator state for global and event scopes", async () => {
@@ -66,26 +68,26 @@ describe("slideGeneratorService", () => {
         return Promise.resolve();
       },
     });
-    expect(saved.ok).toBe(true);
+    expect(saved.ok).toBeTruthy();
     if (!saved.ok) {
       return;
     }
     expect(saved.scope).toBe("event:evt_1");
     expect(saved.updatedAt).toMatch(ISO_PREFIX);
-    expect(scopes).toEqual(["event:evt_1"]);
+    expect(scopes).toStrictEqual(["event:evt_1"]);
 
     const again = await putState(store, adminActor(), "event:evt_1", {
       ...TEMPLATE,
       accent: "#111111",
     });
-    expect(again.ok).toBe(true);
+    expect(again.ok).toBeTruthy();
 
     const loaded = await getState(store, adminActor(), "event:evt_1");
-    expect(loaded.ok).toBe(true);
+    expect(loaded.ok).toBeTruthy();
     if (!loaded.ok) {
       return;
     }
-    expect(loaded.state.data).toEqual({ accent: "#111111", name: "Talk card" });
+    expect(loaded.state.data).toStrictEqual({ accent: "#111111", name: "Talk card" });
     expect(loaded.state.scope).toBe("event:evt_1");
     expect(loaded.state.updatedAt).toBeTruthy();
   });
@@ -96,11 +98,13 @@ describe("slideGeneratorService", () => {
       putState(store, adminActor(), "global", { name: "A" }),
       putState(store, adminActor(), "global", { name: "B" }),
     ]);
-    expect(a.ok && b.ok).toBe(true);
+    expect(a.ok && b.ok).toBeTruthy();
     const loaded = await getState(store, adminActor(), "global");
-    expect(loaded.ok).toBe(true);
+    expect(loaded.ok).toBeTruthy();
     if (loaded.ok) {
-      expect(loaded.state.data).toEqual(expect.objectContaining({ name: expect.any(String) }));
+      expect(loaded.state.data).toStrictEqual(
+        expect.objectContaining({ name: expect.any(String) }),
+      );
     }
   });
 
@@ -108,16 +112,16 @@ describe("slideGeneratorService", () => {
     const store = openMemoryTenant();
     const actor = adminActor();
     const badScope = await putState(store, actor, "city:sydney", TEMPLATE);
-    expect(badScope.ok).toBe(false);
+    expect(badScope.ok).toBeFalsy();
     if (!badScope.ok) {
       expect(badScope.error.status).toBe(400);
     }
 
     const emptyEvent = await putState(store, actor, "event:", TEMPLATE);
-    expect(emptyEvent.ok).toBe(false);
+    expect(emptyEvent.ok).toBeFalsy();
 
     const huge = await putState(store, actor, "global", "x".repeat(256 * 1024 + 1));
-    expect(huge.ok).toBe(false);
+    expect(huge.ok).toBeFalsy();
     if (!huge.ok) {
       expect(huge.error.status).toBe(400);
     }
@@ -128,38 +132,38 @@ describe("slideGeneratorService", () => {
     const actor = adminActor();
 
     const created = await createPreset(store, actor, { data: TEMPLATE, name: " Sunset " });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
-    expect(created.preset).toEqual({ id: created.preset.id, name: "Sunset" });
+    expect(created.preset).toStrictEqual({ id: created.preset.id, name: "Sunset" });
 
     const listed = await listPresets(store, actor);
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
     expect(listed.presets).toHaveLength(1);
-    expect(listed.presets[0]?.data).toEqual(TEMPLATE);
+    expect(listed.presets[0]?.data).toStrictEqual(TEMPLATE);
 
     const fetched = await getPreset(store, actor, created.preset.id);
-    expect(fetched.ok).toBe(true);
+    expect(fetched.ok).toBeTruthy();
     if (!fetched.ok) {
       return;
     }
     expect(fetched.preset.name).toBe("Sunset");
 
     const renamed = await updatePreset(store, actor, created.preset.id, { name: "Dawn" });
-    expect(renamed.ok).toBe(true);
+    expect(renamed.ok).toBeTruthy();
     if (!renamed.ok) {
       return;
     }
     expect(renamed.preset.name).toBe("Dawn");
 
     const removed = await deletePreset(store, actor, created.preset.id);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
     const missing = await getPreset(store, actor, created.preset.id);
-    expect(missing.ok).toBe(false);
+    expect(missing.ok).toBeFalsy();
     if (!missing.ok) {
       expect(missing.error.status).toBe(404);
     }
@@ -168,19 +172,19 @@ describe("slideGeneratorService", () => {
   it("rejects duplicate preset names and member writes", async () => {
     const store = openMemoryTenant();
     const first = await createPreset(store, adminActor(), { data: TEMPLATE, name: "Brand" });
-    expect(first.ok).toBe(true);
+    expect(first.ok).toBeTruthy();
 
     const clash = await createPreset(store, adminActor(), { data: TEMPLATE, name: "Brand" });
-    expect(clash.ok).toBe(false);
+    expect(clash.ok).toBeFalsy();
     if (!clash.ok) {
       expect(clash.error.status).toBe(409);
     }
 
     const denied = await createPreset(store, memberActor(), { data: TEMPLATE, name: "Nope" });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const emptyName = await createPreset(store, adminActor(), { data: TEMPLATE, name: "  " });
-    expect(emptyName.ok).toBe(false);
+    expect(emptyName.ok).toBeFalsy();
     if (!emptyName.ok) {
       expect(emptyName.error.status).toBe(400);
     }
@@ -203,21 +207,21 @@ describe("slideExportService", () => {
         },
       },
     });
-    expect(started.ok).toBe(true);
+    expect(started.ok).toBeTruthy();
     if (!started.ok) {
       return;
     }
-    expect(created).toEqual([started.jobId]);
+    expect(created).toStrictEqual([started.jobId]);
 
     const listed = await listExportJobs(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
-    expect(listed.jobs).toEqual([{ id: started.jobId, status: "queued" }]);
+    expect(listed.jobs).toStrictEqual([{ id: started.jobId, status: "queued" }]);
 
     const status = await getSlideExportJobStatus(store, adminActor(), started.jobId);
-    expect(status.ok).toBe(true);
+    expect(status.ok).toBeTruthy();
     if (!status.ok) {
       return;
     }
@@ -237,7 +241,7 @@ describe("slideExportService", () => {
       }),
       { workflow: silentWorkflow() },
     );
-    expect(tooMany.ok).toBe(false);
+    expect(tooMany.ok).toBeFalsy();
     if (!tooMany.ok) {
       expect(tooMany.error.status).toBe(400);
     }
@@ -245,10 +249,10 @@ describe("slideExportService", () => {
     const denied = await startSlideExportJob(store, memberActor(), exportInput(), {
       workflow: silentWorkflow(),
     });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const listed = await listExportJobs(store, memberActor());
-    expect(listed.ok).toBe(false);
+    expect(listed.ok).toBeFalsy();
   });
 
   it("marks the job failed when workflow create rejects", async () => {
@@ -258,13 +262,13 @@ describe("slideExportService", () => {
         create: () => Promise.reject(new Error("SLIDE_EXPORT missing")),
       },
     });
-    expect(started.ok).toBe(false);
+    expect(started.ok).toBeFalsy();
     if (!started.ok) {
       expect(started.error.status).toBe(503);
     }
 
     const listed = await listExportJobs(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
@@ -277,29 +281,29 @@ describe("slideExportService", () => {
     const started = await startSlideExportJob(store, owner, exportInput(), {
       workflow: silentWorkflow(),
     });
-    expect(started.ok).toBe(true);
+    expect(started.ok).toBeTruthy();
     if (!started.ok) {
       return;
     }
 
     const asOwner = await getSlideExportJobStatus(store, owner, started.jobId);
-    expect(asOwner.ok).toBe(true);
+    expect(asOwner.ok).toBeTruthy();
 
     const asAdmin = await getSlideExportJobStatus(
       store,
       adminActor({ id: "usr_other_admin" }),
       started.jobId,
     );
-    expect(asAdmin.ok).toBe(true);
+    expect(asAdmin.ok).toBeTruthy();
 
     const asMember = await getSlideExportJobStatus(store, memberActor(), started.jobId);
-    expect(asMember.ok).toBe(false);
+    expect(asMember.ok).toBeFalsy();
     if (!asMember.ok) {
       expect(asMember.error.status).toBe(403);
     }
 
     const missing = await getSlideExportJobStatus(store, owner, "job_missing");
-    expect(missing.ok).toBe(false);
+    expect(missing.ok).toBeFalsy();
     if (!missing.ok) {
       expect(missing.error.status).toBe(404);
     }
@@ -322,11 +326,11 @@ describe("slideExportService", () => {
       cache,
       resolveSpeakerName,
     });
-    expect(hit.ok).toBe(true);
+    expect(hit.ok).toBeTruthy();
     if (!hit.ok) {
       return;
     }
-    expect(hit.cached).toEqual({
+    expect(hit.cached).toStrictEqual({
       contentHash: "hash_1",
       filename: "meetup_slides_Ada_Lovelace.png",
       kind: "png",
@@ -339,7 +343,7 @@ describe("slideExportService", () => {
       exportInput({ disambiguateFilenames: true }),
       { cache, resolveSpeakerName },
     );
-    expect(labeled.ok).toBe(true);
+    expect(labeled.ok).toBeTruthy();
     if (!labeled.ok) {
       return;
     }
@@ -351,7 +355,7 @@ describe("slideExportService", () => {
       exportInput({ force: true }),
       { cache, resolveSpeakerName },
     );
-    expect(forced.ok).toBe(true);
+    expect(forced.ok).toBeTruthy();
     if (!forced.ok) {
       return;
     }
@@ -363,7 +367,7 @@ describe("slideExportService", () => {
       exportInput({ speakerIds: ["spk_ada", "spk_grace"] }),
       { cache, resolveSpeakerName },
     );
-    expect(batched.ok).toBe(true);
+    expect(batched.ok).toBeTruthy();
     if (!batched.ok) {
       return;
     }
@@ -378,7 +382,7 @@ describe("slideExportService", () => {
     const declined = await tryShortCircuitCachedExport(store, adminActor(), exportInput(), {
       cache: throwingCache,
     });
-    expect(declined.ok).toBe(true);
+    expect(declined.ok).toBeTruthy();
     if (declined.ok) {
       expect(declined.cached).toBeNull();
     }
@@ -391,9 +395,9 @@ describe("slideExportService", () => {
       cache,
       resolveSpeakerName: () => Promise.reject(new Error("speaker missing")),
     });
-    expect(hit.ok).toBe(true);
+    expect(hit.ok).toBeTruthy();
     if (hit.ok) {
-      expect(hit.cached).toEqual({
+      expect(hit.cached).toStrictEqual({
         contentHash: "hash_1",
         filename: "meetup_slides.png",
         kind: "png",
@@ -407,7 +411,7 @@ describe("slideExportService", () => {
     const started = await startSlideExportJob(store, adminActor(), exportInput(), {
       workflow: silentWorkflow(),
     });
-    expect(started.ok).toBe(true);
+    expect(started.ok).toBeTruthy();
     if (!started.ok) {
       return;
     }
@@ -420,7 +424,7 @@ describe("slideExportService", () => {
           Promise.resolve({ errorMessage: "canceled by platform", status: "complete" }),
       },
     });
-    expect(probed.ok).toBe(true);
+    expect(probed.ok).toBeTruthy();
     if (!probed.ok) {
       return;
     }
@@ -428,7 +432,7 @@ describe("slideExportService", () => {
     expect(probed.job.errorMessage).toBe("canceled by platform");
 
     const again = await getSlideExportJobStatus(store, adminActor(), started.jobId);
-    expect(again.ok).toBe(true);
+    expect(again.ok).toBeTruthy();
     if (!again.ok) {
       return;
     }

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+
 import { getEvent } from "@/modules/events/services/eventsService";
 import { callMcpTool } from "@/modules/system/services/mcpService";
 import type { McpDispatchContext } from "@/modules/system/types";
+
 import { adminActor, openMemoryTenant } from "../helpers/tenant";
 
 const START = "2026-09-01T09:00:00.000Z";
@@ -17,7 +19,7 @@ describe("MCP events contract", () => {
       { citySlug: "sydney", imageUrl: COVER, isActive: true, startTime: START, title: "MCP night" },
       ctx,
     );
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -27,7 +29,7 @@ describe("MCP events contract", () => {
 
     // …while the module's canonical name is `coverUrl`.
     const stored = await getEvent(store, created.event.id);
-    expect(stored.ok).toBe(true);
+    expect(stored.ok).toBeTruthy();
     if (!stored.ok) {
       return;
     }
@@ -38,11 +40,11 @@ describe("MCP events contract", () => {
       { citySlug: "sydney" },
       ctx,
     );
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
-    expect(listed.events.map((event) => event.imageUrl)).toEqual([COVER]);
+    expect(listed.events.map((event) => event.imageUrl)).toStrictEqual([COVER]);
   });
 
   it("rejects a disallowed image host sent as imageUrl", async () => {
@@ -59,7 +61,7 @@ describe("MCP events contract", () => {
       },
       ctx,
     );
-    expect(created.ok).toBe(false);
+    expect(created.ok).toBeFalsy();
     if (created.ok) {
       return;
     }

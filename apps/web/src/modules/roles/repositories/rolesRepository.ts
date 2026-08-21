@@ -1,10 +1,13 @@
 import { and, asc, desc, eq } from "drizzle-orm";
+
 import type { RoleSummary, RoleWrite } from "@/modules/roles/types";
-import { type Permission, parsePermissions } from "@/shared/auth/permissions";
+import { parsePermissions } from "@/shared/auth/permissions";
+import type { Permission } from "@/shared/auth/permissions";
 import { first } from "@/shared/db/rows";
 import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
 /** The only tables this repository may touch. */

@@ -1,11 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
+
 import { defineConfig } from "@playwright/test";
 
 function loadEnvFile(path: string): void {
   if (!existsSync(path)) {
     return;
   }
-  for (const line of readFileSync(path, "utf8").split("\n")) {
+  for (const line of readFileSync(path, "utf-8").split("\n")) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) {
       continue;
@@ -29,8 +30,8 @@ function loadEnvFile(path: string): void {
   }
 }
 
-loadEnvFile(new URL("./.env.e2e", import.meta.url).pathname);
-loadEnvFile(new URL("./.env.local", import.meta.url).pathname);
+loadEnvFile(new URL(".env.e2e", import.meta.url).pathname);
+loadEnvFile(new URL(".env.local", import.meta.url).pathname);
 process.env.CLERK_PUBLISHABLE_KEY ||= process.env.VITE_CLERK_PUBLISHABLE_KEY ?? "";
 
 export default defineConfig({

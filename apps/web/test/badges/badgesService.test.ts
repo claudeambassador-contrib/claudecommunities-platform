@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   awardBadge,
   createBadge,
@@ -8,13 +9,14 @@ import {
   revokeBadge,
   updateBadge,
 } from "@/modules/badges/services/badgesService";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 describe("badgesService", () => {
   it("lets anyone list badges and requires badges.edit to create", async () => {
     const store = openMemoryTenant();
     const denied = await createBadge(store, memberActor(), { name: "Pioneer" });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
     if (!denied.ok) {
       expect(denied.error.status).toBe(403);
     }
@@ -23,7 +25,7 @@ describe("badgesService", () => {
       description: "First wave",
       name: "Pioneer",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -31,51 +33,51 @@ describe("badgesService", () => {
     expect(created.badge.userCount).toBe(0);
 
     const listed = await listBadges(store);
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (listed.ok) {
-      expect(listed.badges.map((badge) => badge.name)).toEqual(["Pioneer"]);
+      expect(listed.badges.map((badge) => badge.name)).toStrictEqual(["Pioneer"]);
     }
   });
 
   it("rejects duplicate names and awards then revokes a holder", async () => {
     const store = openMemoryTenant();
     const created = await createBadge(store, adminActor(), { name: "Pioneer" });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
 
     const dup = await createBadge(store, adminActor(), { name: "Pioneer" });
-    expect(dup.ok).toBe(false);
+    expect(dup.ok).toBeFalsy();
     if (!dup.ok) {
       expect(dup.error.status).toBe(409);
     }
 
     const awarded = await awardBadge(store, adminActor(), created.badge.id, "usr_ada");
-    expect(awarded.ok).toBe(true);
+    expect(awarded.ok).toBeTruthy();
     const again = await awardBadge(store, adminActor(), created.badge.id, "usr_ada");
-    expect(again.ok).toBe(false);
+    expect(again.ok).toBeFalsy();
     if (!again.ok) {
       expect(again.error.status).toBe(409);
     }
 
     const detail = await getBadge(store, created.badge.id);
-    expect(detail.ok).toBe(true);
+    expect(detail.ok).toBeTruthy();
     if (detail.ok) {
       expect(detail.badge.userCount).toBe(1);
-      expect(detail.badge.users.map((user) => user.userId)).toEqual(["usr_ada"]);
+      expect(detail.badge.users.map((user) => user.userId)).toStrictEqual(["usr_ada"]);
     }
 
     const revoked = await revokeBadge(store, adminActor(), created.badge.id, "usr_ada");
-    expect(revoked.ok).toBe(true);
+    expect(revoked.ok).toBeTruthy();
     const missing = await revokeBadge(store, adminActor(), created.badge.id, "usr_ada");
-    expect(missing.ok).toBe(false);
+    expect(missing.ok).toBeFalsy();
 
     const renamed = await updateBadge(store, adminActor(), created.badge.id, { name: "Founder" });
-    expect(renamed.ok).toBe(true);
+    expect(renamed.ok).toBeTruthy();
     const removed = await removeBadge(store, adminActor(), created.badge.id);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
     const gone = await getBadge(store, created.badge.id);
-    expect(gone.ok).toBe(false);
+    expect(gone.ok).toBeFalsy();
   });
 });

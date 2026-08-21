@@ -1,5 +1,5 @@
-import type { ReactElement } from "react";
-import { type ChangeEvent, useCallback, useState } from "react";
+import { type ReactElement, type ChangeEvent, useCallback, useState } from "react";
+
 import type {
   AudienceSplitBlock,
   BenefitsBlock,
@@ -50,10 +50,10 @@ export function HomeSectionsEditor({
     setBlocks((current) => {
       const index = current.findIndex((block) => block.id === id);
       const target = index + direction;
-      if (index < 0 || target < 0 || target >= current.length) {
+      if (index === -1 || target < 0 || target >= current.length) {
         return current;
       }
-      const copy = current.slice();
+      const copy = [...current];
       const [item] = copy.splice(index, 1);
       if (!item) {
         return current;
@@ -190,24 +190,32 @@ function BlockFields({
   onChange: (next: Block) => void;
 }): ReactElement | null {
   switch (block.type) {
-    case "hero":
+    case "hero": {
       return <HeroFields block={block} disabled={disabled} onChange={onChange} />;
-    case "richText":
+    }
+    case "richText": {
       return <RichTextFields block={block} disabled={disabled} onChange={onChange} />;
-    case "webinar":
+    }
+    case "webinar": {
       return <WebinarFields block={block} disabled={disabled} onChange={onChange} />;
+    }
     case "benefits":
-    case "audienceSplit":
+    case "audienceSplit": {
       return <HeadingOnlyFields block={block} disabled={disabled} onChange={onChange} />;
-    case "cta":
+    }
+    case "cta": {
       return <CtaFields block={block} disabled={disabled} onChange={onChange} />;
-    case "gallery":
+    }
+    case "gallery": {
       return <GalleryFields block={block} disabled={disabled} onChange={onChange} />;
+    }
     case "events":
-    case "discord":
+    case "discord": {
       return null;
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 

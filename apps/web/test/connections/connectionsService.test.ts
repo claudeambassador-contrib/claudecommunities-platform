@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+
 import {
   createConnection,
   deleteConnectionById,
   listConnections,
   respondToConnection,
 } from "@/modules/connections/services/connectionsService";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 describe("connectionsService", () => {
@@ -14,17 +16,17 @@ describe("connectionsService", () => {
     const al = adminActor({ id: "usr_al", name: "Al" });
 
     const self = await createConnection(store, ada, ada.id);
-    expect(self.ok).toBe(false);
+    expect(self.ok).toBeFalsy();
 
     const created = await createConnection(store, ada, al.id);
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     expect(created.connection.status).toBe("pending");
 
     const dup = await createConnection(store, al, ada.id);
-    expect(dup.ok).toBe(false);
+    expect(dup.ok).toBeFalsy();
     if (!dup.ok) {
       expect(dup.error.status).toBe(409);
     }
@@ -35,13 +37,13 @@ describe("connectionsService", () => {
       created.connection.id,
       "accepted",
     );
-    expect(requesterAccept.ok).toBe(false);
+    expect(requesterAccept.ok).toBeFalsy();
 
     const accepted = await respondToConnection(store, al, created.connection.id, "accepted");
-    expect(accepted.ok).toBe(true);
+    expect(accepted.ok).toBeTruthy();
 
     const listed = await listConnections(store, ada, { status: "accepted" });
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (listed.ok) {
       expect(listed.connections).toHaveLength(1);
     }
@@ -51,8 +53,8 @@ describe("connectionsService", () => {
       memberActor({ id: "usr_other" }),
       created.connection.id,
     );
-    expect(stranger.ok).toBe(false);
+    expect(stranger.ok).toBeFalsy();
     const removed = await deleteConnectionById(store, ada, created.connection.id);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
   });
 });

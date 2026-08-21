@@ -1,19 +1,16 @@
 import { setMembershipRole } from "@/modules/identity/services/usersService";
 import type { MembershipRole } from "@/modules/identity/types";
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as rolesRepo from "@/modules/roles/repositories/rolesRepository";
 import type { RoleInput, RolePatch, RoleSummary } from "@/modules/roles/types";
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
-import {
-  ALL_PERMISSIONS,
-  PERMISSIONS,
-  type Permission,
-  permissionsForRole,
-} from "@/shared/auth/permissions";
+import { ALL_PERMISSIONS, PERMISSIONS, permissionsForRole } from "@/shared/auth/permissions";
+import type { Permission } from "@/shared/auth/permissions";
 import type { RegistryStore } from "@/shared/db/registryStore";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 const ROLE_NAME = /^[a-z][a-z0-9_]{1,31}$/;
 const RESERVED = new Set(["admin", "member", "owner", "super_admin"]);
@@ -47,7 +44,7 @@ function validatePermissions(input: unknown): Result<{ permissions: Permission[]
 }
 
 async function ensureSystemRoles(store: TenantStore): Promise<void> {
-  const seeds: Array<{ description: string; name: MembershipRole }> = [
+  const seeds: { description: string; name: MembershipRole }[] = [
     { description: "City owner", name: "owner" },
     { description: "City admin", name: "admin" },
     { description: "Community member", name: "member" },
@@ -79,7 +76,7 @@ export async function listRoles(
 export async function listRolesForAssignment(
   store: TenantStore,
   actor: Actor,
-): Promise<Result<{ roles: Array<{ description: string | null; name: string }> }>> {
+): Promise<Result<{ roles: { description: string | null; name: string }[] }>> {
   const perm = ensurePermission(actor, "users.assign_role");
   if (!perm.ok) {
     return perm;

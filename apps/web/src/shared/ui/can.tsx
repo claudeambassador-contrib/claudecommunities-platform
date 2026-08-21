@@ -1,6 +1,8 @@
 import type { ReactElement, ReactNode } from "react";
 import { createContext, useContext, useMemo } from "react";
-import { hasPermission, type Permission } from "@/shared/auth/permissions";
+
+import { hasPermission } from "@/shared/auth/permissions";
+import type { Permission } from "@/shared/auth/permissions";
 
 const PermissionsContext = createContext<ReadonlySet<Permission>>(new Set());
 

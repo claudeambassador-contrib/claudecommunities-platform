@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
+
 import type {
   CoffeePoolStatus,
   ConfigRow,
@@ -15,7 +16,8 @@ import type {
 import type { RegistryTables } from "@/shared/db/registrySchema";
 import type { RegistryStore } from "@/shared/db/registryStore";
 import { first, iso } from "@/shared/db/rows";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
 export const CONFIG_ID = "config";
@@ -379,16 +381,18 @@ export async function insertParticipantWithPool(
   const id = newId("ilp");
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    // biome-ignore lint/performance/noAwaitInLoops: claim the next free pool row before insert
+    // oxlint-disable-next-line no-await-in-loop -- claim the next free pool row before insert
     const claimed = await claimPoolRow(store, id);
     if (claimed.kind === "lost") {
       continue;
     }
     const coffeeCode = claimed.kind === "claimed" ? claimed.code : fallbackCode;
     try {
+      // oxlint-disable-next-line no-await-in-loop -- claim the next free pool row before insert
       return await insertClaimedParticipant(store, input, id, coffeeCode);
     } catch (error) {
       if (claimed.kind === "claimed") {
+        // oxlint-disable-next-line no-await-in-loop -- claim the next free pool row before insert
         await unclaimPoolRow(store, claimed.id);
       }
       if (uniqueColumn(error) === "coffee_code") {

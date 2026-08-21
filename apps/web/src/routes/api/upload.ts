@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+
 import { syncSessionUser } from "@/modules/identity/services/sessionService";
 import { storeUpload } from "@/modules/system/services/uploadService";
 import { getRegistryDb } from "@/shared/db/env";

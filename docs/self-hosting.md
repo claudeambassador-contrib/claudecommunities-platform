@@ -59,20 +59,20 @@ bunx wrangler queues create app-notifications
 
 Where each value comes from:
 
-| Token | Source |
-|---|---|
-| `CF_ACCOUNT_ID` | Dashboard → any domain → Overview → right sidebar "Account ID" |
-| `CF_WORKER_NAME` | A name you choose (lowercase/hyphens), e.g. `claudecommunity` |
-| `CF_D1_ID` | `database_id` printed by `wrangler d1 create claudecommunity-db` |
-| `CF_D1_TAGCACHE_ID` | `database_id` from `wrangler d1 create claudecommunity-next-tag-cache` |
-| `CF_R2_BUCKET` | The bucket name you created for uploads |
-| `CF_R2_CACHE_BUCKET` | The bucket name you created for the cache |
-| `CF_ROUTE` | Your custom hostname, e.g. `community.example.org` |
-| `CF_PUBLIC_URL` | Public origin, e.g. `https://community.example.org` |
-| `NEXT_PUBLIC_REGION` | `au` (default) or `nz` |
-| `HOME_TENANT` | Home tenant slug, e.g. `platform` |
-| `PLATFORM_HOSTS` | Hosts that ARE the platform, e.g. `example.org,localhost,127.0.0.1,workers.dev` |
-| `TENANT_SUBDOMAIN_BASES` | Base host for `*.<base>` tenants, e.g. `example.org` |
+| Token                    | Source                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| `CF_ACCOUNT_ID`          | Dashboard → any domain → Overview → right sidebar "Account ID"                  |
+| `CF_WORKER_NAME`         | A name you choose (lowercase/hyphens), e.g. `claudecommunity`                   |
+| `CF_D1_ID`               | `database_id` printed by `wrangler d1 create claudecommunity-db`                |
+| `CF_D1_TAGCACHE_ID`      | `database_id` from `wrangler d1 create claudecommunity-next-tag-cache`          |
+| `CF_R2_BUCKET`           | The bucket name you created for uploads                                         |
+| `CF_R2_CACHE_BUCKET`     | The bucket name you created for the cache                                       |
+| `CF_ROUTE`               | Your custom hostname, e.g. `community.example.org`                              |
+| `CF_PUBLIC_URL`          | Public origin, e.g. `https://community.example.org`                             |
+| `NEXT_PUBLIC_REGION`     | `au` (default) or `nz`                                                          |
+| `HOME_TENANT`            | Home tenant slug, e.g. `platform`                                               |
+| `PLATFORM_HOSTS`         | Hosts that ARE the platform, e.g. `example.org,localhost,127.0.0.1,workers.dev` |
+| `TENANT_SUBDOMAIN_BASES` | Base host for `*.<base>` tenants, e.g. `example.org`                            |
 
 > If you don't run a notifications consumer worker, you can delete the `queues`
 > block from `wrangler.selfhost.template.jsonc` instead of creating the queue.
@@ -111,7 +111,7 @@ node scripts/gen-wrangler.mjs --template wrangler.selfhost.template.jsonc --infr
 In **Workers & Pages → (your worker) → Settings → Builds**, connect your fork:
 
 1. **Build command:** `bun install && bun run build:cf:selfhost`
-2. **Deploy command:** `bunx opennextjs-cloudflare deploy`  *(no `--env`)*
+2. **Deploy command:** `bunx opennextjs-cloudflare deploy` _(no `--env`)_
 3. **Variables — add all 12 generic tokens** from `.env.selfhost.example` with
    your values. On the runner there is no `.env.selfhost`, so `gen-wrangler`
    reads these dashboard variables.
@@ -264,22 +264,22 @@ routes never break and carry your branding even before the DB is seeded. Set any
 of these as **Workers Builds Variables** (or in `.env.local` for local builds);
 all are optional and fall back to neutral "Claude Community" defaults:
 
-| Variable | Used for | Default |
-|---|---|---|
-| `NEXT_PUBLIC_COMMUNITY_NAME` | Community / brand name in metadata | `Claude Community` |
-| `NEXT_PUBLIC_SHORT_NAME` | Short nav/footer label | = community name |
-| `NEXT_PUBLIC_COUNTRY` | Country name in copy | `""` |
-| `NEXT_PUBLIC_NATIONALITY` | Demonym used in copy | `""` |
-| `NEXT_PUBLIC_LANG` | BCP-47 lang (drives OG locale) | `en` |
-| `NEXT_PUBLIC_CURRENCY` | ISO currency code | `USD` |
-| `NEXT_PUBLIC_CURRENCY_SYMBOL` | Currency symbol | `$` |
-| `NEXT_PUBLIC_DEFAULT_TIMEZONE` | Default IANA timezone | `UTC` |
-| `NEXT_PUBLIC_SENDER_DOMAIN` | Sending / public domain | `claudecommunities.com` |
-| `NEXT_PUBLIC_FROM_EMAIL` | Full From header | `<name> <noreply@<domain>>` |
-| `NEXT_PUBLIC_DISCORD_INVITE` | Public Discord invite | `""` |
-| `NEXT_PUBLIC_SITE_URL` | Canonical site URL | `https://claudecommunities.com` |
-| `NEXT_PUBLIC_APP_URL` | App URL | = site URL |
-| `NEXT_PUBLIC_GA_ID` | GA4 measurement id | `null` (analytics off) |
+| Variable                       | Used for                           | Default                         |
+| ------------------------------ | ---------------------------------- | ------------------------------- |
+| `NEXT_PUBLIC_COMMUNITY_NAME`   | Community / brand name in metadata | `Claude Community`              |
+| `NEXT_PUBLIC_SHORT_NAME`       | Short nav/footer label             | = community name                |
+| `NEXT_PUBLIC_COUNTRY`          | Country name in copy               | `""`                            |
+| `NEXT_PUBLIC_NATIONALITY`      | Demonym used in copy               | `""`                            |
+| `NEXT_PUBLIC_LANG`             | BCP-47 lang (drives OG locale)     | `en`                            |
+| `NEXT_PUBLIC_CURRENCY`         | ISO currency code                  | `USD`                           |
+| `NEXT_PUBLIC_CURRENCY_SYMBOL`  | Currency symbol                    | `$`                             |
+| `NEXT_PUBLIC_DEFAULT_TIMEZONE` | Default IANA timezone              | `UTC`                           |
+| `NEXT_PUBLIC_SENDER_DOMAIN`    | Sending / public domain            | `claudecommunities.com`         |
+| `NEXT_PUBLIC_FROM_EMAIL`       | Full From header                   | `<name> <noreply@<domain>>`     |
+| `NEXT_PUBLIC_DISCORD_INVITE`   | Public Discord invite              | `""`                            |
+| `NEXT_PUBLIC_SITE_URL`         | Canonical site URL                 | `https://claudecommunities.com` |
+| `NEXT_PUBLIC_APP_URL`          | App URL                            | = site URL                      |
+| `NEXT_PUBLIC_GA_ID`            | GA4 measurement id                 | `null` (analytics off)          |
 
 > The **DB (`getTenantConfig()`) is the runtime source of truth** for everything
 > rendered per request. `NEXT_PUBLIC_*` only feeds the few build-baked metadata

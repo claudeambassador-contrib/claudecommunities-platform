@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { heuristicEvaluator, parseCandidateCsv } from "@/modules/attendance/heuristic";
 import {
   ATTENDANCE_BATCH_SIZE,
@@ -17,19 +18,19 @@ function candidate(index: number): Candidate {
   };
 }
 
-describe("evaluateCandidates", () => {
+describe(evaluateCandidates, () => {
   it("rejects an empty prompt and batches large candidate lists", async () => {
     const empty = await evaluateCandidates("", [candidate(1)], {
       evaluateBatch: () => Promise.resolve([]),
     });
-    expect(empty.ok).toBe(false);
+    expect(empty.ok).toBeFalsy();
 
     const none = await evaluateCandidates("AI meetup", [], {
       evaluateBatch: () => Promise.resolve([]),
     });
-    expect(none.ok).toBe(true);
+    expect(none.ok).toBeTruthy();
     if (none.ok) {
-      expect(none.evaluations).toEqual([]);
+      expect(none.evaluations).toStrictEqual([]);
     }
 
     const seen: number[] = [];
@@ -40,20 +41,18 @@ describe("evaluateCandidates", () => {
       evaluateBatch: (_prompt, batch) => {
         seen.push(batch.length);
         return Promise.resolve(
-          batch.map(
-            (person): Evaluation => ({
-              email: person.email,
-              fitScore: 8,
-              reasoning: "fit",
-              recommended: true,
-            }),
-          ),
+          batch.map((person): Evaluation => ({
+            email: person.email,
+            fitScore: 8,
+            reasoning: "fit",
+            recommended: true,
+          })),
         );
       },
     });
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     if (result.ok) {
-      expect(seen).toEqual([ATTENDANCE_BATCH_SIZE, 3]);
+      expect(seen).toStrictEqual([ATTENDANCE_BATCH_SIZE, 3]);
       expect(result.evaluations).toHaveLength(people.length);
     }
   });
@@ -64,7 +63,7 @@ describe("evaluateCandidates", () => {
     );
     expect(rows).toHaveLength(1);
     const result = await evaluateCandidates("engineers building agents", rows, heuristicEvaluator);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     if (result.ok) {
       expect(result.evaluations[0]?.email).toBe("ada@example.com");
       expect(result.evaluations[0]?.fitScore).toBeGreaterThan(0);

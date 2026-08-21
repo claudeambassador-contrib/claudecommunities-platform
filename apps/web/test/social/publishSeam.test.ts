@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+
 import { publishStarterFromEnv } from "@/modules/social/services/publishStarter";
 import {
   claimPostForPublish,
   listDuePublishable,
   markPublishFailed,
 } from "@/modules/social/services/socialService";
+
 import { openMemoryTenant } from "../helpers/tenant";
 
 async function insertScheduledPost(store: ReturnType<typeof openMemoryTenant>, id: string) {
@@ -36,7 +38,7 @@ describe("publish seam", () => {
     const store = openMemoryTenant();
     await insertScheduledPost(store, "post_1");
     const result = await listDuePublishable(store, new Date());
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     if (result.ok) {
       expect(result.posts.map((p) => p.id)).toContain("post_1");
     }
@@ -46,9 +48,9 @@ describe("publish seam", () => {
     const store = openMemoryTenant();
     await insertScheduledPost(store, "post_1");
     const result = await claimPostForPublish(store, "post_1");
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     if (result.ok) {
-      expect(result.claimed).toBe(true);
+      expect(result.claimed).toBeTruthy();
     }
   });
 
@@ -56,7 +58,7 @@ describe("publish seam", () => {
     const store = openMemoryTenant();
     await insertScheduledPost(store, "post_1");
     const result = await markPublishFailed(store, "post_1", "no connector");
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     const { socialPosts } = store.tables;
     const rows = await store.db.select().from(socialPosts);
     expect(rows[0]?.status).toBe("failed");
@@ -76,7 +78,7 @@ describe("publish seam", () => {
     });
     expect(starter).toBeDefined();
     await starter?.start({ d1Binding: "TENANT_TEST", orgId: "org_test", postId: "p1" });
-    expect(calls).toEqual([
+    expect(calls).toStrictEqual([
       { params: { d1Binding: "TENANT_TEST", orgId: "org_test", postId: "p1" } },
     ]);
   });

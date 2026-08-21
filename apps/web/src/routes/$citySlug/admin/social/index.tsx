@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import type { ReactElement } from "react";
-import { type ChangeEvent, useCallback, useRef, useState } from "react";
+import { type ReactElement, type ChangeEvent, useCallback, useRef, useState } from "react";
 import { z } from "zod";
+
 import { createPost, listAccounts, listPosts } from "@/modules/social/services/socialService";
 import type { SocialAccountSummary, SocialPostAction } from "@/modules/social/types";
 import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";

@@ -7,6 +7,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+
 import { getRegionConfig } from "@/shared/region";
 
 const CORAL = "#D4836A";

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { createPost, createSpace } from "@/modules/community/services/communityService";
 import { createCourse } from "@/modules/courses/services/coursesService";
 import { createEvent } from "@/modules/events/services/eventsService";
@@ -17,6 +18,7 @@ import type { McpDispatchContext } from "@/modules/system/types";
 import { createSpeaker, createTalkSubmission } from "@/modules/talks/services/talksService";
 import type { RegistryStore } from "@/shared/db/registryStore";
 import type { TenantStore } from "@/shared/db/tenantStore";
+
 import { openMemoryRegistry } from "../helpers/registry";
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
@@ -106,27 +108,27 @@ interface Slugged {
   slug: string;
 }
 
-describe("listMcpTools", () => {
+describe(listMcpTools, () => {
   it("lists the complete live catalog plus health and page tools", () => {
     const tools = listMcpTools();
     const names = tools.map((tool) => tool.name);
 
-    expect(names).toEqual(
+    expect(names).toStrictEqual(
       expect.arrayContaining([...LIVE_TOOL_NAMES, "health", "get_page", "list_pages"]),
     );
     expect(new Set(names).size).toBe(names.length);
     for (const tool of tools) {
       expect(tool.description.length).toBeGreaterThan(0);
     }
-    expect(implementedMcpToolNames()).toEqual([...names].sort());
+    expect(implementedMcpToolNames()).toStrictEqual([...names].sort());
   });
 });
 
-describe("callMcpTool", () => {
+describe(callMcpTool, () => {
   it("returns the community feed for a city", async () => {
     const store = openMemoryTenant();
     const space = await createSpace(store, adminActor(), { name: "General", slug: "general" });
-    expect(space.ok).toBe(true);
+    expect(space.ok).toBeTruthy();
     if (!space.ok) {
       return;
     }
@@ -134,14 +136,14 @@ describe("callMcpTool", () => {
       content: "Hello feed",
       spaceId: space.space.id,
     });
-    expect(posted.ok).toBe(true);
+    expect(posted.ok).toBeTruthy();
 
     const feed = await callMcpTool<{ posts: { content: string }[] }>(
       "getFeed",
       { citySlug: CITY },
       dispatchCtx(store),
     );
-    expect(feed.ok).toBe(true);
+    expect(feed.ok).toBeTruthy();
     if (!feed.ok) {
       return;
     }
@@ -154,7 +156,7 @@ describe("callMcpTool", () => {
       {},
       dispatchCtx(openMemoryTenant()),
     );
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     if (!result.ok) {
       return;
     }
@@ -171,14 +173,14 @@ describe("callMcpTool", () => {
       { citySlug: CITY, isActive: true, startTime: START, title: "Intro Night" },
       ctx,
     );
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     expect(created.event.title).toBe("Intro Night");
 
     const listed = await callMcpTool<{ events: Titled[] }>("getEvents", { citySlug: CITY }, ctx);
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
@@ -189,7 +191,7 @@ describe("callMcpTool", () => {
       { citySlug: CITY, eventId: created.event.id },
       ctx,
     );
-    expect(fetched.ok).toBe(true);
+    expect(fetched.ok).toBeTruthy();
     if (!fetched.ok) {
       return;
     }
@@ -202,7 +204,7 @@ describe("callMcpTool", () => {
     const args = { citySlug: CITY };
 
     const space = await createSpace(store, adminActor(), { name: "General" });
-    expect(space.ok).toBe(true);
+    expect(space.ok).toBeTruthy();
     if (!space.ok) {
       return;
     }
@@ -211,10 +213,10 @@ describe("callMcpTool", () => {
       spaceId: space.space.id,
       title: "Intro",
     });
-    expect(post.ok).toBe(true);
+    expect(post.ok).toBeTruthy();
 
     const feed = await callMcpTool<{ posts: { title: string | null }[] }>("getFeed", args, ctx);
-    expect(feed.ok).toBe(true);
+    expect(feed.ok).toBeTruthy();
     if (!feed.ok) {
       return;
     }
@@ -226,24 +228,24 @@ describe("callMcpTool", () => {
       slug: "intro",
       title: "Intro to Claude",
     });
-    expect(course.ok).toBe(true);
+    expect(course.ok).toBeTruthy();
 
     const courses = await callMcpTool<{ courses: Slugged[] }>("getCourses", args, ctx);
-    expect(courses.ok).toBe(true);
+    expect(courses.ok).toBeTruthy();
     if (!courses.ok) {
       return;
     }
-    expect(courses.courses.map((item) => item.slug)).toEqual(["intro"]);
+    expect(courses.courses.map((item) => item.slug)).toStrictEqual(["intro"]);
 
     const talk = await createTalkSubmission(store, memberActor(), {
       email: "ada@example.com",
       name: "Ada",
       title: "Building with Claude",
     });
-    expect(talk.ok).toBe(true);
+    expect(talk.ok).toBeTruthy();
 
     const talks = await callMcpTool<{ talks: unknown[] }>("listSpeakerSubmissions", args, ctx);
-    expect(talks.ok).toBe(true);
+    expect(talks.ok).toBeTruthy();
     if (!talks.ok) {
       return;
     }
@@ -254,23 +256,23 @@ describe("callMcpTool", () => {
       startTime: START,
       title: "Meetup Night",
     });
-    expect(event.ok).toBe(true);
+    expect(event.ok).toBeTruthy();
     if (!event.ok) {
       return;
     }
     const speaker = await createSpeaker(store, adminActor(), event.event.id, { name: "Ada" });
-    expect(speaker.ok).toBe(true);
+    expect(speaker.ok).toBeTruthy();
 
     const speakers = await callMcpTool<{ speakers: Named[] }>(
       "listEventSpeakers",
       { citySlug: CITY, eventId: event.event.id },
       ctx,
     );
-    expect(speakers.ok).toBe(true);
+    expect(speakers.ok).toBeTruthy();
     if (!speakers.ok) {
       return;
     }
-    expect(speakers.speakers.map((item) => item.name)).toEqual(["Ada"]);
+    expect(speakers.speakers.map((item) => item.name)).toStrictEqual(["Ada"]);
 
     const page = await createContentPage(store, adminActor(), {
       blocks: [{ body: "Welcome", enabled: true, heading: null, id: "blk_1", type: "richText" }],
@@ -278,21 +280,21 @@ describe("callMcpTool", () => {
       status: "published",
       title: "About us",
     });
-    expect(page.ok).toBe(true);
+    expect(page.ok).toBeTruthy();
 
     const pages = await callMcpTool<{ pages: Slugged[] }>("list_pages", args, ctx);
-    expect(pages.ok).toBe(true);
+    expect(pages.ok).toBeTruthy();
     if (!pages.ok) {
       return;
     }
-    expect(pages.pages.map((item) => item.slug)).toEqual(["about"]);
+    expect(pages.pages.map((item) => item.slug)).toStrictEqual(["about"]);
 
     const published = await callMcpTool<{ page: { title: string } | null }>(
       "get_page",
       { citySlug: CITY, slug: "about" },
       ctx,
     );
-    expect(published.ok).toBe(true);
+    expect(published.ok).toBeTruthy();
     if (!published.ok) {
       return;
     }
@@ -304,7 +306,7 @@ describe("callMcpTool", () => {
       externalId: "org_li",
       platform: "linkedin",
     });
-    expect(account.ok).toBe(true);
+    expect(account.ok).toBeTruthy();
     if (!account.ok) {
       return;
     }
@@ -312,10 +314,10 @@ describe("callMcpTool", () => {
       accountId: account.account.id,
       content: "Ship it",
     });
-    expect(social.ok).toBe(true);
+    expect(social.ok).toBeTruthy();
 
     const socialPosts = await callMcpTool<{ posts: unknown[] }>("listSocialPosts", args, ctx);
-    expect(socialPosts.ok).toBe(true);
+    expect(socialPosts.ok).toBeTruthy();
     if (!socialPosts.ok) {
       return;
     }
@@ -326,18 +328,18 @@ describe("callMcpTool", () => {
       { citySlug: CITY, scope: "global" },
       ctx,
     );
-    expect(state.ok).toBe(true);
+    expect(state.ok).toBeTruthy();
     if (!state.ok) {
       return;
     }
     expect(state.state.scope).toBe("global");
 
     const presets = await callMcpTool<{ presets: unknown[] }>("listSlideStylePresets", args, ctx);
-    expect(presets.ok).toBe(true);
+    expect(presets.ok).toBeTruthy();
     if (!presets.ok) {
       return;
     }
-    expect(presets.presets).toEqual([]);
+    expect(presets.presets).toStrictEqual([]);
   });
 
   it("lists org members and returns the actor profile from the registry", async () => {
@@ -358,18 +360,18 @@ describe("callMcpTool", () => {
       { citySlug: CITY },
       ctx,
     );
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
-    expect(listed.users.map((user) => user.email)).toEqual(["ada@example.com"]);
+    expect(listed.users.map((user) => user.email)).toStrictEqual(["ada@example.com"]);
 
     const profile = await callMcpTool<{ user: { displayName: string | null; id: string } }>(
       "getUserProfile",
       {},
       ctx,
     );
-    expect(profile.ok).toBe(true);
+    expect(profile.ok).toBeTruthy();
     if (!profile.ok) {
       return;
     }
@@ -385,7 +387,7 @@ describe("callMcpTool", () => {
         upload: { baseUrl: "https://example.test", token: "tok_mcp" },
       }),
     );
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     if (!result.ok) {
       return;
     }
@@ -395,7 +397,7 @@ describe("callMcpTool", () => {
 
   it("returns 503 for requestImageUploadUrl when upload is not configured", async () => {
     const result = await callMcpTool("requestImageUploadUrl", {}, dispatchCtx(openMemoryTenant()));
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
     if (!result.ok) {
       expect(result.error.status).toBe(503);
     }
@@ -408,7 +410,7 @@ describe("callMcpTool", () => {
       { citySlug: CITY, postId: "post_1" },
       dispatchCtx(store, memberActor()),
     );
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
     if (!result.ok) {
       expect(result.error.status).toBe(403);
     }
@@ -416,7 +418,7 @@ describe("callMcpTool", () => {
 
   it("returns not_found for an unknown tool name", async () => {
     const result = await callMcpTool("not_a_real_tool", {}, dispatchCtx(openMemoryTenant()));
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
     if (!result.ok) {
       expect(result.error.status).toBe(404);
     }

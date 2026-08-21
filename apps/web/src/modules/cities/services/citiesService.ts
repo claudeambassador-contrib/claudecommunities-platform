@@ -1,10 +1,11 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as citiesRepo from "@/modules/cities/repositories/citiesRepository";
 import type { AdminCity, CityInput, CityWrite } from "@/modules/cities/types";
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -160,7 +161,7 @@ export async function reorderCities(
   }
   for (const [index, slug] of orderedSlugs.entries()) {
     // D1 has no interactive transaction — apply order one row at a time.
-    // biome-ignore lint/performance/noAwaitInLoops: sequential D1 writes
+    // oxlint-disable-next-line no-await-in-loop -- sequential D1 writes
     await citiesRepo.setPosition(store, slug.trim().toLowerCase(), index);
   }
   return ok({ success: true });

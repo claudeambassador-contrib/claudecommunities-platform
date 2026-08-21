@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   createCity,
   listCitiesAdmin,
@@ -7,6 +8,7 @@ import {
   updateCity,
 } from "@/modules/cities/services/citiesService";
 import type { CityInput } from "@/modules/cities/types";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 function city(overrides: Partial<CityInput> = {}): CityInput {
@@ -27,17 +29,17 @@ describe("citiesService", () => {
   it("lists for cities.view and creates unique slugs for cities.edit", async () => {
     const store = openMemoryTenant();
     const denied = await listCitiesAdmin(store, memberActor());
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const created = await createCity(store, adminActor(), city());
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     expect(created.city.position).toBe(0);
 
     const dup = await createCity(store, adminActor(), city());
-    expect(dup.ok).toBe(false);
+    expect(dup.ok).toBeFalsy();
     if (!dup.ok) {
       expect(dup.error.status).toBe(409);
     }
@@ -56,15 +58,15 @@ describe("citiesService", () => {
         timezone: "Australia/Melbourne",
       }),
     );
-    expect(melbourne.ok).toBe(true);
+    expect(melbourne.ok).toBeTruthy();
     if (melbourne.ok) {
       expect(melbourne.city.position).toBe(1);
     }
 
     const listed = await listCitiesAdmin(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (listed.ok) {
-      expect(listed.cities.map((row) => row.slug)).toEqual(["sydney", "melbourne"]);
+      expect(listed.cities.map((row) => row.slug)).toStrictEqual(["sydney", "melbourne"]);
     }
   });
 
@@ -87,22 +89,22 @@ describe("citiesService", () => {
     );
 
     const renamed = await updateCity(store, adminActor(), "sydney", city({ name: "Sydney CBD" }));
-    expect(renamed.ok).toBe(true);
+    expect(renamed.ok).toBeTruthy();
     if (renamed.ok) {
       expect(renamed.city.name).toBe("Sydney CBD");
     }
 
     const reordered = await reorderCities(store, adminActor(), ["melbourne", "sydney"]);
-    expect(reordered.ok).toBe(true);
+    expect(reordered.ok).toBeTruthy();
     const listed = await listCitiesAdmin(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (listed.ok) {
-      expect(listed.cities.map((row) => row.slug)).toEqual(["melbourne", "sydney"]);
+      expect(listed.cities.map((row) => row.slug)).toStrictEqual(["melbourne", "sydney"]);
     }
 
     const removed = await removeCity(store, adminActor(), "melbourne");
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
     const missing = await removeCity(store, adminActor(), "melbourne");
-    expect(missing.ok).toBe(false);
+    expect(missing.ok).toBeFalsy();
   });
 });

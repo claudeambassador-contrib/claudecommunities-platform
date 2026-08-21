@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, like, or } from "drizzle-orm";
+
 import type {
   MembershipRole,
   MembershipWrite,
@@ -121,13 +122,13 @@ export async function listInvitedMembers(
   store: RegistryStore,
   orgId: string,
 ): Promise<
-  Array<{
+  {
     createdAt: string;
     displayName: string | null;
     email: string;
     hasSignedUp: boolean;
     id: string;
-  }>
+  }[]
 > {
   const { userMemberships, users } = tables(store);
   const rows = await store.db
@@ -241,7 +242,7 @@ export async function listOrgMembers(
 export async function listOrgRecipients(
   store: RegistryStore,
   orgId: string,
-): Promise<Array<{ email: string; id: string }>> {
+): Promise<{ email: string; id: string }[]> {
   const { emailPreferences, userMemberships, users } = tables(store);
   const rows = await store.db
     .select({

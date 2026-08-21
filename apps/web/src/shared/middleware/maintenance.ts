@@ -1,5 +1,5 @@
-import { env } from "cloudflare:workers";
 import { createMiddleware } from "@tanstack/react-start";
+import { env } from "cloudflare:workers";
 
 /**
  * Maintenance kill-switch — mirrors the Next middleware behaviour.

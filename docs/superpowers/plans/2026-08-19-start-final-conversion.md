@@ -23,24 +23,25 @@
 
 ## File map
 
-| File | Responsibility |
-|---|---|
-| `apps/web/src/modules/email/transport.ts` | Resend batch adapter + `EmailTransport` port |
-| `apps/web/src/modules/email/services/emailSendService.ts` | Resolve members, write `email_sends`, call transport, finalize campaign |
-| `apps/web/src/workflows/campaign-send.ts` | Durable steps around `sendCampaign` |
-| `apps/web/src/modules/email/services/emailCampaignsService.ts` | Pass `orgId` + `d1Binding` into the workflow |
-| `apps/web/src/routes/$citySlug/admin/email/$id.tsx` | Send button (`email.send`) |
-| `apps/web/src/worker-scheduled.ts` | Drain due `scheduled` campaigns |
-| `apps/web/src/routes/api/webhooks/resend.ts` | Mark `email_sends` delivered/bounced |
-| `apps/web/src/routes/api/email/unsubscribe.$token.ts` | One-click unsubscribe (registry prefs) |
-| `apps/web/README.md` + `docs/start-conversion-status.md` | Staging deploy + MCP CLI target |
-| Root Next tree | Delete only after staging smoke on Start |
+| File                                                           | Responsibility                                                          |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `apps/web/src/modules/email/transport.ts`                      | Resend batch adapter + `EmailTransport` port                            |
+| `apps/web/src/modules/email/services/emailSendService.ts`      | Resolve members, write `email_sends`, call transport, finalize campaign |
+| `apps/web/src/workflows/campaign-send.ts`                      | Durable steps around `sendCampaign`                                     |
+| `apps/web/src/modules/email/services/emailCampaignsService.ts` | Pass `orgId` + `d1Binding` into the workflow                            |
+| `apps/web/src/routes/$citySlug/admin/email/$id.tsx`            | Send button (`email.send`)                                              |
+| `apps/web/src/worker-scheduled.ts`                             | Drain due `scheduled` campaigns                                         |
+| `apps/web/src/routes/api/webhooks/resend.ts`                   | Mark `email_sends` delivered/bounced                                    |
+| `apps/web/src/routes/api/email/unsubscribe.$token.ts`          | One-click unsubscribe (registry prefs)                                  |
+| `apps/web/README.md` + `docs/start-conversion-status.md`       | Staging deploy + MCP CLI target                                         |
+| Root Next tree                                                 | Delete only after staging smoke on Start                                |
 
 ---
 
 ### Task 1: Real campaign send (service + workflow + Send button)
 
 **Files:**
+
 - Create: `apps/web/src/modules/email/transport.ts`
 - Create: `apps/web/src/modules/email/services/emailSendService.ts`
 - Create: `apps/web/test/email/emailSendService.test.ts`
@@ -54,6 +55,7 @@
 - Test: `apps/web/test/email/emailCampaignsService.test.ts`
 
 **Interfaces:**
+
 - Consumes: `listOrgMembers` / new `listOrgRecipients`, `emailCampaigns`, `emailSends`, `getEmailSettings`
 - Produces: `sendCampaign(store, registry, campaignId, transport)` → `{ sent, failed, skipped }`
 
@@ -69,6 +71,7 @@
 ### Task 2: Unsubscribe + Resend webhook
 
 **Files:**
+
 - Create: `apps/web/src/modules/email/services/emailWebhookService.ts`
 - Create: `apps/web/src/routes/api/webhooks/resend.ts`
 - Create: `apps/web/src/routes/api/email/unsubscribe.$token.ts`
@@ -76,6 +79,7 @@
 - Modify: `apps/web/src/modules/identity/schema.registry.ts` if a `campaigns` / `unsubscribed` pref is missing — otherwise reuse `weeklyDigest: false` as the suppression flag for campaign mail.
 
 **Interfaces:**
+
 - Produces: `applyResendEvent({ resendId, type })`, `unsubscribeEmail(email)`
 - Campaign HTML can append `List-Unsubscribe` later; first cut is a `/api/email/unsubscribe/$token` HMAC using `RESEND_API_KEY` or `RENDER_SIGNING_SECRET`.
 
@@ -88,6 +92,7 @@
 ### Task 3: MCP CLI against Start
 
 **Files:**
+
 - Modify: `apps/web/README.md` (CLI `MCP_URL=http://localhost:3001/api/mcp`)
 - Modify: `cli/` only if it hardcodes a Next origin
 - Test: `apps/web/test/mcp/mcpService.test.ts` — add `health` + `getFeed` dispatch smoke if missing
@@ -102,6 +107,7 @@
 ### Task 4: Staging Worker is Start
 
 **Files:**
+
 - Modify: `apps/web/README.md`, `docs/start-cutover.md`, `docs/start-conversion-status.md`
 - Modify: `apps/web/.env.example` (`RESEND_API_KEY`, `ZERNIO_API_KEY`)
 

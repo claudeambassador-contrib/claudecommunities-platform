@@ -1,5 +1,6 @@
 import { useRouter } from "@tanstack/react-router";
-import { type FormEvent, useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import type { FormEvent } from "react";
 
 /** The shape every guarded mutation server fn resolves to. */
 export type FormResult = { ok: true } | { error: string; ok: false };
@@ -51,7 +52,7 @@ export function useFormSubmit<T extends FormResult>(options: UseFormSubmitOption
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      // biome-ignore lint/suspicious/noUnnecessaryConditions: pendingRef is mutated below; this guards against re-entrant double submits
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- pendingRef is mutated below; this guards against re-entrant double submits
       if (pendingRef.current) {
         return;
       }

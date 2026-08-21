@@ -1,5 +1,6 @@
 import type { AttendanceEvaluator, Candidate, Evaluation } from "@/modules/attendance/types";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 export const ATTENDANCE_BATCH_SIZE = 20;
 

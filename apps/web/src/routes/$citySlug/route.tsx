@@ -2,11 +2,13 @@ import { createFileRoute, Link, notFound, Outlet, useRouterState } from "@tansta
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
+
 import { hasAnyAdminPermission } from "@/modules/identity/services/sessionService";
 import { getOwnProfile } from "@/modules/identity/services/usersService";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { getRegionConfig } from "@/shared/region";
-import { CityHeader, type CityViewer } from "@/shared/ui/city-header";
+import { CityHeader } from "@/shared/ui/city-header";
+import type { CityViewer } from "@/shared/ui/city-header";
 
 function selectPathname(state: { location: { pathname: string } }): string {
   return state.location.pathname;

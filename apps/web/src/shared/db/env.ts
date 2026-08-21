@@ -1,8 +1,12 @@
 import { env } from "cloudflare:workers";
+
 import type { TenantContext } from "@/shared/http/routeContext";
+
 import { createRegistryDb, createTenantDb, getD1Binding } from "./client";
-import { type RegistryStore, registryStore } from "./registryStore";
-import { type TenantStore, tenantStore } from "./tenantStore";
+import { registryStore } from "./registryStore";
+import type { RegistryStore } from "./registryStore";
+import { tenantStore } from "./tenantStore";
+import type { TenantStore } from "./tenantStore";
 
 /** Worker env as a loose record for D1 binding lookups. */
 export function workerEnv(): Record<string, unknown> {

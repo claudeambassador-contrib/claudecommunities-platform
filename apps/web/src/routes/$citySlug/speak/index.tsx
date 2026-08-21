@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
+
 import { createTalkSubmission } from "@/modules/talks/services/talksService";
 import { cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { loadCityPage } from "@/shared/http/cityPage";

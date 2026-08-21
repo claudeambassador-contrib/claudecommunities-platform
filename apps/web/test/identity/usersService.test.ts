@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+
 import { insertMembership, insertUser } from "@/modules/identity/repositories/directoryRepository";
 import { findEmailPreferences } from "@/modules/identity/repositories/emailPreferencesRepository";
 import {
@@ -21,6 +22,7 @@ import {
   updateOwnProfile,
 } from "@/modules/identity/services/usersService";
 import { EMAIL_PREF_DEFAULTS } from "@/modules/identity/types";
+
 import { openMemoryRegistry } from "../helpers/registry";
 import { adminActor, memberActor } from "../helpers/tenant";
 
@@ -56,23 +58,26 @@ describe("usersService", () => {
     await insertMembership(store, { orgId: "org_other", userId: outsider.id });
 
     const denied = await listUsers(store, memberActor(), ORG);
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
     if (!denied.ok) {
       expect(denied.error.status).toBe(403);
     }
 
     const listed = await listUsers(store, adminActor(), ORG);
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
-    expect(listed.users.map((u) => u.email).sort()).toEqual(["ada@example.com", "al@example.com"]);
-    expect(listed.users.every((u) => u.id !== outsider.id)).toBe(true);
+    expect(listed.users.map((u) => u.email).sort()).toStrictEqual([
+      "ada@example.com",
+      "al@example.com",
+    ]);
+    expect(listed.users.every((u) => u.id !== outsider.id)).toBeTruthy();
 
     const searched = await listUsers(store, adminActor(), ORG, { search: "ada" });
-    expect(searched.ok).toBe(true);
+    expect(searched.ok).toBeTruthy();
     if (searched.ok) {
-      expect(searched.users.map((u) => u.id)).toEqual([ada.id]);
+      expect(searched.users.map((u) => u.id)).toStrictEqual([ada.id]);
     }
   });
 
@@ -85,14 +90,14 @@ describe("usersService", () => {
       id: "usr_admin",
     });
     const profile = await getOwnProfile(store, adminActor({ id: user.id }));
-    expect(profile.ok).toBe(true);
+    expect(profile.ok).toBeTruthy();
     if (profile.ok) {
       expect(profile.user.email).toBe("me@example.com");
       expect(profile.user.displayName).toBe("Me");
     }
 
     const missing = await getOwnProfile(store, adminActor({ id: "usr_gone" }));
-    expect(missing.ok).toBe(false);
+    expect(missing.ok).toBeFalsy();
     if (!missing.ok) {
       expect(missing.error.status).toBe(404);
     }
@@ -107,11 +112,11 @@ describe("usersService", () => {
       imageUrl: "https://example.com/ada.png",
     });
     const { authors } = await listPublicAuthors(store, [ada.id, "usr_missing"]);
-    expect(authors).toEqual([
+    expect(authors).toStrictEqual([
       { id: ada.id, imageUrl: "https://example.com/ada.png", name: "Ada Lovelace" },
     ]);
     const empty = await listPublicAuthors(store, []);
-    expect(empty.authors).toEqual([]);
+    expect(empty.authors).toStrictEqual([]);
   });
 
   it("updates the actor display name", async () => {
@@ -125,7 +130,7 @@ describe("usersService", () => {
     const updated = await updateOwnProfile(store, adminActor({ id: "usr_admin" }), {
       displayName: "  New Name  ",
     });
-    expect(updated.ok).toBe(true);
+    expect(updated.ok).toBeTruthy();
     if (updated.ok) {
       expect(updated.user.displayName).toBe("New Name");
     }
@@ -134,47 +139,47 @@ describe("usersService", () => {
   it("invites a new member and lists the pending invite", async () => {
     const store = openMemoryRegistry();
     const denied = await inviteMember(store, memberActor(), ORG, { email: "x@example.com" });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const invited = await inviteMember(store, adminActor(), ORG, {
       displayName: "Ada",
       email: "ada@example.com",
     });
-    expect(invited.ok).toBe(true);
+    expect(invited.ok).toBeTruthy();
     if (!invited.ok) {
       return;
     }
-    expect(invited.created).toBe(true);
+    expect(invited.created).toBeTruthy();
     const listed = await listInvites(store, adminActor(), ORG);
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (listed.ok) {
-      expect(listed.invites.map((row) => row.email)).toEqual(["ada@example.com"]);
+      expect(listed.invites.map((row) => row.email)).toStrictEqual(["ada@example.com"]);
     }
   });
 
   it("imports a CSV of members and lists them as email contacts", async () => {
     const store = openMemoryRegistry();
     const rows = parseMemberCsv("email,name\nada@example.com,Ada\nbad-line\nal@example.com,Al");
-    expect(rows).toEqual([
+    expect(rows).toStrictEqual([
       { displayName: "Ada", email: "ada@example.com" },
       { displayName: "Al", email: "al@example.com" },
     ]);
     const imported = await importMembers(store, adminActor(), ORG, rows);
-    expect(imported.ok).toBe(true);
+    expect(imported.ok).toBeTruthy();
     if (!imported.ok) {
       return;
     }
     expect(imported.created).toBe(2);
     const contacts = await listEmailContacts(store, adminActor(), ORG);
-    expect(contacts.ok).toBe(true);
+    expect(contacts.ok).toBeTruthy();
     if (contacts.ok) {
-      expect(contacts.users.map((user) => user.email).sort()).toEqual([
+      expect(contacts.users.map((user) => user.email).sort()).toStrictEqual([
         "ada@example.com",
         "al@example.com",
       ]);
     }
     const forbidden = await listEmailContacts(store, memberActor(), ORG);
-    expect(forbidden.ok).toBe(false);
+    expect(forbidden.ok).toBeFalsy();
   });
 
   it("lists a city directory without emails and requires membership", async () => {
@@ -192,23 +197,23 @@ describe("usersService", () => {
     await insertMembership(store, { orgId: "org_other", userId: outsider.id });
 
     const anon = await listDirectory(store, memberActor({ id: "" }), ORG);
-    expect(anon.ok).toBe(false);
+    expect(anon.ok).toBeFalsy();
     if (!anon.ok) {
       expect(anon.error.status).toBe(401);
     }
 
     const foreign = await listDirectory(store, memberActor({ id: outsider.id }), ORG);
-    expect(foreign.ok).toBe(false);
+    expect(foreign.ok).toBeFalsy();
     if (!foreign.ok) {
       expect(foreign.error.status).toBe(403);
     }
 
     const listed = await listDirectory(store, memberActor({ id: ada.id }), ORG);
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
-    expect(listed.users.map((user) => user.id)).toEqual([ada.id]);
+    expect(listed.users.map((user) => user.id)).toStrictEqual([ada.id]);
     expect(listed.users[0]).toMatchObject({ displayName: "Ada", id: ada.id });
     expect(listed.users[0]).not.toHaveProperty("email");
   });
@@ -221,11 +226,11 @@ describe("usersService", () => {
       email: "pref@example.com",
     });
     const loaded = await getEmailPreferences(store, memberActor({ id: user.id }));
-    expect(loaded.ok).toBe(true);
+    expect(loaded.ok).toBeTruthy();
     if (loaded.ok) {
-      expect(loaded.preferences).toEqual(EMAIL_PREF_DEFAULTS);
+      expect(loaded.preferences).toStrictEqual(EMAIL_PREF_DEFAULTS);
     }
-    expect(await findEmailPreferences(store, user.id)).toBeNull();
+    await expect(findEmailPreferences(store, user.id)).resolves.toBeNull();
   });
 
   it("upserts then updates email preferences and ignores unknown keys", async () => {
@@ -240,24 +245,24 @@ describe("usersService", () => {
       extra: "nope",
       likes: true,
     } as { extra: string; likes: boolean });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
-    expect(created.preferences).toEqual({ ...EMAIL_PREF_DEFAULTS, likes: true });
+    expect(created.preferences).toStrictEqual({ ...EMAIL_PREF_DEFAULTS, likes: true });
 
     const updated = await updateEmailPreferences(store, actor, { mentions: false });
-    expect(updated.ok).toBe(true);
+    expect(updated.ok).toBeTruthy();
     if (!updated.ok) {
       return;
     }
-    expect(updated.preferences.likes).toBe(true);
-    expect(updated.preferences.mentions).toBe(false);
+    expect(updated.preferences.likes).toBeTruthy();
+    expect(updated.preferences.mentions).toBeFalsy();
 
     const loaded = await getEmailPreferences(store, actor);
-    expect(loaded.ok).toBe(true);
+    expect(loaded.ok).toBeTruthy();
     if (loaded.ok) {
-      expect(loaded.preferences).toEqual(updated.preferences);
+      expect(loaded.preferences).toStrictEqual(updated.preferences);
     }
   });
 
@@ -275,24 +280,24 @@ describe("usersService", () => {
     });
 
     const before = await listCampaignRecipients(store, ORG);
-    expect(before.map((row) => row.id).sort()).toEqual([ada.id, al.id].sort());
+    expect(before.map((row) => row.id).sort()).toStrictEqual([ada.id, al.id].sort());
 
     const missing = await unsubscribeByEmail(store, "nobody@example.com");
-    expect(missing.ok).toBe(false);
+    expect(missing.ok).toBeFalsy();
     if (!missing.ok) {
       expect(missing.error.status).toBe(404);
     }
 
     const unsubscribed = await unsubscribeByEmail(store, "rcpt2@example.com");
-    expect(unsubscribed.ok).toBe(true);
+    expect(unsubscribed.ok).toBeTruthy();
     if (unsubscribed.ok) {
       expect(unsubscribed.email).toBe("rcpt2@example.com");
     }
     const prefs = await findEmailPreferences(store, al.id);
-    expect(prefs?.weeklyDigest).toBe(false);
+    expect(prefs?.weeklyDigest).toBeFalsy();
 
     const after = await listCampaignRecipients(store, ORG);
-    expect(after).toEqual([{ email: "rcpt@example.com", id: ada.id }]);
+    expect(after).toStrictEqual([{ email: "rcpt@example.com", id: ada.id }]);
   });
 
   it("sets a membership role and 404s unknown users or non-members", async () => {
@@ -309,19 +314,19 @@ describe("usersService", () => {
     });
 
     const unknown = await setMembershipRole(store, ORG, "usr_missing", "admin");
-    expect(unknown.ok).toBe(false);
+    expect(unknown.ok).toBeFalsy();
     if (!unknown.ok) {
       expect(unknown.error.status).toBe(404);
     }
 
     const nonMember = await setMembershipRole(store, ORG, outsider.id, "admin");
-    expect(nonMember.ok).toBe(false);
+    expect(nonMember.ok).toBeFalsy();
     if (!nonMember.ok) {
       expect(nonMember.error.status).toBe(404);
     }
 
     const promoted = await setMembershipRole(store, ORG, ada.id, "admin");
-    expect(promoted.ok).toBe(true);
+    expect(promoted.ok).toBeTruthy();
     if (promoted.ok) {
       expect(promoted).toMatchObject({ id: ada.id, role: "admin" });
     }
@@ -338,33 +343,33 @@ describe("usersService", () => {
       role: "admin",
     });
 
-    expect(await actorFromClerkUserId(store.db, "clk_unknown")).toBeNull();
+    await expect(actorFromClerkUserId(store.db, "clk_unknown")).resolves.toBeNull();
 
     const actor = await actorFromClerkUserId(store.db, "clk_actor");
     expect(actor).not.toBeNull();
     expect(actor?.id).toBe(ada.id);
     expect(actor?.email).toBe("actor@example.com");
-    expect(actor?.isSuperAdmin).toBe(false);
-    expect(actor?.permissions.has("users.view")).toBe(true);
-    expect(actor?.permissions.has("roles.edit")).toBe(false);
+    expect(actor?.isSuperAdmin).toBeFalsy();
+    expect(actor?.permissions.has("users.view")).toBeTruthy();
+    expect(actor?.permissions.has("roles.edit")).toBeFalsy();
 
     await store.db
       .update(store.tables.users)
       .set({ isBanned: true })
       .where(eq(store.tables.users.id, ada.id));
-    expect(await actorFromClerkUserId(store.db, "clk_actor")).toBeNull();
+    await expect(actorFromClerkUserId(store.db, "clk_actor")).resolves.toBeNull();
   });
 
   it("rejects unauthenticated email preference reads and writes", async () => {
     const store = openMemoryRegistry();
     const anon = memberActor({ id: "" });
     const loaded = await getEmailPreferences(store, anon);
-    expect(loaded.ok).toBe(false);
+    expect(loaded.ok).toBeFalsy();
     if (!loaded.ok) {
       expect(loaded.error.status).toBe(401);
     }
     const saved = await updateEmailPreferences(store, anon, { likes: true });
-    expect(saved.ok).toBe(false);
+    expect(saved.ok).toBeFalsy();
     if (!saved.ok) {
       expect(saved.error.status).toBe(401);
     }

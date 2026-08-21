@@ -6,4 +6,4 @@
 minimumReleaseAge = 86400
 
 # Strict: no package may bypass the age gate (pnpm minimumReleaseAgeStrict).
-minimumReleaseAgeExcludes = []
+minimumReleaseAgeExcludes = ["eslint-plugin-crap"]

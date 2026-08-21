@@ -1,4 +1,4 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as slidesRepo from "@/modules/slides/repositories/slidesRepository";
 import type {
   SlideGeneratorState,
@@ -12,7 +12,8 @@ import type {
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { type Empty, err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Empty, Result } from "@/shared/http/errors";
 
 const MAX_BODY_BYTES = 256 * 1024;
 

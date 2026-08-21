@@ -3,7 +3,8 @@ import type { Actor } from "@/shared/auth/actor";
 import { getRegistryStore, openTenantStore } from "@/shared/db/env";
 import type { RegistryStore } from "@/shared/db/registryStore";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import type { AuthContext, RouteContext, TenantContext } from "@/shared/http/routeContext";
 
 export interface CityPageContext {

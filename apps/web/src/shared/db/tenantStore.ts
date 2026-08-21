@@ -1,5 +1,6 @@
 import type { TenantDb } from "./client";
-import { createTenantSchema, type TenantTables } from "./tenantSchema";
+import { createTenantSchema } from "./tenantSchema";
+import type { TenantTables } from "./tenantSchema";
 
 /**
  * A city instance's database handle bound to its orgId.

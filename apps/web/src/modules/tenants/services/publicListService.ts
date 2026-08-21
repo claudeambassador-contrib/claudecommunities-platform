@@ -6,7 +6,8 @@ import {
 import type { TenantRow } from "@/modules/tenants/schema.registry";
 import { tenantSettings } from "@/modules/tenants/schema.registry";
 import type { RegistryDb } from "@/shared/db/client";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import type { TenantContext } from "@/shared/http/routeContext";
 import { generateOrgId, newId, nowMs, toD1Binding, toSafeSlug } from "@/shared/ids";
 
@@ -116,7 +117,7 @@ export async function resolveCityContext(
       return err("not_found", 404);
     }
     return ok({ tenant: toContext(row) });
-  } catch (e) {
-    return err("registry_unavailable", 503, e instanceof Error ? e.message : undefined);
+  } catch (error) {
+    return err("registry_unavailable", 503, error instanceof Error ? error.message : undefined);
   }
 }

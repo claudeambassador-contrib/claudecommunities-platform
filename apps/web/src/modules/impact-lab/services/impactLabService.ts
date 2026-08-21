@@ -1,4 +1,4 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as repo from "@/modules/impact-lab/repositories/impactLabRepository";
 import type {
   CheckInInput,
@@ -15,7 +15,8 @@ import type {
   TeamInput,
 } from "@/modules/impact-lab/types";
 import type { RegistryStore } from "@/shared/db/registryStore";
-import { type Empty, err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Empty, Result } from "@/shared/http/errors";
 
 export const COFFEE_POOL_SIZE = 100;
 export const DEFAULT_ACCESS_CODE = "IMPACTLAB";
@@ -158,7 +159,7 @@ async function uniqueCoffeeCode(store: RegistryStore): Promise<string> {
   for (let i = 0; i < 24; i += 1) {
     const code = genCoffeeCode();
     // Sequential uniqueness checks — each candidate depends on the previous miss.
-    // biome-ignore lint/performance/noAwaitInLoops: uniqueness is checked one code at a time
+    // oxlint-disable-next-line no-await-in-loop -- uniqueness is checked one code at a time
     if (!(await repo.coffeeCodeTaken(store, code))) {
       return code;
     }
@@ -555,8 +556,9 @@ export async function growCoffeePool(
   const startOrder = (await repo.maxCoffeeSortOrder(store)) + 1;
   for (let i = 0; i < target - current; i += 1) {
     // Sequential inserts: each code must be unique against the growing pool.
-    // biome-ignore lint/performance/noAwaitInLoops: pool rows are claimed in order
+    // oxlint-disable-next-line no-await-in-loop -- pool rows are claimed in order
     const code = await uniqueCoffeeCode(store);
+    // oxlint-disable-next-line no-await-in-loop -- pool rows are claimed in order
     await repo.insertCoffeeCode(store, { code, sortOrder: startOrder + i });
   }
   return ok({ total: target });

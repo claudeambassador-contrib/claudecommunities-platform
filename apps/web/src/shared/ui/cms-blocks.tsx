@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
+
 import type { Block } from "@/modules/pages/types";
 import type { RegionConfig } from "@/shared/region";
 
@@ -53,7 +54,7 @@ function CmsBlock(props: {
   return renderCmsBlock(props);
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one branch per CMS block type
+// oxlint-disable-next-line complexity -- one branch per CMS block type
 function renderCmsBlock({
   block,
   citySlug,
@@ -69,7 +70,7 @@ function renderCmsBlock({
 }): ReactElement | null {
   const city = { citySlug };
   switch (block.type) {
-    case "hero":
+    case "hero": {
       return (
         <div className="card stack" key={block.id}>
           {block.badge ? <p className="muted">{block.badge}</p> : null}
@@ -85,7 +86,8 @@ function renderCmsBlock({
           </div>
         </div>
       );
-    case "benefits":
+    }
+    case "benefits": {
       return (
         <div className="card stack" key={block.id}>
           <strong>{block.heading ?? "Why join"}</strong>
@@ -97,7 +99,8 @@ function renderCmsBlock({
           ))}
         </div>
       );
-    case "audienceSplit":
+    }
+    case "audienceSplit": {
       return (
         <div className="card stack" key={block.id}>
           <strong>{block.heading ?? "Who it's for"}</strong>
@@ -114,7 +117,8 @@ function renderCmsBlock({
           ))}
         </div>
       );
-    case "events":
+    }
+    case "events": {
       return (
         <div className="card stack" key={block.id}>
           <strong>Upcoming events</strong>
@@ -136,7 +140,8 @@ function renderCmsBlock({
           )}
         </div>
       );
-    case "discord":
+    }
+    case "discord": {
       return (
         <div className="card stack" key={block.id}>
           <strong>Discord</strong>
@@ -146,7 +151,8 @@ function renderCmsBlock({
           </a>
         </div>
       );
-    case "gallery":
+    }
+    case "gallery": {
       return (
         <div className="card stack" key={block.id}>
           <strong>{block.heading ?? "From recent meetups"}</strong>
@@ -162,7 +168,8 @@ function renderCmsBlock({
           )}
         </div>
       );
-    case "cta":
+    }
+    case "cta": {
       return (
         <div className="card stack" key={block.id}>
           <strong>
@@ -184,21 +191,25 @@ function renderCmsBlock({
           )}
         </div>
       );
-    case "richText":
+    }
+    case "richText": {
       return (
         <div className="card stack" key={block.id}>
           {block.heading ? <strong>{block.heading}</strong> : null}
           <p className="m-0 whitespace-pre-wrap">{block.body}</p>
         </div>
       );
-    case "webinar":
+    }
+    case "webinar": {
       return (
         <a className="card stack" href={block.href} key={block.id} rel="noreferrer">
           <strong>{block.title}</strong>
           <p className="muted m-0">{block.description}</p>
         </a>
       );
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }

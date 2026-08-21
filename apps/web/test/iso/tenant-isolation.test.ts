@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+
 import Database from "better-sqlite3";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
+
 import { events } from "@/modules/events/schema.tenant";
 import { createTenantSchema } from "@/shared/db/tenantSchema";
 import { tenantStore } from "@/shared/db/tenantStore";
@@ -12,7 +14,7 @@ function openTenantDb(orgId: string, binding: string) {
   const sqlite = new Database(":memory:");
   const sql = readFileSync(
     resolve(import.meta.dirname, "../../drizzle/tenant/0001_initial.sql"),
-    "utf8",
+    "utf-8",
   );
   sqlite.exec(sql);
   const db = drizzle(sqlite, { schema: createTenantSchema() });

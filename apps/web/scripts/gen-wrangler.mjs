@@ -6,10 +6,9 @@
  * after optional substitution (local database_ids are literals).
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const ROOT = dirname(fileURLToPath(import.meta.url));
+const ROOT = import.meta.dirname;
 const APP_ROOT = resolve(ROOT, "..");
 const templatePath = resolve(APP_ROOT, "wrangler.template.jsonc");
 const outPath = resolve(APP_ROOT, "wrangler.jsonc");
@@ -19,7 +18,7 @@ function loadEnvFile(path) {
     return {};
   }
   const out = {};
-  for (const line of readFileSync(path, "utf8").split("\n")) {
+  for (const line of readFileSync(path, "utf-8").split("\n")) {
     const t = line.trim();
     if (!t || t.startsWith("#")) {
       continue;
@@ -31,7 +30,7 @@ function loadEnvFile(path) {
     out[t.slice(0, i).trim()] = t
       .slice(i + 1)
       .trim()
-      .replace(/^["']|["']$/g, "");
+      .replaceAll(/^["']|["']$/g, "");
   }
   return out;
 }
@@ -42,9 +41,9 @@ const env = {
   ...process.env,
 };
 
-let text = readFileSync(templatePath, "utf8");
+let text = readFileSync(templatePath, "utf-8");
 const missing = [];
-text = text.replace(/\$\{([A-Z0-9_]+)\}/g, (_, key) => {
+text = text.replaceAll(/\$\{([A-Z0-9_]+)\}/g, (_, key) => {
   const v = env[key];
   if (v === null || v === undefined || v === "") {
     missing.push(key);

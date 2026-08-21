@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   createCourse,
   enrollInCourse,
@@ -8,6 +9,7 @@ import {
   removeCourse,
   updateCourse,
 } from "@/modules/courses/services/coursesService";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 describe("coursesService", () => {
@@ -18,30 +20,30 @@ describe("coursesService", () => {
       slug: "intro",
       title: "Intro to Claude",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     expect(created.course.lessons).toHaveLength(1);
 
     const hidden = await listPublished(store);
-    expect(hidden.ok).toBe(true);
+    expect(hidden.ok).toBeTruthy();
     if (!hidden.ok) {
       return;
     }
-    expect(hidden.courses).toEqual([]);
+    expect(hidden.courses).toStrictEqual([]);
 
     const published = await updateCourse(store, adminActor(), created.course.id, {
       isPublished: true,
     });
-    expect(published.ok).toBe(true);
+    expect(published.ok).toBeTruthy();
 
     const listed = await listPublished(store);
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
-    expect(listed.courses.map((c) => c.slug)).toEqual(["intro"]);
+    expect(listed.courses.map((c) => c.slug)).toStrictEqual(["intro"]);
   });
 
   it("rejects create without courses.edit and duplicate slugs", async () => {
@@ -50,12 +52,12 @@ describe("coursesService", () => {
       slug: "x",
       title: "Nope",
     });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const first = await createCourse(store, adminActor(), { slug: "dup", title: "A" });
-    expect(first.ok).toBe(true);
+    expect(first.ok).toBeTruthy();
     const clash = await createCourse(store, adminActor(), { slug: "dup", title: "B" });
-    expect(clash.ok).toBe(false);
+    expect(clash.ok).toBeFalsy();
     if (!clash.ok) {
       expect(clash.error.status).toBe(409);
     }
@@ -68,21 +70,21 @@ describe("coursesService", () => {
       slug: "enroll",
       title: "Enroll me",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     const first = await enrollInCourse(store, memberActor(), created.course.id);
-    expect(first.ok).toBe(true);
+    expect(first.ok).toBeTruthy();
     const again = await enrollInCourse(store, memberActor(), created.course.id);
-    expect(again.ok).toBe(true);
+    expect(again.ok).toBeTruthy();
 
     const fetched = await getCourse(store, created.course.id, memberActor());
-    expect(fetched.ok).toBe(true);
+    expect(fetched.ok).toBeTruthy();
     if (!fetched.ok) {
       return;
     }
-    expect(fetched.course.enrolled).toBe(true);
+    expect(fetched.course.enrolled).toBeTruthy();
   });
 
   it("hides drafts from members and allows admin list/delete", async () => {
@@ -91,21 +93,21 @@ describe("coursesService", () => {
       slug: "draft",
       title: "Draft",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     const hidden = await getCourse(store, created.course.id, memberActor());
-    expect(hidden.ok).toBe(false);
+    expect(hidden.ok).toBeFalsy();
 
     const adminList = await listAllAdmin(store, adminActor());
-    expect(adminList.ok).toBe(true);
+    expect(adminList.ok).toBeTruthy();
     if (!adminList.ok) {
       return;
     }
     expect(adminList.courses).toHaveLength(1);
 
     const removed = await removeCourse(store, adminActor(), created.course.id);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
   });
 });

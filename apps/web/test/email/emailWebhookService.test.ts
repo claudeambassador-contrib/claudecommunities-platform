@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+
 import { createCampaign } from "@/modules/email/services/emailCampaignsService";
 import { sendCampaign } from "@/modules/email/services/emailSendService";
 import {
@@ -14,6 +15,7 @@ import {
   insertUser,
   listOrgRecipients,
 } from "@/modules/identity/repositories/directoryRepository";
+
 import { openMemoryRegistry } from "../helpers/registry";
 import { adminActor, openMemoryTenant } from "../helpers/tenant";
 
@@ -41,10 +43,10 @@ describe("emailWebhookService", () => {
     });
 
     const ignored = await applyResendEvent(store, { resendId: "re_bounce", type: "email.opened" });
-    expect(ignored.ok && ignored.updated).toBe(false);
+    expect(ignored.ok && ignored.updated).toBeFalsy();
 
     const bounced = await applyResendEvent(store, { resendId: "re_bounce", type: "email.bounced" });
-    expect(bounced.ok && bounced.updated).toBe(true);
+    expect(bounced.ok && bounced.updated).toBeTruthy();
     if (bounced.ok) {
       expect(bounced.status).toBe("bounced");
     }
@@ -66,7 +68,7 @@ describe("emailWebhookService", () => {
     });
     await insertMembership(registry, { orgId: ORG, userId: ada.id });
 
-    expect(await listOrgRecipients(registry, ORG)).toEqual([
+    await expect(listOrgRecipients(registry, ORG)).resolves.toStrictEqual([
       { email: "ada@example.com", id: ada.id },
     ]);
 
@@ -75,14 +77,14 @@ describe("emailWebhookService", () => {
     expect(verifyUnsubscribeToken(token, "other")).toBeNull();
 
     const unsubscribed = await unsubscribeEmail(registry, ada.email);
-    expect(unsubscribed.ok).toBe(true);
-    expect(await listOrgRecipients(registry, ORG)).toEqual([]);
+    expect(unsubscribed.ok).toBeTruthy();
+    await expect(listOrgRecipients(registry, ORG)).resolves.toStrictEqual([]);
 
     const created = await createCampaign(store, adminActor(), {
       name: "Blast",
       subject: "News",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }

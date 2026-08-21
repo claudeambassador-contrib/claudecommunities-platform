@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
+
 import { getCityPublic } from "@/modules/cities/services/citiesService";
 import { loadCityPage } from "@/shared/http/cityPage";
 import { EmptyCard, PageHeader } from "@/shared/ui/page";

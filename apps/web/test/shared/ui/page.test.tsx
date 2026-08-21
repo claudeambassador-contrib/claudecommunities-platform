@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+
 import { DeniedCard, EmptyCard, ItemList, PageHeader, SignInCard } from "@/shared/ui/page";
 
 const MEETUP_RE = /Meetup/;
 
-describe("PageHeader", () => {
+describe(PageHeader, () => {
   it("renders the title as a heading", () => {
     render(<PageHeader title="Events" />);
     expect(screen.getByRole("heading", { name: "Events" })).toBeInTheDocument();
@@ -29,14 +30,14 @@ describe("PageHeader", () => {
   });
 });
 
-describe("EmptyCard", () => {
+describe(EmptyCard, () => {
   it("renders its children", () => {
     render(<EmptyCard>Nothing here yet.</EmptyCard>);
     expect(screen.getByText("Nothing here yet.")).toBeInTheDocument();
   });
 });
 
-describe("DeniedCard", () => {
+describe(DeniedCard, () => {
   it("shows default title and default reason", () => {
     render(<DeniedCard />);
     expect(screen.getByRole("heading", { name: "Access denied" })).toBeInTheDocument();
@@ -55,7 +56,7 @@ describe("DeniedCard", () => {
   });
 });
 
-describe("SignInCard", () => {
+describe(SignInCard, () => {
   it("links to /login by default", () => {
     render(<SignInCard />);
     expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
@@ -67,7 +68,7 @@ describe("SignInCard", () => {
   });
 });
 
-describe("ItemList", () => {
+describe(ItemList, () => {
   it("renders the empty message when there are no items", () => {
     render(<ItemList empty="No events yet." items={[]} />);
     expect(screen.getByText("No events yet.")).toBeInTheDocument();

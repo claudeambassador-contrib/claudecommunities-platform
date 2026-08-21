@@ -1,4 +1,4 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as activityRepo from "@/modules/activity/repositories/activityRepository";
 import type {
   ActivityItem,
@@ -6,7 +6,8 @@ import type {
   RecordActivityInput,
 } from "@/modules/activity/types";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { ok, type Result } from "@/shared/http/errors";
+import { ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 export async function recordActivity(
   store: TenantStore,

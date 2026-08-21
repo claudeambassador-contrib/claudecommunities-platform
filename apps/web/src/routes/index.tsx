@@ -2,6 +2,7 @@ import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/tanstack-re
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
+
 import { listPublicTenants } from "@/modules/tenants/services/publicListService";
 import { isClerkPublishableConfigured } from "@/shared/auth/clerk";
 import { loadRegistryPage } from "@/shared/http/registryPage";

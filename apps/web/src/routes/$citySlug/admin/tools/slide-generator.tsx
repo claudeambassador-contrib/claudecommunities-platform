@@ -1,8 +1,8 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import type { ReactElement } from "react";
-import { type ChangeEvent, useCallback, useRef, useState } from "react";
+import { type ReactElement, type ChangeEvent, useCallback, useRef, useState } from "react";
 import { z } from "zod";
+
 import {
   createPreset,
   getState,

@@ -35,7 +35,7 @@ export function resendTransportFromEnv(env: Record<string, unknown>): EmailTrans
     async sendBatch(messages) {
       const results: EmailSendResult[] = [];
       for (const batch of chunkMessages(messages)) {
-        // biome-ignore lint/performance/noAwaitInLoops: Resend rate-limits batch POSTs
+        // oxlint-disable-next-line no-await-in-loop -- Resend rate-limits batch POSTs
         const response = await fetch("https://api.resend.com/emails/batch", {
           body: JSON.stringify(
             batch.map((message) => ({
@@ -51,8 +51,9 @@ export function resendTransportFromEnv(env: Record<string, unknown>): EmailTrans
           },
           method: "POST",
         });
+        // oxlint-disable-next-line no-await-in-loop -- Resend rate-limits batch POSTs
         const body = (await response.json().catch(() => null)) as {
-          data?: Array<{ id?: string }>;
+          data?: { id?: string }[];
           error?: { message?: string };
         } | null;
         if (!response.ok) {

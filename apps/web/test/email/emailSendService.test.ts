@@ -1,10 +1,12 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+
 import { createCampaign, getCampaign } from "@/modules/email/services/emailCampaignsService";
 import { sendCampaign } from "@/modules/email/services/emailSendService";
 import type { EmailTransport } from "@/modules/email/transport";
 import { insertMembership, insertUser } from "@/modules/identity/repositories/directoryRepository";
 import { getRegionConfig } from "@/shared/region";
+
 import { openMemoryRegistry } from "../helpers/registry";
 import { adminActor, openMemoryTenant } from "../helpers/tenant";
 
@@ -71,7 +73,7 @@ describe("emailSendService", () => {
       name: "Blast",
       subject: "News",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -87,12 +89,12 @@ describe("emailSendService", () => {
 
     const transport = recordingTransport();
     const result = await sendCampaign(store, registry, created.campaign.id, transport);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     if (!result.ok) {
       return;
     }
     expect(result).toMatchObject({ failed: 0, sent: 1, skipped: 1 });
-    expect(transport.to).toEqual(["ada@example.com"]);
+    expect(transport.to).toStrictEqual(["ada@example.com"]);
     expect(transport.from[0]).toBe(`hello@${getRegionConfig().senderDomain}`);
 
     const loaded = await getCampaign(store, adminActor(), created.campaign.id);
@@ -111,7 +113,7 @@ describe("emailSendService", () => {
     const store = openMemoryTenant(ORG);
     const registry = openMemoryRegistry();
     const result = await sendCampaign(store, registry, "cmp_missing", recordingTransport());
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
     if (!result.ok) {
       expect(result.error.status).toBe(404);
     }

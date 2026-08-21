@@ -3,16 +3,14 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { useCallback, useState } from "react";
 import { z } from "zod";
+
 import {
   createAutomation,
   listAutomations,
   setAutomationStatus,
 } from "@/modules/email/services/emailOpsService";
-import {
-  AUTOMATION_LIVE_STATUSES,
-  type AutomationDetail,
-  type AutomationLiveStatus,
-} from "@/modules/email/types";
+import { AUTOMATION_LIVE_STATUSES } from "@/modules/email/types";
+import type { AutomationDetail, AutomationLiveStatus } from "@/modules/email/types";
 import { cityHandler, cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { ok } from "@/shared/http/errors";
 import { Can } from "@/shared/ui/can";

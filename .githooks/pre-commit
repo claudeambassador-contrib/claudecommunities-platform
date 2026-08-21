@@ -1,7 +1,7 @@
 #!/bin/sh
 # Cross-platform pre-commit hook (Linux, macOS, and Windows via Git's bundled bash).
 # Wired up by the package.json "prepare" script: git config core.hooksPath .githooks
-# Runs the full clean-codebase gate: biome lint+format, eslint, and tsc.
+# Runs the apps/web clean-codebase gate: oxlint + oxfmt + tsc.
 #
 # Skip in a pinch with:  git commit --no-verify
 
@@ -14,7 +14,7 @@ else
   RUN="npm run"
 fi
 
-echo "pre-commit: running 'bun run check' (biome + eslint + tsc)…"
+echo "pre-commit: running 'bun run check' (apps/web oxlint + oxfmt + tsc)…"
 $RUN check
 
 echo "pre-commit: clean ✔"

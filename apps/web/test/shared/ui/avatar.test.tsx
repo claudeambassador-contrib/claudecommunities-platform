@@ -1,8 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+
 import { Avatar } from "@/shared/ui/avatar";
 
-describe("Avatar", () => {
+describe(Avatar, () => {
   it("renders an image when src is provided", () => {
     render(<Avatar name="Ada Lovelace" src="https://example.com/a.png" />);
     const img = screen.getByRole("img", { name: "Ada Lovelace" });

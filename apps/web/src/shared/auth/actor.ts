@@ -1,5 +1,7 @@
-import { hasPermission, type Permission } from "@/shared/auth/permissions";
-import { type Empty, err, ok, type Result } from "@/shared/http/errors";
+import { hasPermission } from "@/shared/auth/permissions";
+import type { Permission } from "@/shared/auth/permissions";
+import { err, ok } from "@/shared/http/errors";
+import type { Empty, Result } from "@/shared/http/errors";
 
 /** Transport-agnostic actor passed into domain services. */
 export interface Actor {

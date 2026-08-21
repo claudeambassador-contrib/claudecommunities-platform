@@ -1,6 +1,7 @@
 import { SignIn } from "@clerk/tanstack-react-start";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
+
 import { isClerkPublishableConfigured } from "@/shared/auth/clerk";
 
 export const Route = createFileRoute("/login")({

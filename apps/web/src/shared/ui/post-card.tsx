@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
+
 import type { FeedCard } from "@/modules/community/types";
 import { Avatar } from "@/shared/ui/avatar";
 import { RemoteImage } from "@/shared/ui/remote-image";

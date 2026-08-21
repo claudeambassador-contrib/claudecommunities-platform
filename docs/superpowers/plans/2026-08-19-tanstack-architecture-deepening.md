@@ -28,11 +28,13 @@
 ### Task 1: `guarded()` — one deep route-guard interface
 
 **Files:**
+
 - Create: `src/shared/http/guarded.ts`
 - Create: `test/shared/guarded.test.ts`
 - Modify: `src/routes/$citySlug/admin/courses/index.tsx` (exemplar conversion)
 
 **Interfaces:**
+
 - Consumes: `loadCityPage(citySlug)` from `@/shared/http/cityPage` (returns `Result<CityPageContext>` where `CityPageContext = { actor: Actor | null; auth; ctx; registry; store; tenant }`), `ensurePermission(actor, permission)` from `@/shared/auth/actor`, `Result`/`ok` from `@/shared/http/errors`, `Permission` type from `@/shared/auth/permissions`.
 - Produces: `guarded<T>(citySlug, permission, fn)` and types `Guarded<T>`, `GuardedPage`. Tasks 2 and 3 convert routes to call it. Exact signature below.
 
@@ -91,8 +93,10 @@ describe("guarded", () => {
 
   it("maps a service error to denied", async () => {
     vi.mocked(loadCityPage).mockResolvedValue(page() as never);
-    const result = await guarded("sydney", null, async () =>
-      err("invalid_input", 400) as Result<{ x: number }>,
+    const result = await guarded(
+      "sydney",
+      null,
+      async () => err("invalid_input", 400) as Result<{ x: number }>,
     );
     expect(result).toEqual({ allowed: false, reason: "invalid_input" });
   });
@@ -236,10 +240,12 @@ git commit -m "refactor(start): add guarded() route-guard interface with exempla
 ### Task 2: Sweep batch A — convert admin routes to `guarded()`
 
 **Files:**
+
 - Modify (every file that matches the ritual, batch A):
   `src/routes/admin/index.tsx`, `src/routes/$citySlug/admin/settings.tsx`, `src/routes/$citySlug/admin/import.tsx`, `src/routes/$citySlug/admin/index.tsx`, `src/routes/$citySlug/admin/speakers.tsx`, `src/routes/$citySlug/admin/roles.tsx`, `src/routes/$citySlug/admin/analytics.tsx`, `src/routes/$citySlug/admin/invite.tsx`, `src/routes/$citySlug/admin/cities.tsx`, `src/routes/$citySlug/admin/badges.tsx`, `src/routes/$citySlug/admin/users.tsx`, `src/routes/$citySlug/admin/route.tsx`, `src/routes/$citySlug/admin/tiers.tsx`, `src/routes/$citySlug/admin/posts.tsx`, `src/routes/$citySlug/admin/tools/attendance-planner.tsx`, `src/routes/$citySlug/admin/tools/attendee-analytics.tsx`, `src/routes/$citySlug/admin/tools/index.tsx`, `src/routes/$citySlug/admin/tools/qr-generator.tsx`, `src/routes/$citySlug/admin/tools/slide-generator.tsx`, `src/routes/$citySlug/admin/industries/new.tsx`, `src/routes/$citySlug/admin/industries/index.tsx`, `src/routes/$citySlug/admin/industries/$slug.tsx`
 
 **Interfaces:**
+
 - Consumes: `guarded(citySlug, permission, fn)` and `GuardedPage` from `@/shared/http/guarded` (Task 1); `ok` from `@/shared/http/errors`.
 - Produces: nothing new — behaviour-preserving conversion.
 
@@ -305,9 +311,11 @@ git commit -m "refactor(start): route batch A onto guarded()"
 ### Task 3: Sweep batch B — remaining admin routes to `guarded()`
 
 **Files:**
+
 - Modify: `src/routes/$citySlug/admin/courses/$id/edit.tsx`, `src/routes/$citySlug/admin/courses/new.tsx`, `src/routes/$citySlug/admin/social/settings.tsx`, `src/routes/$citySlug/admin/social/index.tsx`, `src/routes/$citySlug/admin/pages/index.tsx`, `src/routes/$citySlug/admin/pages/new.tsx`, `src/routes/$citySlug/admin/pages/$id.tsx`, `src/routes/$citySlug/admin/pages/home.tsx`, `src/routes/$citySlug/admin/events/index.tsx`, `src/routes/$citySlug/admin/events/new.tsx`, `src/routes/$citySlug/admin/email/new.tsx`, `src/routes/$citySlug/admin/email/settings.tsx`, `src/routes/$citySlug/admin/email/$id.tsx`, `src/routes/$citySlug/admin/email/contacts.tsx`, `src/routes/$citySlug/admin/email/templates.tsx`, `src/routes/$citySlug/admin/email/analytics.tsx`, `src/routes/$citySlug/admin/email/index.tsx`, `src/routes/$citySlug/admin/email/automations.tsx`, plus any other file `grep -rln "allowed: false as const" src/routes` still reports.
 
 **Interfaces:**
+
 - Consumes: `guarded` from `@/shared/http/guarded`, `ok` from `@/shared/http/errors`.
 - Produces: nothing new.
 
@@ -337,6 +345,7 @@ git commit -m "refactor(start): route batch B onto guarded()"
 ### Task 4: Pull cron + publish workflow behind the social seam
 
 **Files:**
+
 - Modify: `src/worker-scheduled.ts`
 - Modify: `src/workflows/publish-post.ts`
 - Modify: `src/modules/social/services/socialService.ts`
@@ -345,6 +354,7 @@ git commit -m "refactor(start): route batch B onto guarded()"
 - Test: `test/social/publishSeam.test.ts` (create)
 
 **Interfaces:**
+
 - Consumes: `socialRepo.listDueScheduled(store, now): Promise<SocialPostSummary[]>`, `socialRepo.claimForPublish(store, postId)`, `socialRepo.updatePostById(store, postId, patch)`, `socialRepo.getPostById(store, postId)` — all existing in `src/modules/social/repositories/socialRepository.ts`; `TenantStore`; `Result`/`ok`/`err`.
 - Produces (later steps and the cron rely on these exact names):
   - `socialService.claimPostForPublish(store: TenantStore, postId: string): Promise<Result<{ attempt: number; claimed: boolean }>>`
@@ -419,7 +429,9 @@ describe("publish seam", () => {
     });
     expect(starter).toBeDefined();
     await starter?.start({ d1Binding: "TENANT_TEST", orgId: "org_test", postId: "p1" });
-    expect(calls).toEqual([{ params: { d1Binding: "TENANT_TEST", orgId: "org_test", postId: "p1" } }]);
+    expect(calls).toEqual([
+      { params: { d1Binding: "TENANT_TEST", orgId: "org_test", postId: "p1" } },
+    ]);
   });
 });
 ```
@@ -486,8 +498,7 @@ export interface PublishStarter {
 
 export function publishStarterFromEnv(env: Record<string, unknown>): PublishStarter | undefined {
   const binding = env.PUBLISH_POST as
-    | { create: (opts: { params: unknown }) => Promise<unknown> }
-    | undefined;
+    { create: (opts: { params: unknown }) => Promise<unknown> } | undefined;
   if (!binding?.create) {
     return undefined;
   }
@@ -527,6 +538,7 @@ Keep the dynamic `await import()` style — it exists to keep `cloudflare:worker
 - [ ] **Step 6: Rewire `src/workflows/publish-post.ts`**
 
 Replace direct `socialRepo` calls with the service seam:
+
 - `socialRepo.claimForPublish(store, postId)` → `claimPostForPublish(store, postId)` (import from `@/modules/social/services/socialService`).
 - The no-connector branch's `socialRepo.updatePostById(store, postId, { errorMessage, status: "failed" })` → `markPublishFailed(store, postId, "No social connector is configured on this Worker")`.
 - `socialRepo.getPostById(store, postId)` → keep, **but** move it behind the service too if `socialService` already exposes a `getPost`-style function — check first; if none exists, add `export async function getPostForPublish(store: TenantStore, postId: string)` that forwards to `socialRepo.getPostById` and use it. Remove the `socialRepo` import from the workflow entirely.
@@ -547,6 +559,7 @@ git commit -m "refactor(start): cron and publish workflow go through the social 
 ### Task 5: Evict the ambient env from tenants + identity services
 
 **Files:**
+
 - Modify: `src/modules/tenants/services/publicListService.ts`
 - Modify: `src/modules/identity/services/sessionService.ts`
 - Modify: `src/modules/system/services/mcpHttp.ts`
@@ -555,6 +568,7 @@ git commit -m "refactor(start): cron and publish workflow go through the social 
 - Test: `test/tenants/publicListService.test.ts` (create)
 
 **Interfaces:**
+
 - Consumes: `RegistryDb` type from `@/shared/db/client`; `getRegistryDb()` from `@/shared/db/env` (now called only by composition points); `openMemoryRegistry()` from `test/helpers/registry.ts`.
 - Produces (exact new signatures — every caller must pass the db):
   - `resolveCityContext(db: RegistryDb, slug: string): Promise<Result<{ tenant: TenantContext }>>`
@@ -635,6 +649,7 @@ Expected: FAIL — current functions take no `db` parameter (type error / wrong 
 Find them: `cd apps/web && grep -rn "resolveCityContext\|listPublicTenants\|provisionCity" src scripts --include="*.ts" --include="*.tsx" --include="*.mjs"`
 
 Known callers and their fixes:
+
 - `src/modules/identity/services/sessionService.ts` → `buildCityRouteContext`: build `const registryDb = getRegistryDb();` once at the top, pass to `resolveCityContext(registryDb, citySlug)`, reuse the same `registryDb` for `usersRepo.findMembership(...)` and for `ctx.registryDb` (deleting the two extra `getRegistryDb()` calls). Also change `syncSessionUser` to accept `db: RegistryDb` and use it for `usersRepo.upsertFromClerk`; `buildCityRouteContext` passes `registryDb` in. Import `resolveCityContext` from `@/modules/tenants/services/publicListService` directly (drop the `resolveCityService` shim import — the shim dies in Task 8).
 - `src/modules/system/services/mcpHttp.ts` → wherever it calls the changed functions, obtain `const db = getRegistryDb();` at the handler top (mcpHttp is an HTTP composition point — env access is allowed there per Global Constraints? It is not in the allowlist, so instead import `getRegistryDb` from `@/shared/db/env` — this file already uses `workerEnv()`; keep its env usage as-is, only add the `db` argument to the changed calls).
 - `src/modules/community/services/postsService.ts` → same: it already calls `openTenantStore` from env; give it the db argument from `getRegistryDb()` at its composition entry, or accept a db param if its own callers are routes (choose the smallest change that compiles and keeps tests green; note the choice in the report).
@@ -663,11 +678,13 @@ git commit -m "refactor(start): registry services take RegistryDb instead of amb
 ### Task 6: Memoise the session/city hot path
 
 **Files:**
+
 - Create: `src/shared/ttlMemo.ts`
 - Modify: `src/modules/identity/services/sessionService.ts`
 - Test: `test/shared/ttlMemo.test.ts` (create)
 
 **Interfaces:**
+
 - Consumes: Task 5's shapes (`syncSessionUser(db)`, `buildCityRouteContext` composition point).
 - Produces: `ttlMemo<T>(ttlMs: number): { get(key: string): T | undefined; set(key: string, value: T): void }`.
 
@@ -782,12 +799,14 @@ git commit -m "perf(start): 60s isolate memo for Clerk session sync and city res
 ### Task 7: A real upload interface — `storeUpload` behind the seam
 
 **Files:**
+
 - Modify: `src/modules/system/services/uploadService.ts`
 - Modify: `src/routes/api/upload.ts`
 - Modify: `src/routes/api/upload/mcp.ts`
 - Test: `test/system/uploadService.test.ts` (create)
 
 **Interfaces:**
+
 - Consumes: `putBytes(key, bytes, contentType)`, `publicUrl(key)`, `tenantObjectKey(r2Prefix, ...parts)`, `isStorageConfigured()` from `@/shared/storage/r2`; `Result`/`ok`/`err`.
 - Produces:
   - `sanitizeFilename(name: string): string`
@@ -795,6 +814,7 @@ git commit -m "perf(start): 60s isolate memo for Clerk session sync and city res
   - `storeUpload(form: FormData, opts?: { r2Prefix?: string | null }): Promise<Result<{ key: string; url: string }>>`
 
 **Security notes this task fixes (deliberate behaviour changes, already ruled):**
+
 1. `POST /api/upload` currently requires **no authentication** — anyone can write to the bucket. It now requires a signed-in Clerk user (via `syncSessionUser`). MCP upload keeps its bearer check.
 2. `file.name` currently goes into the R2 key raw — sanitize it.
 3. `folder` is a raw user string — restrict to a safe charset.
@@ -804,10 +824,7 @@ git commit -m "perf(start): 60s isolate memo for Clerk session sync and city res
 ```ts
 // test/system/uploadService.test.ts
 import { describe, expect, it } from "vitest";
-import {
-  buildUploadKey,
-  sanitizeFilename,
-} from "@/modules/system/services/uploadService";
+import { buildUploadKey, sanitizeFilename } from "@/modules/system/services/uploadService";
 
 describe("sanitizeFilename", () => {
   it("strips path separators and odd characters", () => {
@@ -961,6 +978,7 @@ git commit -m "refactor(start): single storeUpload seam with auth, sanitized key
 ### Task 8: Shim sweep — delete pass-throughs, fix the stray route
 
 **Files:**
+
 - Delete: `src/modules/tenants/services/resolveCityService.ts`
 - Delete: `src/modules/social/services/socialPostsService.ts` (fold into `socialService.ts`)
 - Modify: `src/modules/social/services/socialService.ts` (absorb `countScheduled`)
@@ -968,6 +986,7 @@ git commit -m "refactor(start): single storeUpload seam with auth, sanitized key
 - Modify: `src/routes/$citySlug/events/index.tsx` (use `loadCityPage` instead of hand-rolled resolve + open)
 
 **Interfaces:**
+
 - Consumes: `loadCityPage` from `@/shared/http/cityPage`; `publicListService` exports (post-Task 5 signatures); existing `socialRepo.countByStatus(store, status)`.
 - Produces: `socialService.countScheduled(store, actor)` — same behaviour the deleted file had.
 
@@ -1050,11 +1069,13 @@ Note: `src/workflows/slide-export.ts` (stub) is deliberately **not** deleted —
 ### Task 9: Repo hygiene — shared row helpers + per-repo table slices
 
 **Files:**
+
 - Create: `src/shared/db/rows.ts`
 - Test: `test/shared/rows.test.ts` (create)
 - Modify: every `src/modules/*/repositories/*.ts` that defines a local `first<T>` (≈19 files) or a local `iso(value)` (≈5 files) — find with grep; and add a table-slice type to each repository file (20 files).
 
 **Interfaces:**
+
 - Consumes: `TenantTables` from `@/shared/db/tenantSchema`; `TenantStore`.
 - Produces:
   - `first<T>(rows: T[]): T | undefined`

@@ -5,117 +5,117 @@
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
   "observability": {
-    "enabled": true
+    "enabled": true,
   },
   "vars": {
     "VITE_REGION": "au",
-    "MAINTENANCE_MODE": "false"
+    "MAINTENANCE_MODE": "false",
   },
   "d1_databases": [
     {
       "binding": "REGISTRY",
       "database_name": "claudecommunity-registry-local",
       "database_id": "local-registry",
-      "migrations_dir": "drizzle/registry"
+      "migrations_dir": "drizzle/registry",
     },
     {
       "binding": "TENANT_SYDNEY",
       "database_name": "claudecommunity-sydney-local",
       "database_id": "local-sydney",
-      "migrations_dir": "drizzle/tenant"
+      "migrations_dir": "drizzle/tenant",
     },
     {
       "binding": "TENANT_MELBOURNE",
       "database_name": "claudecommunity-melbourne-local",
       "database_id": "local-melbourne",
-      "migrations_dir": "drizzle/tenant"
-    }
+      "migrations_dir": "drizzle/tenant",
+    },
   ],
   "r2_buckets": [
     {
       "binding": "STORAGE",
-      "bucket_name": "claudecommunity-uploads-local"
-    }
+      "bucket_name": "claudecommunity-uploads-local",
+    },
   ],
   "browser": {
-    "binding": "BROWSER"
+    "binding": "BROWSER",
   },
   "triggers": {
-    "crons": ["*/15 * * * *"]
+    "crons": ["*/15 * * * *"],
   },
   "workflows": [
     {
       "name": "publish-post",
       "binding": "PUBLISH_POST",
-      "class_name": "PublishPostWorkflow"
+      "class_name": "PublishPostWorkflow",
     },
     {
       "name": "slide-export",
       "binding": "SLIDE_EXPORT",
-      "class_name": "SlideExportWorkflow"
+      "class_name": "SlideExportWorkflow",
     },
     {
       "name": "campaign-send",
       "binding": "CAMPAIGN_SEND",
-      "class_name": "CampaignSendWorkflow"
-    }
+      "class_name": "CampaignSendWorkflow",
+    },
   ],
   "env": {
     "staging": {
       "name": "claudecommunities-start-staging",
       "vars": {
         "VITE_REGION": "au",
-        "MAINTENANCE_MODE": "false"
+        "MAINTENANCE_MODE": "false",
       },
       "d1_databases": [
         {
           "binding": "REGISTRY",
           "database_name": "claudecommunity-registry-staging",
           "database_id": "${REGISTRY_DATABASE_ID}",
-          "migrations_dir": "drizzle/registry"
+          "migrations_dir": "drizzle/registry",
         },
         {
           "binding": "TENANT_SYDNEY",
           "database_name": "claudecommunity-sydney-staging",
           "database_id": "${TENANT_SYDNEY_DATABASE_ID}",
-          "migrations_dir": "drizzle/tenant"
+          "migrations_dir": "drizzle/tenant",
         },
         {
           "binding": "TENANT_MELBOURNE",
           "database_name": "claudecommunity-melbourne-staging",
           "database_id": "${TENANT_MELBOURNE_DATABASE_ID}",
-          "migrations_dir": "drizzle/tenant"
-        }
+          "migrations_dir": "drizzle/tenant",
+        },
       ],
       "r2_buckets": [
         {
           "binding": "STORAGE",
-          "bucket_name": "claudecommunity-uploads-staging"
-        }
+          "bucket_name": "claudecommunity-uploads-staging",
+        },
       ],
       "browser": {
-        "binding": "BROWSER"
+        "binding": "BROWSER",
       },
       "triggers": {
-        "crons": ["*/15 * * * *"]
+        "crons": ["*/15 * * * *"],
       },
       "workflows": [
         {
           "name": "publish-post-staging",
           "binding": "PUBLISH_POST",
-          "class_name": "PublishPostWorkflow"
+          "class_name": "PublishPostWorkflow",
         },
         {
           "name": "slide-export-staging",
           "binding": "SLIDE_EXPORT",
-          "class_name": "SlideExportWorkflow"
+          "class_name": "SlideExportWorkflow",
         },
         {
           "name": "campaign-send-staging",
           "binding": "CAMPAIGN_SEND",
-          "class_name": "CampaignSendWorkflow"
-        }
-      ]
-    }
-  }
+          "class_name": "CampaignSendWorkflow",
+        },
+      ],
+    },
+  },
 }

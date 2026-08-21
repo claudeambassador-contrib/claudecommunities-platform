@@ -1,8 +1,9 @@
 # TanStack Start cutover runbook
 
 There is **no production traffic**. Staging is the only Cloudflare target.
-Once Start smokes on staging, delete the root Next/Prisma/OpenNext tree.
-Do **not** ETL from the Next shared D1 — Start D1s are clean-slate.
+The root Next/Prisma/OpenNext tree is gone. Staging is the only Cloudflare
+target. Do **not** ETL from any leftover Next shared D1 — Start D1s are
+clean-slate.
 
 ## Preconditions
 
@@ -35,17 +36,8 @@ CLAUDECOMMUNITY_CLI_URL=http://localhost:3001 bun src/index.ts login
 # or --server https://<staging-host>
 ```
 
-## Retire Next / Prisma / OpenNext
+## Retired
 
-Only after the staging smoke above:
-
-```bash
-# Destructive — do not run until Start is the staging Worker:
-# - prisma/, migrations/ (legacy), open-next.config.ts
-# - @opennextjs/cloudflare, next, @prisma/*, @clerk/nextjs
-# - scripts/inject-workflow-exports.mjs, patches/opennext*
-# - src/app, src/middleware.ts (Next), eslint.config.mjs Next lockdown
-# - Point root package.json dev/test/check at apps/web
-```
-
+Root Next.js, Prisma, OpenNext, legacy `src/`, `prisma/`, `migrations/`, and
+the Next ESLint lockdown are gone. Root `package.json` delegates to `apps/web`.
 Keep `cli/` and `mcp-ui/`; they only need the Start origin.

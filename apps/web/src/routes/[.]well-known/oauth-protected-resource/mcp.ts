@@ -1,5 +1,6 @@
 import { corsHeaders, generateClerkProtectedResourceMetadata } from "@clerk/mcp-tools/server";
 import { createFileRoute } from "@tanstack/react-router";
+
 import { clerkKeysFromRecord } from "@/shared/auth/clerk";
 import { workerEnv } from "@/shared/db/env";
 

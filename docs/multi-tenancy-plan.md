@@ -165,8 +165,8 @@ transport (§13).
 
 - Every request resolves exactly one tenant at a single **chokepoint**;
   everything below it gets its DB/storage from context (§4.2). The serving
-  worker picks *which data worker name* to open a session to — that
-  selection is the security boundary. The *separate database* property is
+  worker picks _which data worker name_ to open a session to — that
+  selection is the security boundary. The _separate database_ property is
   intact and slightly stronger than direct bindings: each tenant's D1 is
   attached to its own worker, reachable only through the named dispatch
   hop, which can also carry per-tenant CPU/subrequest limits (free QoS
@@ -179,24 +179,24 @@ transport (§13).
 
 ### Trade-offs vs v4 direct bindings
 
-| | v4 direct bindings | v6 data workers |
-|---|---|---|
-| Tenant ceiling | ~5,000 (unofficial) | unbounded (per-script fee past 1,000) |
-| Serving-worker config | mutated per tenant (PATCH hazards) | static forever |
-| New-tenant visibility | next isolates only | immediate (`get()` by name) |
-| DB access | native binding calls | one dispatch session per request + framed queries (§4.1) |
-| Extra moving part | — | data-worker template lifecycle + fan-out |
-| Extra cost | — | W4P $25/mo + CPU-ms + per-script past 1,000 |
-| Per-tenant QoS | no | yes (custom limits per dispatch) |
+|                       | v4 direct bindings                 | v6 data workers                                          |
+| --------------------- | ---------------------------------- | -------------------------------------------------------- |
+| Tenant ceiling        | ~5,000 (unofficial)                | unbounded (per-script fee past 1,000)                    |
+| Serving-worker config | mutated per tenant (PATCH hazards) | static forever                                           |
+| New-tenant visibility | next isolates only                 | immediate (`get()` by name)                              |
+| DB access             | native binding calls               | one dispatch session per request + framed queries (§4.1) |
+| Extra moving part     | —                                  | data-worker template lifecycle + fan-out                 |
+| Extra cost            | —                                  | W4P $25/mo + CPU-ms + per-script past 1,000              |
+| Per-tenant QoS        | no                                 | yes (custom limits per dispatch)                         |
 
 ### Trade-offs vs v2 (unchanged)
 
-| v2 (stamp) | v6 (SaaS) |
-|---|---|
-| Per-tenant Clerk app & keys | One Clerk app; orgs for membership. Users are platform-level. |
-| Per-tenant Worker secrets | Platform keys by default; tenant BYO keys encrypted in tenant DB (§8) |
-| Infra-enforced isolation | Code-chokepoint isolation over per-tenant DBs |
-| Onboarding in hours | Onboarding in minutes |
+| v2 (stamp)                  | v6 (SaaS)                                                             |
+| --------------------------- | --------------------------------------------------------------------- |
+| Per-tenant Clerk app & keys | One Clerk app; orgs for membership. Users are platform-level.         |
+| Per-tenant Worker secrets   | Platform keys by default; tenant BYO keys encrypted in tenant DB (§8) |
+| Infra-enforced isolation    | Code-chokepoint isolation over per-tenant DBs                         |
+| Onboarding in hours         | Onboarding in minutes                                                 |
 
 A future flagship tenant demanding hard isolation can still get a dedicated
 v2-style stamp; the config-as-data work here is its prerequisite anyway.
@@ -248,7 +248,7 @@ exactly this reason). The chokepoint therefore derives tenant lazily:
   `src/lib/db.ts` raw helpers ride the same client.
 - **Non-HTTP entry points use the same API explicitly**: workflow steps,
   queue consumers, and `scheduled()` call `runWithTenant(payload.tenantId,
-  …)` — there is no middleware there, and the plan does not pretend
+…)` — there is no middleware there, and the plan does not pretend
   otherwise.
 - Client memoization is per `(ctx, tenant)` — never per-ctx alone (a
   platform request iterating tenants via the audited `withTenant` escape
@@ -327,7 +327,7 @@ rotation).
 - **Normalize before matching**: every existing middleware allowlist is
   path-literal (`src/middleware.ts:62-127`) and now faces two URL shapes
   (`/india/events` vs `/events` on a custom domain). The middleware strips
-  the tenant prefix / resolves the host *first*, then runs allowlists,
+  the tenant prefix / resolves the host _first_, then runs allowlists,
   Clerk, and maintenance checks against the normalized tenant-relative
   path.
 - **MCP/OAuth discovery**: per-tenant MCP endpoints (`/<slug>/api/mcp`,
@@ -370,12 +370,12 @@ largest mechanical change in the plan; it's why Phase 1 is XL.
    for fine-grained permissions**. `setUserRole` (org-scoped now) syncs the
    coarse tier to the org membership.
 2. **Tenant identity always comes from the URL/host chokepoint — never from
-   the session.** Clerk sessions have one *active organization* at a time;
+   the session.** Clerk sessions have one _active organization_ at a time;
    two community tabs flip it globally, so trusting the JWT org claim
-   authorizes against the wrong tenant. The session proves *who*; membership
-   + role are checked against the URL-resolved tenant. Applies doubly to
-   MCP (`src/lib/mcp/tools.ts`). CI carries a cross-tab / cross-tenant
-   authz test.
+   authorizes against the wrong tenant. The session proves _who_; membership
+   - role are checked against the URL-resolved tenant. Applies doubly to
+     MCP (`src/lib/mcp/tools.ts`). CI carries a cross-tab / cross-tenant
+     authz test.
 3. **Tenant admin definition**: approval makes the requester org owner.
    Platform admin grants/demotes further admins from platform `/admin` —
    in-process, writing Clerk org membership + tenant-DB mirror in one
@@ -407,14 +407,14 @@ largest mechanical change in the plan; it's why Phase 1 is XL.
 
 ## 8. External services per tenant
 
-| Service | Model |
-|---|---|
-| Resend | Platform API key. Per-tenant sending domains added via Resend API (DNS shown in tenant admin); default `<slug>@mail.claudecommunities.com`. Platform webhook, fan-out by tenant tag. |
-| LinkedIn | Platform LinkedIn app; per-tenant OAuth tokens already in tenant DB. **Current app is Development tier (~500 req/day, app-wide)** — serving many unrelated organizations requires **Standard tier** vetting ([app review](https://learn.microsoft.com/en-us/linkedin/marketing/community-management-app-review?view=li-lms-2025-11)): calendar dependency, filed in Phase 0; per-tenant throttling; **Zernio is the interim multi-tenant path**. |
-| Zernio | Per-tenant API key entered by tenant admin, AES-GCM-encrypted in tenant DB with the platform KEK (escrowed, §4.6). |
-| Anthropic | Platform key + per-tenant metering; BYO encrypted key later. |
-| GA | Per-tenant `gaId` setting (validated), injected at render. |
-| Internal secrets | Platform-level Worker secrets, unchanged. |
+| Service          | Model                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Resend           | Platform API key. Per-tenant sending domains added via Resend API (DNS shown in tenant admin); default `<slug>@mail.claudecommunities.com`. Platform webhook, fan-out by tenant tag.                                                                                                                                                                                                                                                             |
+| LinkedIn         | Platform LinkedIn app; per-tenant OAuth tokens already in tenant DB. **Current app is Development tier (~500 req/day, app-wide)** — serving many unrelated organizations requires **Standard tier** vetting ([app review](https://learn.microsoft.com/en-us/linkedin/marketing/community-management-app-review?view=li-lms-2025-11)): calendar dependency, filed in Phase 0; per-tenant throttling; **Zernio is the interim multi-tenant path**. |
+| Zernio           | Per-tenant API key entered by tenant admin, AES-GCM-encrypted in tenant DB with the platform KEK (escrowed, §4.6).                                                                                                                                                                                                                                                                                                                               |
+| Anthropic        | Platform key + per-tenant metering; BYO encrypted key later.                                                                                                                                                                                                                                                                                                                                                                                     |
+| GA               | Per-tenant `gaId` setting (validated), injected at render.                                                                                                                                                                                                                                                                                                                                                                                       |
+| Internal secrets | Platform-level Worker secrets, unchanged.                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 Nothing reads a tenant credential except `tenantSecrets.ts`
 (decrypt + audit), enforced by the eslint lockdown.
@@ -434,7 +434,7 @@ include the tenant id.
 ### 9.1 Signup → approval → live
 
 1. `/start`: signed-in user applies — name, slug (validated against policy
-   + reserved list), locale, pitch → registry `status=pending`.
+   - reserved list), locale, pitch → registry `status=pending`.
 2. Platform admin approves at apex `/admin` → enqueue provision (§4.3) →
    typically live in ~1–2 minutes → applicant lands in their
    `/admin/settings` onboarding checklist.
@@ -445,7 +445,7 @@ include the tenant id.
 
 - Approvals queue; tenant CRUD; grant/demote tenant admins; audit log.
 - **Suspend/resume**: registry `status=suspended` → middleware 503s that
-  tenant; cron/workflows skip it. Status checked on *every* request through
+  tenant; cron/workflows skip it. Status checked on _every_ request through
   an in-isolate cache (TTL ~30 s) with an active purge.
 - Fleet view: tenants × status × migrationTag × dataWorkerVersion × health.
   ⚠ Health probes are **chunked** (≤25 dispatches per backend request, or
@@ -509,7 +509,7 @@ include the tenant id.
 
 - **Workers for Platforms: $25/mo** + inbound requests + CPU-ms
   (~$0.02/M ms past 60M included) + **~$0.02/script/mo past 1,000 data
-  workers**. Dispatch subrequests are *not* billed per-call; the spike
+  workers**. Dispatch subrequests are _not_ billed per-call; the spike
   validates real CPU-ms per page with the session transport.
 - Cloudflare for SaaS: first 100 custom hostnames free, then ~$0.10/mo
   each.
@@ -525,14 +525,14 @@ include the tenant id.
 
 ## 12. Phasing
 
-| Phase | Delivers | Size |
-|---|---|---|
-| **0. Spike + foundations (go/no-go gate)** | ⚠ **Leg #0: the 32-invocation rule vs dispatch calls, and the session transport** — WebSocket-over-dispatch (and/or RPC session stub) carrying N pipelined queries in 1 invocation; **adapter-conformance corpus** through `PrismaD1(remoteD1)` vs a direct binding (P2002 unique-violation, `Bytes` round-trip, `$transaction`, `raw()`, `meta.changes` — byte-identical behavior); latency: sequential, parallel, 15-query page; create-D1 → upload → migrate-through-worker loop incl. multi-statement splitting; template fan-out across 100 synthetic tenants + in-flight survival; `wrangler dev`/`getPlatformProxy` both dev modes; gradual-deploy × DO/Workflows; W4P CPU-ms billing validation. Also: slug/worker-name policy + reserved list; `auth.ts` lowercase fix; LinkedIn Standard-tier application filed; Clerk org-model mapping spike; pricing/"who pays" decision | L |
-| **1. Tenant-aware core** | App restructure (`(platform)` + `/t/[tenant]`, normalize-then-match middleware), chokepoint (lazy derivation from rewrite/header + explicit `runWithTenant` for non-HTTP; remote-D1 session client + PrismaD1 reuse; storage prefix enforcement incl. the upload `folder` fix), registry + `TenantSetting` + validation, region.ts deletion + ~98-consumer migration, identity rules of §6, cross-tenant CI tests. Exit: AU runs as a path tenant on staging end-to-end **through a data-worker session**. | XL |
-| **2. Platform plane** | Provisioning worker + queues (`PROVISION`, `tenant-jobs` + consumer wiring incl. `inject-workflow-exports.mjs` extension), `TENANT_PROVISION`, `/start` signup + approvals, platform `/admin` (approve/suspend/admins/fleet-with-chunked-health/audit), tenant-aware cron via queue fan-out, notifications tagging, data-worker template lifecycle (versioning, canary fan-out, drift repair), migration fan-out + version gate, KEK setup + escrow | L |
-| **3. Custom domains** | Cloudflare for SaaS (fallback origin, zone route, O2O playbook), attach flow + cert status UI, Clerk satellite domains, canonical-URL handling + domain-event wholesale revalidation | L |
-| **4. AU/NZ migration** | §10 with staging rehearsal (incl. clerkId rewrite + R2 alias map); retire stamp deploys + NZ account | L |
-| **5. SaaS polish** | Tenant quotas (incl. W4P custom limits) + BYO encrypted keys, offboarding/data export, billing if/when monetized, directory/discovery on the apex | M |
+| Phase                                      | Delivers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Size |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| **0. Spike + foundations (go/no-go gate)** | ⚠ **Leg #0: the 32-invocation rule vs dispatch calls, and the session transport** — WebSocket-over-dispatch (and/or RPC session stub) carrying N pipelined queries in 1 invocation; **adapter-conformance corpus** through `PrismaD1(remoteD1)` vs a direct binding (P2002 unique-violation, `Bytes` round-trip, `$transaction`, `raw()`, `meta.changes` — byte-identical behavior); latency: sequential, parallel, 15-query page; create-D1 → upload → migrate-through-worker loop incl. multi-statement splitting; template fan-out across 100 synthetic tenants + in-flight survival; `wrangler dev`/`getPlatformProxy` both dev modes; gradual-deploy × DO/Workflows; W4P CPU-ms billing validation. Also: slug/worker-name policy + reserved list; `auth.ts` lowercase fix; LinkedIn Standard-tier application filed; Clerk org-model mapping spike; pricing/"who pays" decision | L    |
+| **1. Tenant-aware core**                   | App restructure (`(platform)` + `/t/[tenant]`, normalize-then-match middleware), chokepoint (lazy derivation from rewrite/header + explicit `runWithTenant` for non-HTTP; remote-D1 session client + PrismaD1 reuse; storage prefix enforcement incl. the upload `folder` fix), registry + `TenantSetting` + validation, region.ts deletion + ~98-consumer migration, identity rules of §6, cross-tenant CI tests. Exit: AU runs as a path tenant on staging end-to-end **through a data-worker session**.                                                                                                                                                                                                                                                                                                                                                                            | XL   |
+| **2. Platform plane**                      | Provisioning worker + queues (`PROVISION`, `tenant-jobs` + consumer wiring incl. `inject-workflow-exports.mjs` extension), `TENANT_PROVISION`, `/start` signup + approvals, platform `/admin` (approve/suspend/admins/fleet-with-chunked-health/audit), tenant-aware cron via queue fan-out, notifications tagging, data-worker template lifecycle (versioning, canary fan-out, drift repair), migration fan-out + version gate, KEK setup + escrow                                                                                                                                                                                                                                                                                                                                                                                                                                   | L    |
+| **3. Custom domains**                      | Cloudflare for SaaS (fallback origin, zone route, O2O playbook), attach flow + cert status UI, Clerk satellite domains, canonical-URL handling + domain-event wholesale revalidation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | L    |
+| **4. AU/NZ migration**                     | §10 with staging rehearsal (incl. clerkId rewrite + R2 alias map); retire stamp deploys + NZ account                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | L    |
+| **5. SaaS polish**                         | Tenant quotas (incl. W4P custom limits) + BYO encrypted keys, offboarding/data export, billing if/when monetized, directory/discovery on the apex                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | M    |
 
 Phases 0–2 deliver the product promise (self-serve path tenants); 3–4 add
 BYO domains and bring the existing communities home.

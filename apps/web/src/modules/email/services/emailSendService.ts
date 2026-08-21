@@ -1,10 +1,12 @@
 import { and, eq } from "drizzle-orm";
+
 import type { EmailTransport } from "@/modules/email/transport";
 import { listCampaignRecipients } from "@/modules/identity/services/usersService";
 import type { RegistryStore } from "@/shared/db/registryStore";
 import { first } from "@/shared/db/rows";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 import { getRegionConfig } from "@/shared/region";
 

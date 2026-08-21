@@ -5,6 +5,7 @@
 ## Implementation status
 
 **Done (in code, tsc-clean, no new lint issues):**
+
 - `src/lib/region.ts` — `Region` type, `REGION` (from `NEXT_PUBLIC_REGION`,
   defaults `"au"`), `REGION_CONFIGS`, `getRegionConfig()`.
 - `src/lib/cities.ts` — `region` field on `City`; 19 AU + 10 NZ cities;
@@ -40,6 +41,7 @@
   Clerk key the real deploy already provides).
 
 **Still required (external / manual):**
+
 1. Provision the NZ Cloudflare account + D1 + R2; replace the
    `REPLACE_WITH_NZ_*` placeholders in `wrangler.jsonc`.
 2. Create the NZ Clerk instance + Resend sender; copy `.env.nz.*.example` →
@@ -94,16 +96,16 @@ environment in the same shape.
 
 ## What is per-region (env var / binding) vs shared (code)
 
-| Per-region (config) | Shared (code, in the repo) |
-|---|---|
-| Clerk instance — `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_JWT_ISSUER_DOMAIN` | All app logic, routes, components |
-| D1 database (members + all data) — `DB` binding → different `database_id` | Prisma schema + migrations (run per env) |
-| Domain — `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `routes` | Permissions registry, services, MCP tools |
-| Email sender — Resend key / from-address / footer | Email templates + `CampaignSendWorkflow` |
-| Social accounts — `LINKEDIN_CLIENT_ID/SECRET`, Zernio key | Social provider registry + workflows |
-| R2 bucket — `STORAGE` binding (separate bucket per region) | Storage service (`src/lib/storage.ts`) |
-| Region identity — new `NEXT_PUBLIC_REGION=au\|nz` var | Branding/copy/cities **driven by** that var |
-| Other secrets — `RENDER_SIGNING_SECRET`, `CRON_SECRET`, `SOCIAL_OAUTH_STATE_SECRET` | — |
+| Per-region (config)                                                                                 | Shared (code, in the repo)                  |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Clerk instance — `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_JWT_ISSUER_DOMAIN` | All app logic, routes, components           |
+| D1 database (members + all data) — `DB` binding → different `database_id`                           | Prisma schema + migrations (run per env)    |
+| Domain — `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `routes`                                    | Permissions registry, services, MCP tools   |
+| Email sender — Resend key / from-address / footer                                                   | Email templates + `CampaignSendWorkflow`    |
+| Social accounts — `LINKEDIN_CLIENT_ID/SECRET`, Zernio key                                           | Social provider registry + workflows        |
+| R2 bucket — `STORAGE` binding (separate bucket per region)                                          | Storage service (`src/lib/storage.ts`)      |
+| Region identity — new `NEXT_PUBLIC_REGION=au\|nz` var                                               | Branding/copy/cities **driven by** that var |
+| Other secrets — `RENDER_SIGNING_SECRET`, `CRON_SECRET`, `SOCIAL_OAUTH_STATE_SECRET`                 | —                                           |
 
 ## Content decision (resolved)
 
@@ -149,7 +151,7 @@ Two viable approaches, to choose from when we revisit:
   GH Action exports the "global" tables from AU and upserts into the NZ account's
   DB. Authoring UX unchanged, but one-way (only AU authors shared content).
 
-> **Off the table with separate accounts:** a shared D1/R2 *binding*
+> **Off the table with separate accounts:** a shared D1/R2 _binding_
 > (live-shared content read at runtime). Cross-account R2 is only reachable via
 > the S3 API with access keys — runtime coupling + credential management we
 > don't want. If live-shared content ever becomes a hard requirement, that's the
@@ -162,6 +164,7 @@ Leaning A — but defer the choice.
 Mostly configuration; one small code change. No schema changes.
 
 **Step 1 — Provision the NZ Cloudflare account + resources.**
+
 - Create / obtain the **NZ Cloudflare account** → its `account_id` and an API
   token scoped to it (Workers, D1, R2 edit).
 - On the NZ account: create D1 `claudecommunity-nz-db` (`wrangler d1 create`),
@@ -193,6 +196,7 @@ secrets on AU.
 
 **Step 5 — Parameterise branding/locale by `NEXT_PUBLIC_REGION`** (the only
 code change):
+
 - `src/lib/cities.ts` — add a `region` field per city and add NZ cities
   (Auckland, Wellington, Christchurch, …, `Pacific/Auckland`); filter the
   exported list by `NEXT_PUBLIC_REGION`.

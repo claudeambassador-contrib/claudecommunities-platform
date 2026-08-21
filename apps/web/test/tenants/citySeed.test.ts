@@ -1,8 +1,10 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { describe, expect, it } from "vitest";
+
 import { listCitiesAdmin } from "@/modules/cities/services/citiesService";
 import { listFeed, listSpaces } from "@/modules/community/services/communityService";
 import { listPublished, listPublishedScheduled } from "@/modules/courses/services/coursesService";
@@ -22,6 +24,7 @@ import { createRegistrySchema } from "@/shared/db/registrySchema";
 import { registryStore } from "@/shared/db/registryStore";
 import { createTenantSchema } from "@/shared/db/tenantSchema";
 import { tenantStore } from "@/shared/db/tenantStore";
+
 import { ownerActor } from "../helpers/tenant";
 
 const NOW = 1_800_000_000_000;
@@ -32,7 +35,7 @@ function applyMigrations(sqlite: Database.Database, dir: string): void {
   for (const file of readdirSync(dir)
     .filter((name) => name.endsWith(".sql"))
     .sort()) {
-    sqlite.exec(readFileSync(join(dir, file), "utf8"));
+    sqlite.exec(readFileSync(join(dir, file), "utf-8"));
   }
 }
 
@@ -63,16 +66,16 @@ function openSeeded() {
   return { registry, seed, store, tenantSqlite };
 }
 
-describe("buildCitySeed", () => {
+describe(buildCitySeed, () => {
   it("seeds spaces, catalog rows, a published event, feed posts, home blocks, and cities", async () => {
     const { store } = openSeeded();
 
     const spaces = await listSpaces(store);
-    expect(spaces.ok).toBe(true);
+    expect(spaces.ok).toBeTruthy();
     if (!spaces.ok) {
       return;
     }
-    expect(spaces.spaces.map((space) => space.slug)).toEqual([
+    expect(spaces.spaces.map((space) => space.slug)).toStrictEqual([
       "announcements",
       "say-hello",
       "general",
@@ -82,7 +85,7 @@ describe("buildCitySeed", () => {
     ]);
 
     const published = await listEvents(store);
-    expect(published.ok).toBe(true);
+    expect(published.ok).toBeTruthy();
     if (!published.ok) {
       return;
     }
@@ -91,7 +94,7 @@ describe("buildCitySeed", () => {
     expect(published.events[0]?.startTime).toBe(new Date(NOW + 14 * 86_400_000).toISOString());
 
     const allEvents = await listEvents(store, { includeInactive: true });
-    expect(allEvents.ok && allEvents.events.map((event) => event.status).sort()).toEqual([
+    expect(allEvents.ok && allEvents.events.map((event) => event.status).sort()).toStrictEqual([
       "draft",
       "published",
     ]);
@@ -104,37 +107,40 @@ describe("buildCitySeed", () => {
     expect(hero && "heading" in hero ? hero.heading : null).toBe("Welcome to the seeded city");
 
     const cities = await listCitiesAdmin(store, ownerActor());
-    expect(cities.ok && cities.cities.map((city) => city.slug)).toEqual(["sydney", "melbourne"]);
+    expect(cities.ok && cities.cities.map((city) => city.slug)).toStrictEqual([
+      "sydney",
+      "melbourne",
+    ]);
 
     const agenda = await listPublicAgenda(store, "evt_seed_published");
-    expect(agenda.ok && agenda.items.map((item) => item.title)).toEqual([
+    expect(agenda.ok && agenda.items.map((item) => item.title)).toStrictEqual([
       "Doors + welcome",
       "Live coding with Claude Code",
     ]);
 
     const courses = await listPublished(store);
-    expect(courses.ok && courses.courses.map((course) => course.slug)).toEqual([
+    expect(courses.ok && courses.courses.map((course) => course.slug)).toStrictEqual([
       "intro-to-claude-code",
     ]);
     const workshops = await listPublishedScheduled(store);
     expect(workshops.ok && workshops.courses[0]?.registrationUrl).toContain("example.com/register");
 
     const resources = await listPublishedPages(store);
-    expect(resources.ok && resources.pages.map((page) => page.slug).sort()).toEqual([
+    expect(resources.ok && resources.pages.map((page) => page.slug).sort()).toStrictEqual([
       "for/ecommerce",
       "getting-started",
     ]);
 
     const tiers = await listPublicTiers(store);
-    expect(tiers.ok && tiers.tiers.map((tier) => tier.slug)).toEqual(["community", "member"]);
+    expect(tiers.ok && tiers.tiers.map((tier) => tier.slug)).toStrictEqual(["community", "member"]);
 
     const campaigns = await listCampaigns(store, ownerActor());
-    expect(campaigns.ok && campaigns.campaigns.map((row) => row.name)).toEqual([
+    expect(campaigns.ok && campaigns.campaigns.map((row) => row.name)).toStrictEqual([
       "Welcome to the city",
     ]);
 
     const speakers = await listSpeakers(store, ownerActor(), "evt_seed_published");
-    expect(speakers.ok && speakers.speakers.map((row) => row.name)).toEqual(["Ada Lovelace"]);
+    expect(speakers.ok && speakers.speakers.map((row) => row.name)).toStrictEqual(["Ada Lovelace"]);
 
     const accounts = await listAccounts(store, ownerActor());
     const posts = await listPosts(store, ownerActor());
@@ -146,11 +152,11 @@ describe("buildCitySeed", () => {
     const { registry } = openSeeded();
 
     const ada = await findByEmail(registry.db, "ada@example.com");
-    expect(ada?.clerkUserId.startsWith("invite_")).toBe(true);
+    expect(ada?.clerkUserId.startsWith("invite_")).toBeTruthy();
     expect(ada && (await findMembership(registry.db, ada.id, ORG))?.role).toBe("member");
 
     const owner = await findByEmail(registry.db, "jack@example.com");
-    expect(owner?.clerkUserId.startsWith("invite_")).toBe(true);
+    expect(owner?.clerkUserId.startsWith("invite_")).toBeTruthy();
     expect(owner && (await findMembership(registry.db, owner.id, ORG))?.role).toBe("owner");
     expect(owner && (await findByClerkId(registry.db, owner.clerkUserId))?.email).toBe(
       "jack@example.com",
@@ -179,7 +185,7 @@ describe("buildCitySeed", () => {
       drizzle(registrySqlite, { schema: createRegistrySchema() }) as never,
     );
 
-    expect(await findByEmail(registry.db, "jack@example.com")).toBeNull();
+    await expect(findByEmail(registry.db, "jack@example.com")).resolves.toBeNull();
     const owner = await findByEmail(registry.db, "e2e.admin@example.com");
     expect(owner?.clerkUserId).toBe("invite_seed_owner");
     expect(owner && (await findMembership(registry.db, owner.id, ORG))?.role).toBe("owner");
@@ -196,6 +202,6 @@ describe("buildCitySeed", () => {
 
     const ada = await findByEmail(registry.db, "ada@example.com");
     expect(ada && (await findMembership(registry.db, ada.id, ORG))?.role).toBe("owner");
-    expect(await findByEmail(registry.db, "jack@example.com")).toBeNull();
+    await expect(findByEmail(registry.db, "jack@example.com")).resolves.toBeNull();
   });
 });

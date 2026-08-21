@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import type { Block, BlockType } from "@/modules/pages/types";
 
 const MAX_BLOCKS = 30;
@@ -49,7 +50,7 @@ function normalizeSlug(raw: unknown): string {
   return raw
     .trim()
     .toLowerCase()
-    .replace(/^\/+|\/+$/g, "");
+    .replaceAll(/^\/+|\/+$/g, "");
 }
 
 /**

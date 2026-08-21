@@ -1,5 +1,6 @@
 import type { z } from "zod";
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as socialRepo from "@/modules/social/repositories/socialRepository";
 import {
   connectorIdInput,
@@ -22,7 +23,8 @@ import type {
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { type Empty, err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Empty, Result } from "@/shared/http/errors";
 
 const DEFAULT_MAX_TEXT = 3000;
 
@@ -433,7 +435,7 @@ export async function publishDueScheduled(
   const errors: { error: string; id: string }[] = [];
   for (const post of due) {
     // Sequential claim+publish so two due rows cannot interleave CAS.
-    // biome-ignore lint/performance/noAwaitInLoops: cron drain is sequential
+    // oxlint-disable-next-line no-await-in-loop -- cron drain is sequential
     const result = await publishExisting(store, post.id, deps);
     if (result.ok && result.post.status !== "failed") {
       dispatched.push(post.id);
@@ -455,7 +457,7 @@ export async function reconcileDelegatedScheduled(
   let count = 0;
   for (const post of due) {
     // Sequential status flips keep D1 writes deterministic.
-    // biome-ignore lint/performance/noAwaitInLoops: reconcile one delegated row at a time
+    // oxlint-disable-next-line no-await-in-loop -- reconcile one delegated row at a time
     const updated = await socialRepo.updatePostById(store, post.id, {
       publishedAt: post.scheduledAt ? new Date(post.scheduledAt) : now,
       status: "published",

@@ -6,8 +6,8 @@ This document provides authentication setup information for future agents workin
 
 - **Authentication Provider**: Clerk (https://clerk.com)
 - **Production Domain**: claudecommunity.com.au
-- **Hosting**: Cloudflare Workers (via OpenNext) — see `wrangler.jsonc`
-- **Database**: Cloudflare D1 (SQLite), binding `DB`
+- **Hosting**: Cloudflare Workers (TanStack Start in `apps/web`)
+- **Database**: Cloudflare D1 — `REGISTRY` plus one D1 per city
 
 ## Clerk Dashboard Access
 
@@ -20,15 +20,19 @@ This document provides authentication setup information for future agents workin
 The following environment variables / secrets are configured on the Worker
 (`ccau` for production, `ccau-staging` for staging). Set with `wrangler secret put <NAME>`:
 
-| Variable | Description |
-|----------|-------------|
-| `CLERK_SECRET_KEY` | Clerk backend secret key |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk frontend publishable key |
-| `CLERK_JWT_ISSUER_DOMAIN` | JWT issuer used to verify Clerk tokens from the MCP server |
+| Variable                            | Description                                                |
+| ----------------------------------- | ---------------------------------------------------------- |
+| `CLERK_SECRET_KEY`                  | Clerk backend secret key                                   |
+| `VITE_CLERK_PUBLISHABLE_KEY`        | Clerk frontend publishable key                             |
+| `CLERK_JWT_ISSUER_DOMAIN`           | JWT issuer used to verify Clerk tokens from the MCP server |
 
 ## Middleware Configuration
 
-The Clerk middleware is configured in `src/middleware.ts`:
+The Clerk middleware is configured in `apps/web` (`@clerk/tanstack-react-start`).
+Public city pages load without keys. Sign-in needs both Clerk secrets and
+`http://localhost:3001` as an allowed origin.
+
+Historical Next middleware notes (retired):
 
 - **Static routes** (skip Clerk entirely): `/`, `/events`, `/professionals`, `/vibe-coders`, `/offline`
 - **Public routes** (through Clerk but no auth required): login, signup, events, professionals, pricing, webhooks, cities
@@ -70,20 +74,20 @@ To complete Google OAuth setup:
 ## Browser Automation Notes
 
 When making configuration changes, use `--chrome` flag with Claude Code for browser automation tasks:
+
 - Cloudflare Dashboard: https://dash.cloudflare.com
 - Clerk Dashboard: https://dashboard.clerk.com
 
 ## Database Information
 
 - **Provider**: Cloudflare D1 (SQLite)
-- **Binding**: `DB` — see `wrangler.jsonc`
-- **Adapter**: `@prisma/adapter-d1`, resolved per-request via `getCloudflareContext().env.DB`
-- **Prisma client**: `src/lib/prisma.ts`
-- **Raw SQL helper**: `src/lib/db.ts` (SQLite-flavored, `?` placeholders)
+- **Bindings**: `REGISTRY` + `TENANT_*` — see `apps/web/wrangler.template.jsonc`
+- **ORM**: Drizzle (`drizzle-orm/d1`) in `apps/web/src/shared/db`
 
 ## API Routes
 
 ### Events API
+
 - `GET /api/events` - List all events
 - `POST /api/events` - Create new event
 - `GET /api/events/[id]` - Get single event

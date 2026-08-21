@@ -11,9 +11,8 @@ export async function handleScheduled(
   const { eq } = await import("drizzle-orm");
   const { createRegistryDb, getD1Binding } = await import("@/shared/db/client");
   const { tenants } = await import("@/modules/tenants/schema.registry");
-  const { campaignWorkflowFromEnv } = await import(
-    "@/modules/email/services/emailCampaignsService"
-  );
+  const { campaignWorkflowFromEnv } =
+    await import("@/modules/email/services/emailCampaignsService");
 
   const registry = createRegistryDb(getD1Binding(env, "REGISTRY"));
   const cities = await registry.select().from(tenants).where(eq(tenants.status, "active"));
@@ -21,10 +20,10 @@ export async function handleScheduled(
 
   for (const city of cities) {
     try {
-      // biome-ignore lint/performance/noAwaitInLoops: isolate city failures
+      // oxlint-disable-next-line no-await-in-loop -- isolate city failures
       await drainCity(env, city, campaignWorkflow);
-    } catch (e) {
-      console.error(`[cron] city ${city.slug} failed`, e);
+    } catch (error) {
+      console.error(`[cron] city ${city.slug} failed`, error);
     }
   }
 }
@@ -32,13 +31,13 @@ export async function handleScheduled(
 async function drainCity(
   env: Record<string, unknown>,
   city: { d1Binding: string; orgId: string; slug: string },
+  // oxlint-disable-next-line typescript/consistent-type-imports -- keep the dynamic import graph for cron
   campaignWorkflow: import("@/modules/email/types").CampaignWorkflow | undefined,
 ): Promise<void> {
   const { createTenantDb, getD1Binding } = await import("@/shared/db/client");
   const { tenantStore } = await import("@/shared/db/tenantStore");
-  const { listDueScheduled, startCampaignSend } = await import(
-    "@/modules/email/services/emailCampaignsService"
-  );
+  const { listDueScheduled, startCampaignSend } =
+    await import("@/modules/email/services/emailCampaignsService");
   const { listDuePublishable } = await import("@/modules/social/services/socialService");
   const { publishStarterFromEnv } = await import("@/modules/social/services/publishStarter");
 
@@ -52,7 +51,7 @@ async function drainCity(
   const starter = publishStarterFromEnv(env);
   if (due.ok && starter) {
     for (const post of due.posts) {
-      // biome-ignore lint/performance/noAwaitInLoops: workflow create is per-post
+      // oxlint-disable-next-line no-await-in-loop -- workflow create is per-post
       await starter.start({ d1Binding: city.d1Binding, orgId: city.orgId, postId: post.id });
     }
   }
@@ -65,7 +64,7 @@ async function drainCity(
     return;
   }
   for (const campaign of campaigns.campaigns) {
-    // biome-ignore lint/performance/noAwaitInLoops: claim+start must stay sequential
+    // oxlint-disable-next-line no-await-in-loop -- claim+start must stay sequential
     const started = await startCampaignSend(store, campaign.id, campaignWorkflow);
     if (!started.ok) {
       console.error(`[cron] campaign ${campaign.id} failed`, started.error);

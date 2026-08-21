@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+
 import type { ServiceError } from "@/shared/http/errors";
 import { presentError } from "@/shared/http/presentError";
 
-describe("presentError", () => {
+describe(presentError, () => {
   it("prefers an explicit message over the code table", () => {
     const error: ServiceError = { code: "forbidden", message: "Custom message", status: 403 };
     expect(presentError(error)).toBe("Custom message");

@@ -1,11 +1,13 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as usersRepo from "@/modules/identity/repositories/usersRepository";
 import { resolveCityContext } from "@/modules/tenants/services/publicListService";
 import type { Actor } from "@/shared/auth/actor";
-import { hasPermission, type Permission, permissionsForRole } from "@/shared/auth/permissions";
+import { hasPermission, permissionsForRole } from "@/shared/auth/permissions";
+import type { Permission } from "@/shared/auth/permissions";
 import type { RegistryDb } from "@/shared/db/client";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import type { AuthContext, RouteContext, TenantContext } from "@/shared/http/routeContext";
 import { newId } from "@/shared/ids";
 import type { ttlMemo } from "@/shared/ttlMemo";

@@ -2,6 +2,7 @@ import { useClerk } from "@clerk/tanstack-react-start";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useCallback, useState } from "react";
+
 import { isClerkPublishableConfigured } from "@/shared/auth/clerk";
 import { Avatar } from "@/shared/ui/avatar";
 
@@ -200,7 +201,7 @@ export function CityHeader({
 function ClerkSignOut({ citySlug }: { citySlug: string }): ReactElement {
   const { signOut } = useClerk();
   const handleSignOut = useCallback(() => {
-    signOut({ redirectUrl: `/${citySlug}` }).catch(() => undefined);
+    signOut({ redirectUrl: `/${citySlug}` }).catch(() => {});
   }, [citySlug, signOut]);
   return (
     <button className="btn btn-primary" onClick={handleSignOut} type="button">

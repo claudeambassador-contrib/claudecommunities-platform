@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   connectAccount,
   createPost,
@@ -14,9 +15,12 @@ import {
   updatePost,
 } from "@/modules/social/services/socialService";
 import type { SocialAccountInput, SocialConnector } from "@/modules/social/types";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 const FUTURE = "2026-12-01T09:00:00.000Z";
+const published: string[] = [];
+const deleted: string[] = [];
 
 function testConnector(overrides: Partial<SocialConnector> = {}): SocialConnector {
   return {
@@ -39,9 +43,6 @@ function testConnector(overrides: Partial<SocialConnector> = {}): SocialConnecto
   };
 }
 
-const published: string[] = [];
-const deleted: string[] = [];
-
 function resetFakes(): void {
   published.length = 0;
   deleted.length = 0;
@@ -56,7 +57,7 @@ async function seededAccount() {
     externalId: "org_li",
     platform: "linkedin",
   });
-  expect(connected.ok).toBe(true);
+  expect(connected.ok).toBeTruthy();
   if (!connected.ok) {
     throw new Error("connect failed");
   }
@@ -72,7 +73,7 @@ describe("social accounts", () => {
       externalId: "x",
       platform: "linkedin",
     });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const connected = await connectAccount(store, adminActor(), {
       connector: "zernio",
@@ -80,9 +81,9 @@ describe("social accounts", () => {
       externalId: "org_li",
       platform: "linkedin",
     });
-    expect(connected.ok).toBe(true);
+    expect(connected.ok).toBeTruthy();
     const listed = await listAccounts(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
@@ -90,7 +91,7 @@ describe("social accounts", () => {
     expect(listed.accounts[0]?.displayName).toBe("Claude AU");
 
     const hidden = await listAccounts(store, memberActor());
-    expect(hidden.ok).toBe(false);
+    expect(hidden.ok).toBeFalsy();
   });
 
   it("rejects an unknown connector or platform", async () => {
@@ -101,7 +102,7 @@ describe("social accounts", () => {
       externalId: "x",
       platform: "linkedin",
     });
-    expect(badConnector.ok).toBe(false);
+    expect(badConnector.ok).toBeFalsy();
     if (!badConnector.ok) {
       expect(badConnector.error.status).toBe(400);
     }
@@ -112,7 +113,7 @@ describe("social accounts", () => {
       externalId: "x",
       platform: "mastodon" as unknown as SocialAccountInput["platform"],
     });
-    expect(badPlatform.ok).toBe(false);
+    expect(badPlatform.ok).toBeFalsy();
     if (!badPlatform.ok) {
       expect(badPlatform.error.status).toBe(400);
     }
@@ -121,9 +122,9 @@ describe("social accounts", () => {
   it("disconnects an account", async () => {
     const { account, store } = await seededAccount();
     const removed = await disconnectAccount(store, adminActor(), account.id);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
     const listed = await listAccounts(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
@@ -138,7 +139,7 @@ describe("social posts", () => {
       accountId: account.id,
       content: "Hello community",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -147,7 +148,7 @@ describe("social posts", () => {
     expect(created.post.account.displayName).toBe("Claude AU");
 
     const listed = await listPosts(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
@@ -160,7 +161,7 @@ describe("social posts", () => {
       accountId: account.id,
       content: "",
     });
-    expect(empty.ok).toBe(false);
+    expect(empty.ok).toBeFalsy();
 
     const long = await createPost(
       store,
@@ -168,7 +169,7 @@ describe("social posts", () => {
       { accountId: account.id, content: "x".repeat(101) },
       { connector: testConnector() },
     );
-    expect(long.ok).toBe(false);
+    expect(long.ok).toBeFalsy();
 
     const media = await createPost(
       store,
@@ -181,7 +182,7 @@ describe("social posts", () => {
       },
       { connector: testConnector() },
     );
-    expect(media.ok).toBe(false);
+    expect(media.ok).toBeFalsy();
 
     const tooFewForMultiImage = await createPost(
       store,
@@ -194,7 +195,7 @@ describe("social posts", () => {
       },
       { connector: testConnector() },
     );
-    expect(tooFewForMultiImage.ok).toBe(false);
+    expect(tooFewForMultiImage.ok).toBeFalsy();
   });
 
   it("schedules a future post and publishes immediately when asked", async () => {
@@ -205,7 +206,7 @@ describe("social posts", () => {
       content: "Later",
       scheduledAt: FUTURE,
     });
-    expect(scheduled.ok).toBe(true);
+    expect(scheduled.ok).toBeTruthy();
     if (!scheduled.ok) {
       return;
     }
@@ -217,13 +218,13 @@ describe("social posts", () => {
       { accountId: account.id, action: "publish", content: "Now" },
       { connector: testConnector() },
     );
-    expect(publishedNow.ok).toBe(true);
+    expect(publishedNow.ok).toBeTruthy();
     if (!publishedNow.ok) {
       return;
     }
     expect(publishedNow.post.status).toBe("published");
     expect(publishedNow.post.externalUrl).toBe("https://example.com/p/1");
-    expect(published).toEqual(["Now"]);
+    expect(published).toStrictEqual(["Now"]);
   });
 
   it("does not edit a published post and deletes a delegated schedule remotely first", async () => {
@@ -234,12 +235,12 @@ describe("social posts", () => {
       { accountId: account.id, action: "publish", content: "Live" },
       { connector: testConnector() },
     );
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     const edited = await updatePost(store, adminActor(), created.post.id, { content: "Nope" });
-    expect(edited.ok).toBe(false);
+    expect(edited.ok).toBeFalsy();
 
     const delegated = await createPost(store, adminActor(), {
       accountId: account.id,
@@ -247,7 +248,7 @@ describe("social posts", () => {
       content: "Zernio later",
       scheduledAt: FUTURE,
     });
-    expect(delegated.ok).toBe(true);
+    expect(delegated.ok).toBeTruthy();
     if (!delegated.ok) {
       return;
     }
@@ -257,7 +258,7 @@ describe("social posts", () => {
           Promise.resolve({ externalId: "z_99", externalUrl: "https://example.com/z" }),
       }),
     });
-    expect(handed.ok).toBe(true);
+    expect(handed.ok).toBeTruthy();
     if (!handed.ok) {
       return;
     }
@@ -267,10 +268,10 @@ describe("social posts", () => {
     const removed = await deletePost(store, adminActor(), handed.post.id, {
       connector: testConnector(),
     });
-    expect(removed.ok).toBe(true);
-    expect(deleted).toEqual(["z_99"]);
+    expect(removed.ok).toBeTruthy();
+    expect(deleted).toStrictEqual(["z_99"]);
     const gone = await getPost(store, adminActor(), handed.post.id);
-    expect(gone.ok).toBe(false);
+    expect(gone.ok).toBeFalsy();
   });
 
   it("drains due scheduled posts and reconciles delegated ones", async () => {
@@ -281,7 +282,7 @@ describe("social posts", () => {
       content: "Due",
       scheduledAt: FUTURE,
     });
-    expect(due.ok).toBe(true);
+    expect(due.ok).toBeTruthy();
     if (!due.ok) {
       return;
     }
@@ -289,13 +290,13 @@ describe("social posts", () => {
     const drained = await publishDueScheduled(store, new Date("2027-01-01T00:00:00.000Z"), {
       connector: testConnector({ supportsNativeScheduling: false }),
     });
-    expect(drained.ok).toBe(true);
+    expect(drained.ok).toBeTruthy();
     if (!drained.ok) {
       return;
     }
-    expect(drained.dispatched).toEqual([due.post.id]);
+    expect(drained.dispatched).toStrictEqual([due.post.id]);
     const loaded = await getPost(store, adminActor(), due.post.id);
-    expect(loaded.ok).toBe(true);
+    expect(loaded.ok).toBeTruthy();
     if (!loaded.ok) {
       return;
     }
@@ -307,7 +308,7 @@ describe("social posts", () => {
       content: "Remote",
       scheduledAt: FUTURE,
     });
-    expect(delegated.ok).toBe(true);
+    expect(delegated.ok).toBeTruthy();
     if (!delegated.ok) {
       return;
     }
@@ -321,7 +322,7 @@ describe("social posts", () => {
       store,
       new Date("2027-01-01T00:00:00.000Z"),
     );
-    expect(reconciled.ok).toBe(true);
+    expect(reconciled.ok).toBeTruthy();
     if (!reconciled.ok) {
       return;
     }
@@ -334,7 +335,7 @@ describe("social posts", () => {
       accountId: account.id,
       content: "Stuck",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -342,7 +343,7 @@ describe("social posts", () => {
       workflow: { start: () => Promise.resolve({ workflowId: "wf_stuck" }) },
     });
     const reset = await resetStuckPublishing(store, 0);
-    expect(reset.ok).toBe(true);
+    expect(reset.ok).toBeTruthy();
     if (!reset.ok) {
       return;
     }
@@ -355,7 +356,7 @@ describe("social posts", () => {
       accountId: account.id,
       content: "Once",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -369,7 +370,7 @@ describe("social posts", () => {
         },
       },
     });
-    expect(first.ok).toBe(true);
+    expect(first.ok).toBeTruthy();
     const second = await publishExisting(store, created.post.id, {
       workflow: {
         start: ({ attempt }) => {
@@ -378,8 +379,8 @@ describe("social posts", () => {
         },
       },
     });
-    expect(second.ok).toBe(true);
-    expect(starts).toEqual([1]);
+    expect(second.ok).toBeTruthy();
+    expect(starts).toStrictEqual([1]);
   });
 
   it("hands a draft-to-scheduled update to a native connector", async () => {
@@ -388,7 +389,7 @@ describe("social posts", () => {
       accountId: account.id,
       content: "Composer",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -399,7 +400,7 @@ describe("social posts", () => {
       { scheduledAt: FUTURE, status: "scheduled" },
       { connector: testConnector() },
     );
-    expect(scheduled.ok).toBe(true);
+    expect(scheduled.ok).toBeTruthy();
     if (!scheduled.ok) {
       return;
     }
@@ -421,9 +422,9 @@ describe("social posts", () => {
       externalId: "org_li",
       platform: "linkedin",
     });
-    expect(again.ok).toBe(true);
+    expect(again.ok).toBeTruthy();
     const listed = await listAccounts(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
@@ -437,7 +438,7 @@ describe("social posts", () => {
       accountId: account.id,
       content: "Nope",
     });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
   });
 
   it("requires social.publish (not just social.edit) to create with action publish", async () => {
@@ -449,7 +450,7 @@ describe("social posts", () => {
       accountId: account.id,
       content: "Draft is fine",
     });
-    expect(draft.ok).toBe(true);
+    expect(draft.ok).toBeTruthy();
 
     const denied = await createPost(
       store,
@@ -457,7 +458,7 @@ describe("social posts", () => {
       { accountId: account.id, action: "publish", content: "Not allowed" },
       { connector: testConnector() },
     );
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
     if (!denied.ok) {
       expect(denied.error.status).toBe(403);
     }

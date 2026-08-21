@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { err, ok, type Result } from "@/shared/http/errors";
+
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 // guarded() calls loadCityPage internally; mock the module seam.
-vi.mock("@/shared/http/cityPage", () => ({
+vi.mock(import("@/shared/http/cityPage"), () => ({
   loadCityPage: vi.fn(),
 }));
 
@@ -28,11 +30,11 @@ function page(overrides: object = {}) {
   });
 }
 
-describe("guarded", () => {
+describe(guarded, () => {
   it("denies when the page fails to load", async () => {
     vi.mocked(loadCityPage).mockResolvedValue(err("not_found", 404) as never);
     const result = await guarded("sydney", null, async () => ok({ x: 1 }));
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       allowed: false,
       code: "not_found",
       reason: "That page or record doesn't exist.",
@@ -42,7 +44,7 @@ describe("guarded", () => {
   it("denies unauthenticated (no actor)", async () => {
     vi.mocked(loadCityPage).mockResolvedValue(page({ actor: null }) as never);
     const result = await guarded("sydney", null, async () => ok({ x: 1 }));
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       allowed: false,
       code: "unauthenticated",
       reason: "Sign in to continue.",
@@ -52,7 +54,7 @@ describe("guarded", () => {
   it("denies a missing permission with code 'forbidden'", async () => {
     vi.mocked(loadCityPage).mockResolvedValue(page() as never);
     const result = await guarded("sydney", "events.edit", async () => ok({ x: 1 }));
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       allowed: false,
       code: "forbidden",
       reason: "Missing permission: events.edit",
@@ -66,7 +68,7 @@ describe("guarded", () => {
       null,
       async () => err("invalid_input", 400) as Result<{ x: number }>,
     );
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       allowed: false,
       code: "invalid_input",
       reason: "That input couldn't be saved. Check the fields and try again.",
@@ -79,6 +81,6 @@ describe("guarded", () => {
       expect(p.actor.id).toBe("usr_1");
       return Promise.resolve(ok({ courses: [1, 2] }));
     });
-    expect(result).toEqual({ allowed: true, courses: [1, 2] });
+    expect(result).toStrictEqual({ allowed: true, courses: [1, 2] });
   });
 });

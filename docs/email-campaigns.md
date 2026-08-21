@@ -55,14 +55,14 @@ restarts.
 
 ## Failure handling
 
-| Failure mode | Behaviour |
-|--------------|-----------|
-| Resend returns 429 | Read `Retry-After` / `ratelimit-reset` from response headers; sleep that long; retry up to 3× in-loop, then the workflow-level `step.do` retries once more. |
-| Resend returns 5xx | Same retry path as 429. |
-| Resend returns per-message error (e.g. invalid address) | `batchValidation: "permissive"` returns `errors[]` with `{ index, message }`; only the failed positions are marked `failed`, the rest are marked `sent`. |
-| Whole batch throws | Workflow-level retry runs the step again from the start; idempotency key prevents Resend double-sending. |
-| Workflow dies mid-loop | Cloudflare restarts the workflow at the failed step; completed batches already have their `EmailSend.status = "sent"` rows, so the next run's `resolve-segment` skips them. |
-| `RESEND_API_KEY` missing | Workflow throws on `workflow.start`; status visible in the Workflows dashboard. (Previous behaviour was to silently mark every batch `skipped`.) |
+| Failure mode                                            | Behaviour                                                                                                                                                                   |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Resend returns 429                                      | Read `Retry-After` / `ratelimit-reset` from response headers; sleep that long; retry up to 3× in-loop, then the workflow-level `step.do` retries once more.                 |
+| Resend returns 5xx                                      | Same retry path as 429.                                                                                                                                                     |
+| Resend returns per-message error (e.g. invalid address) | `batchValidation: "permissive"` returns `errors[]` with `{ index, message }`; only the failed positions are marked `failed`, the rest are marked `sent`.                    |
+| Whole batch throws                                      | Workflow-level retry runs the step again from the start; idempotency key prevents Resend double-sending.                                                                    |
+| Workflow dies mid-loop                                  | Cloudflare restarts the workflow at the failed step; completed batches already have their `EmailSend.status = "sent"` rows, so the next run's `resolve-segment` skips them. |
+| `RESEND_API_KEY` missing                                | Workflow throws on `workflow.start`; status visible in the Workflows dashboard. (Previous behaviour was to silently mark every batch `skipped`.)                            |
 
 The send is **idempotent**: every batch posts with
 `Idempotency-Key: campaign:{campaignId}:batch:{batchIndex}`. Resend dedups
@@ -95,24 +95,24 @@ wrangler tail --env staging --format json 2>&1 \
 
 ### Event vocabulary
 
-| `event` | Meaning |
-|---------|---------|
-| `workflow.start` | First line of a workflow instance. Includes `resendKeyConfigured`. |
-| `workflow.no-api-key` | Fatal — `RESEND_API_KEY` missing on the Worker. |
-| `workflow.batches-planned` | After segment resolution; reports `totalRecipients`, `batchCount`. |
-| `workflow.nothing-to-do` | Resume case where everyone is already handled. |
-| `workflow.complete` | Final aggregate counters. |
-| `workflow.uncaught` | Re-thrown to terminate the instance in `errored`. |
-| `segment.resolved` | Total users matching the segment, before subtracting handled. |
-| `segment.filtered` | After subtracting handled + suppressed. |
-| `batch.start` | Per-batch — size, suppressed count. |
-| `batch.sends-created` | After creating `EmailSend` placeholder rows. |
-| `batch.prepared` | After per-recipient HTML personalisation. |
-| `batch.resend-call` | Each Resend API attempt. **Includes `rateLimit` headers** — this is what you grep to tune `BATCH_SLEEP`. |
-| `batch.retrying` | About to sleep + retry after 429/5xx. |
-| `batch.resend-error` | Out of retries OR non-retryable error. |
-| `batch.reconciled` | After updating `EmailSend` rows from the response. |
-| `batch.aggregate` | Running totals after each batch. |
+| `event`                    | Meaning                                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `workflow.start`           | First line of a workflow instance. Includes `resendKeyConfigured`.                                       |
+| `workflow.no-api-key`      | Fatal — `RESEND_API_KEY` missing on the Worker.                                                          |
+| `workflow.batches-planned` | After segment resolution; reports `totalRecipients`, `batchCount`.                                       |
+| `workflow.nothing-to-do`   | Resume case where everyone is already handled.                                                           |
+| `workflow.complete`        | Final aggregate counters.                                                                                |
+| `workflow.uncaught`        | Re-thrown to terminate the instance in `errored`.                                                        |
+| `segment.resolved`         | Total users matching the segment, before subtracting handled.                                            |
+| `segment.filtered`         | After subtracting handled + suppressed.                                                                  |
+| `batch.start`              | Per-batch — size, suppressed count.                                                                      |
+| `batch.sends-created`      | After creating `EmailSend` placeholder rows.                                                             |
+| `batch.prepared`           | After per-recipient HTML personalisation.                                                                |
+| `batch.resend-call`        | Each Resend API attempt. **Includes `rateLimit` headers** — this is what you grep to tune `BATCH_SLEEP`. |
+| `batch.retrying`           | About to sleep + retry after 429/5xx.                                                                    |
+| `batch.resend-error`       | Out of retries OR non-retryable error.                                                                   |
+| `batch.reconciled`         | After updating `EmailSend` rows from the response.                                                       |
+| `batch.aggregate`          | Running totals after each batch.                                                                         |
 
 ## Tuning the pace
 
@@ -139,7 +139,7 @@ curl -X POST -H "Authorization: Bearer <admin>" \
   https://claudecommunity.com.au/api/admin/email/campaigns/<id>/resume
 ```
 
-This starts a *fresh* workflow instance with a new id. The workflow's
+This starts a _fresh_ workflow instance with a new id. The workflow's
 `resolve-segment` step subtracts everyone with an existing `EmailSend` row
 (any status — sent, pending, or failed), so:
 
@@ -167,10 +167,10 @@ each `opennextjs-cloudflare build`. The script is already wired into
 
 ### Required secrets
 
-| Secret | Used by |
-|--------|---------|
-| `RESEND_API_KEY` | The workflow reads it from `this.env`. Set via `wrangler secret put RESEND_API_KEY --env <staging\|production>`. |
-| `RESEND_WEBHOOK_SECRET` | For the webhook reconciliation route, not the workflow. |
+| Secret                  | Used by                                                                                                          |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `RESEND_API_KEY`        | The workflow reads it from `this.env`. Set via `wrangler secret put RESEND_API_KEY --env <staging\|production>`. |
+| `RESEND_WEBHOOK_SECRET` | For the webhook reconciliation route, not the workflow.                                                          |
 
 `process.env.RESEND_API_KEY` does **not** work inside workflows on this
 project — `nodejs_compat_populate_process_env` is not enabled. Always use
@@ -224,12 +224,12 @@ load-test runs ≤ 250.
 
 ## Where to look
 
-| File | Purpose |
-|------|---------|
-| `src/workflows/campaign-send.ts` | The workflow itself. |
-| `src/app/api/admin/email/campaigns/[id]/send/route.ts` | Kickoff route. |
-| `src/app/api/admin/email/campaigns/[id]/resume/route.ts` | Resume route. |
-| `src/app/api/webhooks/resend/route.ts` | Reconciles delivery/bounce/complaint events back onto `EmailSend`. |
-| `src/lib/email/{blocks,tracking,unsubscribe,wrap}.ts` | HTML rendering + per-recipient tracking pixel/link rewrite. |
-| `scripts/inject-workflow-exports.mjs` | Post-build patch that exports workflow classes from the Worker. |
-| `wrangler.jsonc` | `[[workflows]]` bindings. |
+| File                                                     | Purpose                                                            |
+| -------------------------------------------------------- | ------------------------------------------------------------------ |
+| `src/workflows/campaign-send.ts`                         | The workflow itself.                                               |
+| `src/app/api/admin/email/campaigns/[id]/send/route.ts`   | Kickoff route.                                                     |
+| `src/app/api/admin/email/campaigns/[id]/resume/route.ts` | Resume route.                                                      |
+| `src/app/api/webhooks/resend/route.ts`                   | Reconciles delivery/bounce/complaint events back onto `EmailSend`. |
+| `src/lib/email/{blocks,tracking,unsubscribe,wrap}.ts`    | HTML rendering + per-recipient tracking pixel/link rewrite.        |
+| `scripts/inject-workflow-exports.mjs`                    | Post-build patch that exports workflow classes from the Worker.    |
+| `wrangler.jsonc`                                         | `[[workflows]]` bindings.                                          |

@@ -52,7 +52,7 @@ const CONFIGS: Record<Region, RegionConfig> = {
 export function getRegion(): Region {
   const raw =
     (typeof process !== "undefined" && process.env.VITE_REGION) ||
-    (typeof import.meta !== "undefined" &&
+    (import.meta !== undefined &&
       (import.meta as ImportMeta & { env?: { VITE_REGION?: string } }).env?.VITE_REGION) ||
     "au";
   return raw === "nz" ? "nz" : "au";

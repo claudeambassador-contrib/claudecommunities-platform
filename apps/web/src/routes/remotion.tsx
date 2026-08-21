@@ -1,6 +1,7 @@
 import { Player } from "@remotion/player";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
+
 import { WebsiteTour } from "@/shared/ui/website-tour";
 
 export const Route = createFileRoute("/remotion")({
@@ -10,8 +11,8 @@ export const Route = createFileRoute("/remotion")({
 
 function RemotionPage(): ReactElement {
   return (
-    <main className="stack min-h-dvh items-center bg-ink p-6">
-      <h1 className="m-0 text-[28px] text-cream">Website tour</h1>
+    <main className="stack bg-ink min-h-dvh items-center p-6">
+      <h1 className="text-cream m-0 text-[28px]">Website tour</h1>
       <Player
         autoPlay
         component={WebsiteTour}

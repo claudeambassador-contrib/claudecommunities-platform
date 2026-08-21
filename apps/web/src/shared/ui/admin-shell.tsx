@@ -1,8 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { useCallback, useState } from "react";
+
 import type { Permission } from "@/shared/auth/permissions";
-import { type AdminNavItem, groupAdminNav } from "@/shared/ui/adminNav";
+import { groupAdminNav } from "@/shared/ui/adminNav";
+import type { AdminNavItem } from "@/shared/ui/adminNav";
 import { PermissionsProvider } from "@/shared/ui/can";
 
 export interface AdminShellProps {

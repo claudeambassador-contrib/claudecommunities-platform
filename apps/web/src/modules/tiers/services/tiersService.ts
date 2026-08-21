@@ -1,11 +1,12 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as tiersRepo from "@/modules/tiers/repositories/tiersRepository";
 import { tierWriteInput } from "@/modules/tiers/schemas";
 import type { TierInput, TierSummary, TierWrite } from "@/modules/tiers/types";
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import { toSafeSlug } from "@/shared/ids";
 
 function validateInput(input: TierInput): Result<{ write: TierWrite }> {

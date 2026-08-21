@@ -1,5 +1,6 @@
 import type { McpArgs } from "@/modules/system/types";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 export function str(args: McpArgs, key: string): string | undefined {
   const value = args[key];

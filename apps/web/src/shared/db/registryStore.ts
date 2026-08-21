@@ -1,5 +1,6 @@
 import type { RegistryDb } from "./client";
-import { createRegistrySchema, type RegistryTables } from "./registrySchema";
+import { createRegistrySchema } from "./registrySchema";
+import type { RegistryTables } from "./registrySchema";
 
 /**
  * Global-plane database handle (tenants, identity, Impact Lab).

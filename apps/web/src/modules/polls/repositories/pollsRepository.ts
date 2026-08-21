@@ -1,9 +1,11 @@
 import { and, asc, eq, sql } from "drizzle-orm";
+
 import type { PollDetail } from "@/modules/polls/types";
 import { first } from "@/shared/db/rows";
 import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
 /** The only tables this repository may touch. */
@@ -107,7 +109,7 @@ export async function insertPoll(
   }
   for (const [index, text] of input.options.entries()) {
     // Sequential inserts keep option order deterministic on D1.
-    // biome-ignore lint/performance/noAwaitInLoops: option rows are ordered writes
+    // oxlint-disable-next-line no-await-in-loop -- option rows are ordered writes
     await store.db.insert(pollOptions).values({
       id: newId("opt"),
       orgId: store.orgId,

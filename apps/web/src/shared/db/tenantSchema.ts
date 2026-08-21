@@ -2,8 +2,8 @@
  * Single SQLite table set applied to every city D1.
  * Unlike Robinson's pgSchema(name), D1 isolation is physical (one DB per city).
  */
-/** biome-ignore-all lint/performance/noNamespaceImport: domain schema barrels */
-/** biome-ignore-all lint/style/useDestructuring: re-export table aliases */
+/* oxlint-disable import/namespace -- domain schema barrels */
+/* oxlint-disable prefer-destructuring -- re-export table aliases */
 
 import * as activityTables from "@/modules/activity/schema.tenant";
 import * as badgeTables from "@/modules/badges/schema.tenant";
@@ -22,56 +22,56 @@ import * as talks from "@/modules/talks/schema.tenant";
 import * as tierTables from "@/modules/tiers/schema.tenant";
 
 export const eventsTable = events.events;
-export const eventRsvps = events.eventRsvps;
-export const eventAgendaItems = events.eventAgendaItems;
-export const eventLumaInterests = events.eventLumaInterests;
-export const eventResources = events.eventResources;
+export const { eventRsvps } = events;
+export const { eventAgendaItems } = events;
+export const { eventLumaInterests } = events;
+export const { eventResources } = events;
 export type EventRow = events.EventRow;
 
-export const spaces = community.spaces;
-export const posts = community.posts;
-export const comments = community.comments;
-export const reactions = community.reactions;
-export const commentReactions = community.commentReactions;
-export const bookmarks = community.bookmarks;
-export const likes = community.likes;
-export const spaceViews = community.spaceViews;
+export const { spaces } = community;
+export const { posts } = community;
+export const { comments } = community;
+export const { reactions } = community;
+export const { commentReactions } = community;
+export const { bookmarks } = community;
+export const { likes } = community;
+export const { spaceViews } = community;
 export type PostRow = community.PostRow;
 
 export const coursesTable = courses.courses;
-export const lessons = courses.lessons;
-export const courseEnrollments = courses.courseEnrollments;
-export const scheduledCourses = courses.scheduledCourses;
+export const { lessons } = courses;
+export const { courseEnrollments } = courses;
+export const { scheduledCourses } = courses;
 
-export const speakers = talks.speakers;
-export const talkComments = talks.talkComments;
-export const talkSubmissions = talks.talkSubmissions;
+export const { speakers } = talks;
+export const { talkComments } = talks;
+export const { talkSubmissions } = talks;
 
-export const emailCampaigns = email.emailCampaigns;
-export const emailTemplates = email.emailTemplates;
-export const emailSends = email.emailSends;
-export const emailAutomations = email.emailAutomations;
-export const emailSettings = email.emailSettings;
+export const { emailCampaigns } = email;
+export const { emailTemplates } = email;
+export const { emailSends } = email;
+export const { emailAutomations } = email;
+export const { emailSettings } = email;
 
-export const socialAccounts = social.socialAccounts;
-export const socialPosts = social.socialPosts;
+export const { socialAccounts } = social;
+export const { socialPosts } = social;
 
-export const slideGeneratorStates = slides.slideGeneratorStates;
-export const slideStylePresets = slides.slideStylePresets;
-export const slideExportJobs = slides.slideExportJobs;
+export const { slideGeneratorStates } = slides;
+export const { slideStylePresets } = slides;
+export const { slideExportJobs } = slides;
 
 export const pagesTable = pages.pages;
-export const badges = badgeTables.badges;
-export const userBadges = badgeTables.userBadges;
-export const notifications = pages.notifications;
-export const roles = roleTables.roles;
-export const activities = activityTables.activities;
-export const cities = cityTables.cities;
-export const connections = connectionTables.connections;
-export const polls = pollTables.polls;
-export const pollOptions = pollTables.pollOptions;
-export const pollVotes = pollTables.pollVotes;
-export const membershipTiers = tierTables.membershipTiers;
+export const { badges } = badgeTables;
+export const { userBadges } = badgeTables;
+export const { notifications } = pages;
+export const { roles } = roleTables;
+export const { activities } = activityTables;
+export const { cities } = cityTables;
+export const { connections } = connectionTables;
+export const { polls } = pollTables;
+export const { pollOptions } = pollTables;
+export const { pollVotes } = pollTables;
+export const { membershipTiers } = tierTables;
 
 /** Stable object of tenant tables (no per-schema factory needed on D1). */
 export function createTenantSchema() {

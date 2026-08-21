@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import { defineConfig } from "vitest/config";
 
 const alias = {
@@ -11,6 +12,12 @@ export default defineConfig({
     alias,
   },
   test: {
+    coverage: {
+      exclude: ["src/routeTree.gen.ts", "**/*.d.ts"],
+      include: ["src/**/*.{ts,tsx}"],
+      provider: "v8",
+      reporter: ["text", "lcov"],
+    },
     projects: [
       {
         resolve: { alias },

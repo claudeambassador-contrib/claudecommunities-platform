@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   createScheduledCourse,
   getScheduledCourse,
@@ -6,6 +7,7 @@ import {
   removeScheduledCourse,
   updateScheduledCourse,
 } from "@/modules/courses/services/coursesService";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 const START = "2026-10-01T09:00:00.000Z";
@@ -17,25 +19,25 @@ describe("scheduledCoursesService", () => {
       startTime: START,
       title: "Claude Workshop",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     expect(created.course.slug).toBe("claude-workshop-october-2026");
-    expect(created.course.isPublished).toBe(false);
+    expect(created.course.isPublished).toBeFalsy();
 
     const hidden = await listPublishedScheduled(store);
-    expect(hidden.ok && hidden.courses).toEqual([]);
+    expect(hidden.ok && hidden.courses).toStrictEqual([]);
 
     const published = await updateScheduledCourse(store, adminActor(), created.course.id, {
       isPublished: true,
     });
-    expect(published.ok).toBe(true);
+    expect(published.ok).toBeTruthy();
 
     const listed = await listPublishedScheduled(store, { upcoming: true });
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (listed.ok) {
-      expect(listed.courses.map((c) => c.slug)).toEqual(["claude-workshop-october-2026"]);
+      expect(listed.courses.map((c) => c.slug)).toStrictEqual(["claude-workshop-october-2026"]);
     }
   });
 
@@ -45,7 +47,7 @@ describe("scheduledCoursesService", () => {
       startTime: START,
       title: "Nope",
     });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
     if (!denied.ok) {
       expect(denied.error.status).toBe(403);
     }
@@ -54,7 +56,7 @@ describe("scheduledCoursesService", () => {
       startTime: "not-a-date",
       title: "Bad",
     });
-    expect(bad.ok).toBe(false);
+    expect(bad.ok).toBeFalsy();
     if (!bad.ok) {
       expect(bad.error.status).toBe(400);
     }
@@ -67,7 +69,7 @@ describe("scheduledCoursesService", () => {
       startTime: START,
       title: "Bootcamp",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -76,7 +78,7 @@ describe("scheduledCoursesService", () => {
       location: "Sydney",
       title: "Renamed Bootcamp",
     });
-    expect(updated.ok).toBe(true);
+    expect(updated.ok).toBeTruthy();
     if (updated.ok) {
       expect(updated.course.slug).toBe(created.course.slug);
       expect(updated.course.title).toBe("Renamed Bootcamp");
@@ -84,11 +86,11 @@ describe("scheduledCoursesService", () => {
     }
 
     const fetched = await getScheduledCourse(store, created.course.slug);
-    expect(fetched.ok).toBe(true);
+    expect(fetched.ok).toBeTruthy();
 
     const removed = await removeScheduledCourse(store, adminActor(), created.course.id);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
     const missing = await getScheduledCourse(store, created.course.id, adminActor());
-    expect(missing.ok).toBe(false);
+    expect(missing.ok).toBeFalsy();
   });
 });

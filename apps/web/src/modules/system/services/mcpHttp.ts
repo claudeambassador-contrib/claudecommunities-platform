@@ -1,6 +1,7 @@
 import { verifyToken } from "@clerk/backend";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+
 import { actorFromClerkUserId } from "@/modules/identity/services/usersService";
 import { callMcpTool, listMcpTools } from "@/modules/system/services/mcpService";
 import type { McpArgs, McpDispatchContext } from "@/modules/system/types";
@@ -93,9 +94,7 @@ function dispatchContext(actor: Actor, request: Request): McpDispatchContext {
 type RegisterLoose = (
   name: string,
   config: { description: string; inputSchema: { additionalProperties: true; type: "object" } },
-  cb: (
-    args: McpArgs,
-  ) => Promise<{ content: Array<{ text: string; type: "text" }>; isError?: boolean }>,
+  cb: (args: McpArgs) => Promise<{ content: { text: string; type: "text" }[]; isError?: boolean }>,
 ) => void;
 
 function createMcpServer(ctx: McpDispatchContext): McpServer {
@@ -139,7 +138,7 @@ export async function handleMcpHttp(request: Request): Promise<Response> {
     sessionIdGenerator: undefined,
   });
   transport.onclose = () => {
-    server.close().catch(() => undefined);
+    server.close().catch(() => {});
   };
   await server.connect(transport);
   return transport.handleRequest(request);

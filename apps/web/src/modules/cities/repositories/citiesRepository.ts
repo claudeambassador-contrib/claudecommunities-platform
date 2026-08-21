@@ -1,9 +1,11 @@
 import { and, asc, eq, sql } from "drizzle-orm";
+
 import type { AdminCity, CityWrite } from "@/modules/cities/types";
 import { first } from "@/shared/db/rows";
 import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
 /** The only tables this repository may touch. */

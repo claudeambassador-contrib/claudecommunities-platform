@@ -1,18 +1,17 @@
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as usersRepo from "@/modules/identity/repositories/usersRepository";
-import {
-  type ClerkProfile,
-  createSessionService,
-  type SessionDeps,
-} from "@/modules/identity/services/sessionCore";
+import { createSessionService } from "@/modules/identity/services/sessionCore";
+import type { ClerkProfile, SessionDeps } from "@/modules/identity/services/sessionCore";
 import { provisionCity } from "@/modules/tenants/services/publicListService";
 import { permissionsForRole } from "@/shared/auth/permissions";
 import type { RegistryStore } from "@/shared/db/registryStore";
 import type { AuthContext, TenantContext } from "@/shared/http/routeContext";
 import { newId } from "@/shared/ids";
 import { ttlMemo } from "@/shared/ttlMemo";
+
 import { openMemoryRegistry } from "../helpers/registry";
 import { openMemoryTenant } from "../helpers/tenant";
 
@@ -72,15 +71,15 @@ describe("sessionCore.syncSessionUser", () => {
 
     const result = await service.syncSessionUser(registry.db);
 
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     if (!result.ok) {
       return;
     }
     expect(result.auth.clerkUserId).toBe(CLERK_ID);
     expect(result.auth.email).toBe("ada@example.com");
-    expect(result.auth.isSuperAdmin).toBe(false);
+    expect(result.auth.isSuperAdmin).toBeFalsy();
     expect(result.auth.role).toBeNull();
-    expect(result.auth.permissions).toEqual(permissionsForRole(null));
+    expect(result.auth.permissions).toStrictEqual(permissionsForRole(null));
 
     const row = await usersRepo.findByClerkId(registry.db, CLERK_ID);
     expect(row?.displayName).toBe("Ada Lovelace");
@@ -97,7 +96,7 @@ describe("sessionCore.syncSessionUser", () => {
 
     const result = await service.syncSessionUser(registry.db);
 
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       error: { code: "banned", message: undefined, status: 403 },
       ok: false,
     });
@@ -114,14 +113,14 @@ describe("sessionCore.syncSessionUser", () => {
 
     await setUserFlag(registry, { isBanned: true });
     const banned = await service.syncSessionUser(registry.db);
-    expect(banned.ok).toBe(false);
+    expect(banned.ok).toBeFalsy();
     expect(banned.ok === false && banned.error.code).toBe("banned");
     expect(deps.sessionMemo.get(CLERK_ID)).toBeUndefined();
 
     // Unbanning must now take the full re-sync path (Clerk is hit a second time).
     await setUserFlag(registry, { isBanned: false });
     const again = await service.syncSessionUser(registry.db);
-    expect(again.ok).toBe(true);
+    expect(again.ok).toBeTruthy();
     expect(deps.getProfile).toHaveBeenCalledTimes(2);
   });
 
@@ -131,13 +130,13 @@ describe("sessionCore.syncSessionUser", () => {
     const service = createSessionService(deps);
 
     const first = await service.syncSessionUser(registry.db);
-    expect(first.ok && first.auth.isSuperAdmin).toBe(false);
+    expect(first.ok && first.auth.isSuperAdmin).toBeFalsy();
 
     await setUserFlag(registry, { isSuperAdmin: true });
     const second = await service.syncSessionUser(registry.db);
 
-    expect(second.ok && second.auth.isSuperAdmin).toBe(true);
-    expect(deps.getProfile).toHaveBeenCalledTimes(1);
+    expect(second.ok && second.auth.isSuperAdmin).toBeTruthy();
+    expect(deps.getProfile).toHaveBeenCalledOnce();
   });
 
   it("falls through to a full re-sync when the registry row vanished after caching", async () => {
@@ -152,9 +151,9 @@ describe("sessionCore.syncSessionUser", () => {
 
     const result = await service.syncSessionUser(registry.db);
 
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     expect(deps.getProfile).toHaveBeenCalledTimes(2);
-    expect(await usersRepo.findByClerkId(registry.db, CLERK_ID)).not.toBeNull();
+    await expect(usersRepo.findByClerkId(registry.db, CLERK_ID)).resolves.not.toBeNull();
   });
 
   it("returns unauthenticated without touching the session when Clerk is not configured", async () => {
@@ -164,8 +163,8 @@ describe("sessionCore.syncSessionUser", () => {
 
     const result = await service.syncSessionUser(registry.db);
 
-    expect(result.ok).toBe(false);
-    expect(result.ok === false && result.error).toEqual({
+    expect(result.ok).toBeFalsy();
+    expect(result.ok === false && result.error).toStrictEqual({
       code: "unauthenticated",
       message: undefined,
       status: 401,
@@ -183,12 +182,12 @@ describe("sessionCore.syncSessionUser", () => {
 
     const result = await service.syncSessionUser(registry.db);
 
-    expect(result.ok === false && result.error).toEqual({
+    expect(result.ok === false && result.error).toStrictEqual({
       code: "missing_email",
       message: undefined,
       status: 400,
     });
-    expect(await usersRepo.findByClerkId(registry.db, CLERK_ID)).toBeNull();
+    await expect(usersRepo.findByClerkId(registry.db, CLERK_ID)).resolves.toBeNull();
   });
 
   it("re-syncs from Clerk once the session memo TTL has expired", async () => {
@@ -199,12 +198,12 @@ describe("sessionCore.syncSessionUser", () => {
 
     await service.syncSessionUser(registry.db);
     await service.syncSessionUser(registry.db);
-    expect(deps.getProfile).toHaveBeenCalledTimes(1);
+    expect(deps.getProfile).toHaveBeenCalledOnce();
 
     vi.advanceTimersByTime(61_000);
     const result = await service.syncSessionUser(registry.db);
 
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     expect(deps.getProfile).toHaveBeenCalledTimes(2);
   });
 });
@@ -217,7 +216,7 @@ describe("sessionCore.buildCityRouteContext", () => {
     const service = createSessionService(deps);
 
     const synced = await service.syncSessionUser(registry.db);
-    expect(synced.ok).toBe(true);
+    expect(synced.ok).toBeTruthy();
     if (!synced.ok) {
       return;
     }
@@ -230,23 +229,23 @@ describe("sessionCore.buildCityRouteContext", () => {
     });
 
     const asMember = await service.buildCityRouteContext(registry.db, "sydney");
-    expect(asMember.ok).toBe(true);
+    expect(asMember.ok).toBeTruthy();
     if (!asMember.ok) {
       return;
     }
     expect(asMember.ctx.tenant.slug).toBe("sydney");
     expect(asMember.ctx.auth?.role).toBe("member");
-    expect(asMember.ctx.auth?.permissions).toEqual(permissionsForRole("member"));
+    expect(asMember.ctx.auth?.permissions).toStrictEqual(permissionsForRole("member"));
 
     await setUserFlag(registry, { isSuperAdmin: true });
     const asSuperAdmin = await service.buildCityRouteContext(registry.db, "sydney");
-    expect(asSuperAdmin.ok && asSuperAdmin.ctx.auth?.permissions).toEqual(
+    expect(asSuperAdmin.ok && asSuperAdmin.ctx.auth?.permissions).toStrictEqual(
       permissionsForRole("owner"),
     );
 
     const anonymous = createSessionService(makeDeps({ getSessionUserId: async () => null }));
     const asGuest = await anonymous.buildCityRouteContext(registry.db, "sydney");
-    expect(asGuest.ok).toBe(true);
+    expect(asGuest.ok).toBeTruthy();
     expect(asGuest.ok && asGuest.ctx.auth).toBeNull();
     expect(asGuest.ok && asGuest.ctx.tenant.slug).toBe("sydney");
   });

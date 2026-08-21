@@ -3,14 +3,14 @@ import { z } from "zod";
 
 // cityFn pulls in guarded → cityPage → the cloudflare:workers env chain, which
 // vitest can't load. The schema merge under test needs none of it.
-vi.mock("@/shared/http/cityPage", () => ({ loadCityPage: vi.fn() }));
+vi.mock(import("@/shared/http/cityPage"), () => ({ loadCityPage: vi.fn() }));
 
 import { cityInput } from "@/shared/http/cityFn";
 
-describe("cityInput", () => {
+describe(cityInput, () => {
   it("requires citySlug when the route declares no extra input", () => {
     const schema = cityInput();
-    expect(schema.parse({ citySlug: "sydney" })).toEqual({ citySlug: "sydney" });
+    expect(schema.parse({ citySlug: "sydney" })).toStrictEqual({ citySlug: "sydney" });
     expect(() => schema.parse({})).toThrow(z.ZodError);
   });
 
@@ -20,7 +20,7 @@ describe("cityInput", () => {
 
   it("merges the route's input shape on top of citySlug", () => {
     const schema = cityInput({ name: z.string(), price: z.number() });
-    expect(schema.parse({ citySlug: "sydney", name: "Gold", price: 10 })).toEqual({
+    expect(schema.parse({ citySlug: "sydney", name: "Gold", price: 10 })).toStrictEqual({
       citySlug: "sydney",
       name: "Gold",
       price: 10,
@@ -47,7 +47,7 @@ describe("cityInput", () => {
       note: z.string().optional(),
       yearlyPrice: z.number().nullable(),
     });
-    expect(schema.parse({ citySlug: "sydney", yearlyPrice: null })).toEqual({
+    expect(schema.parse({ citySlug: "sydney", yearlyPrice: null })).toStrictEqual({
       citySlug: "sydney",
       yearlyPrice: null,
     });

@@ -17,12 +17,12 @@ export interface CitySeedSql {
   tenantSql: string;
 }
 
-const SPACES: ReadonlyArray<{
+const SPACES: readonly {
   description: string;
   icon: string;
   name: string;
   slug: string;
-}> = [
+}[] = [
   {
     description: "Official community announcements",
     icon: "📢",
@@ -62,7 +62,7 @@ const SPACES: ReadonlyArray<{
 ];
 
 function sqlStr(value: string): string {
-  return `'${value.replace(/'/g, "''")}'`;
+  return `'${value.replaceAll("'", "''")}'`;
 }
 
 function homeBlocks(): Block[] {
@@ -103,7 +103,7 @@ export function buildCitySeed(input: CitySeedInput): CitySeedSql {
   const adaIsOwner = ownerEmail === SEED_ADA_EMAIL;
 
   const spaceSql = SPACES.map((space, index) => {
-    const id = `spc_seed_${space.slug.replace(/-/g, "_")}`;
+    const id = `spc_seed_${space.slug.replaceAll("-", "_")}`;
     return `INSERT OR IGNORE INTO spaces (id, org_id, slug, name, description, icon, color, is_private, sort_order, created_at)
 VALUES (${sqlStr(id)}, ${org}, ${sqlStr(space.slug)}, ${sqlStr(space.name)}, ${sqlStr(space.description)}, ${sqlStr(space.icon)}, NULL, 0, ${index + 1}, ${now});`;
   });

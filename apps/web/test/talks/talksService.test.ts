@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { isStorageUrl } from "@/modules/talks/schemas";
 import {
   createSpeaker,
@@ -21,6 +22,7 @@ import {
   updateSpeaker,
   updateTalkContent,
 } from "@/modules/talks/services/talksService";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 const START = "2026-09-01T09:00:00.000Z";
@@ -45,7 +47,7 @@ async function seedTalk(
     name: input.name ?? "Ada",
     title: input.title ?? "Building with Claude",
   });
-  expect(created.ok).toBe(true);
+  expect(created.ok).toBeTruthy();
   if (!created.ok) {
     throw new Error("talk seed failed");
   }
@@ -79,7 +81,7 @@ describe("talksService submissions", () => {
     expect(talk.email).toBe("ada@example.com");
     expect(talk.status).toBe("pending");
     expect(talk.userId).toBe("usr_member");
-    expect(talk.contentLocked).toBe(false);
+    expect(talk.contentLocked).toBeFalsy();
     expect(talk.deletedAt).toBeNull();
   });
 
@@ -89,20 +91,20 @@ describe("talksService submissions", () => {
       email: "a@b.com",
       title: "Talk",
     });
-    expect(noName.ok).toBe(false);
+    expect(noName.ok).toBeFalsy();
 
     const badEmail = await createTalkSubmission(store, memberActor(), {
       email: "not-an-email",
       name: "Ada",
       title: "Talk",
     });
-    expect(badEmail.ok).toBe(false);
+    expect(badEmail.ok).toBeFalsy();
 
     const noTitle = await createTalkSubmission(store, memberActor(), {
       email: "a@b.com",
       name: "Ada",
     });
-    expect(noTitle.ok).toBe(false);
+    expect(noTitle.ok).toBeFalsy();
   });
 
   it("lists only the current user's talks", async () => {
@@ -111,23 +113,23 @@ describe("talksService submissions", () => {
     await seedTalk(store, memberActor({ id: "usr_b" }), { title: "Theirs" });
 
     const mine = await listUserTalks(store, memberActor({ id: "usr_a" }));
-    expect(mine.ok).toBe(true);
+    expect(mine.ok).toBeTruthy();
     if (!mine.ok) {
       return;
     }
-    expect(mine.talks.map((t) => t.title)).toEqual(["Mine"]);
+    expect(mine.talks.map((t) => t.title)).toStrictEqual(["Mine"]);
   });
 
   it("requires speakers.edit to list all submissions", async () => {
     const { store } = await seedTalk();
     const denied = await listTalkSubmissions(store, memberActor());
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
     if (!denied.ok) {
       expect(denied.error.status).toBe(403);
     }
 
     const listed = await listTalkSubmissions(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
@@ -137,13 +139,13 @@ describe("talksService submissions", () => {
   it("lets the owner or an admin read a talk, but not another member", async () => {
     const { store, talk } = await seedTalk();
     const owner = await getTalk(store, memberActor(), talk.id);
-    expect(owner.ok).toBe(true);
+    expect(owner.ok).toBeTruthy();
 
     const admin = await getTalk(store, adminActor(), talk.id);
-    expect(admin.ok).toBe(true);
+    expect(admin.ok).toBeTruthy();
 
     const stranger = await getTalk(store, memberActor({ id: "usr_other" }), talk.id);
-    expect(stranger.ok).toBe(false);
+    expect(stranger.ok).toBeFalsy();
     if (!stranger.ok) {
       expect(stranger.error.status).toBe(403);
     }
@@ -154,17 +156,17 @@ describe("talksService submissions", () => {
     const updated = await updateTalkContent(store, memberActor(), talk.id, {
       title: "Revised title",
     });
-    expect(updated.ok).toBe(true);
+    expect(updated.ok).toBeTruthy();
     if (!updated.ok) {
       return;
     }
     expect(updated.talk.title).toBe("Revised title");
 
     const locked = await setTalkLocks(store, adminActor(), talk.id, { contentLocked: true });
-    expect(locked.ok).toBe(true);
+    expect(locked.ok).toBeTruthy();
 
     const blocked = await updateTalkContent(store, memberActor(), talk.id, { title: "Nope" });
-    expect(blocked.ok).toBe(false);
+    expect(blocked.ok).toBeFalsy();
     if (!blocked.ok) {
       expect(blocked.error.status).toBe(403);
     }
@@ -172,7 +174,7 @@ describe("talksService submissions", () => {
     const adminEdit = await updateTalkContent(store, adminActor(), talk.id, {
       title: "Admin rewrite",
     });
-    expect(adminEdit.ok).toBe(true);
+    expect(adminEdit.ok).toBeTruthy();
     if (!adminEdit.ok) {
       return;
     }
@@ -182,9 +184,9 @@ describe("talksService submissions", () => {
   it("rejects empty name or title on update", async () => {
     const { store, talk } = await seedTalk();
     const emptyName = await updateTalkContent(store, memberActor(), talk.id, { name: "  " });
-    expect(emptyName.ok).toBe(false);
+    expect(emptyName.ok).toBeFalsy();
     const emptyTitle = await updateTalkContent(store, memberActor(), talk.id, { title: "" });
-    expect(emptyTitle.ok).toBe(false);
+    expect(emptyTitle.ok).toBeFalsy();
   });
 
   it("rejects an invalid email on update via the module zod schema", async () => {
@@ -192,7 +194,7 @@ describe("talksService submissions", () => {
     const badEmail = await updateTalkContent(store, memberActor(), talk.id, {
       email: "not-an-email",
     });
-    expect(badEmail.ok).toBe(false);
+    expect(badEmail.ok).toBeFalsy();
     if (!badEmail.ok) {
       expect(badEmail.error.status).toBe(400);
     }
@@ -201,17 +203,17 @@ describe("talksService submissions", () => {
   it("lets an admin set pending, approved, or declined", async () => {
     const { store, talk } = await seedTalk();
     const denied = await setTalkStatus(store, memberActor(), talk.id, "approved");
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const approved = await setTalkStatus(store, adminActor(), talk.id, "approved");
-    expect(approved.ok).toBe(true);
+    expect(approved.ok).toBeTruthy();
     if (!approved.ok) {
       return;
     }
     expect(approved.talk.status).toBe("approved");
 
     const declined = await setTalkStatus(store, adminActor(), talk.id, "declined");
-    expect(declined.ok).toBe(true);
+    expect(declined.ok).toBeTruthy();
     if (!declined.ok) {
       return;
     }
@@ -221,31 +223,31 @@ describe("talksService submissions", () => {
   it("hides soft-deleted talks from the default admin list", async () => {
     const { store, talk } = await seedTalk();
     const denied = await setTalkDeleted(store, memberActor(), talk.id, true);
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const removed = await setTalkDeleted(store, adminActor(), talk.id, true);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
     if (!removed.ok) {
       return;
     }
     expect(removed.talk.deletedAt).not.toBeNull();
 
     const hidden = await listTalkSubmissions(store, adminActor());
-    expect(hidden.ok).toBe(true);
+    expect(hidden.ok).toBeTruthy();
     if (!hidden.ok) {
       return;
     }
-    expect(hidden.talks).toEqual([]);
+    expect(hidden.talks).toStrictEqual([]);
 
     const withDeleted = await listTalkSubmissions(store, adminActor(), { includeDeleted: true });
-    expect(withDeleted.ok).toBe(true);
+    expect(withDeleted.ok).toBeTruthy();
     if (!withDeleted.ok) {
       return;
     }
     expect(withDeleted.talks).toHaveLength(1);
 
     const restored = await setTalkDeleted(store, adminActor(), talk.id, false);
-    expect(restored.ok).toBe(true);
+    expect(restored.ok).toBeTruthy();
     if (!restored.ok) {
       return;
     }
@@ -255,25 +257,25 @@ describe("talksService submissions", () => {
   it("lets the owner hard-delete a pending unlocked talk, but not after review", async () => {
     const { store, talk } = await seedTalk();
     const stranger = await deleteTalkSubmission(store, memberActor({ id: "usr_other" }), talk.id);
-    expect(stranger.ok).toBe(false);
+    expect(stranger.ok).toBeFalsy();
 
     await setTalkStatus(store, adminActor(), talk.id, "approved");
     const afterReview = await deleteTalkSubmission(store, memberActor(), talk.id);
-    expect(afterReview.ok).toBe(false);
+    expect(afterReview.ok).toBeFalsy();
 
     const adminDelete = await deleteTalkSubmission(store, adminActor(), talk.id);
-    expect(adminDelete.ok).toBe(true);
+    expect(adminDelete.ok).toBeTruthy();
 
     const missing = await getTalk(store, adminActor(), talk.id);
-    expect(missing.ok).toBe(false);
+    expect(missing.ok).toBeFalsy();
   });
 
   it("lets the owner hard-delete their own pending talk", async () => {
     const { store, talk } = await seedTalk();
     const removed = await deleteTalkSubmission(store, memberActor(), talk.id);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
     const fetched = await getTalk(store, memberActor(), talk.id);
-    expect(fetched.ok).toBe(false);
+    expect(fetched.ok).toBeFalsy();
   });
 });
 
@@ -288,7 +290,7 @@ describe("talksService speakers", () => {
       name: "Grace",
       talkTitle: "Closing",
     });
-    expect(first.ok && second.ok).toBe(true);
+    expect(first.ok && second.ok).toBeTruthy();
     if (!(first.ok && second.ok)) {
       return;
     }
@@ -297,26 +299,26 @@ describe("talksService speakers", () => {
     expect(first.speaker.eventId).toBe(event.id);
 
     const listed = await listSpeakers(store, adminActor(), event.id);
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
-    expect(listed.speakers.map((s) => s.name)).toEqual(["Ada", "Grace"]);
+    expect(listed.speakers.map((s) => s.name)).toStrictEqual(["Ada", "Grace"]);
   });
 
   it("rejects speaker create without speakers.edit, name, or a real event", async () => {
     const { store, event } = await seedEvent();
     const denied = await createSpeaker(store, memberActor(), event.id, { name: "Ada" });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
     if (!denied.ok) {
       expect(denied.error.status).toBe(403);
     }
 
     const noName = await createSpeaker(store, adminActor(), event.id, { name: "  " });
-    expect(noName.ok).toBe(false);
+    expect(noName.ok).toBeFalsy();
 
     const missingEvent = await createSpeaker(store, adminActor(), "evt_missing", { name: "Ada" });
-    expect(missingEvent.ok).toBe(false);
+    expect(missingEvent.ok).toBeFalsy();
     if (!missingEvent.ok) {
       expect(missingEvent.error.status).toBe(404);
     }
@@ -328,17 +330,17 @@ describe("talksService speakers", () => {
       headshotUrl: "https://evil.example/photo.jpg",
       name: "Ada",
     });
-    expect(bad.ok).toBe(false);
+    expect(bad.ok).toBeFalsy();
 
     const okUrl = await createSpeaker(store, adminActor(), event.id, {
       headshotUrl: "/api/files/ada.png",
       name: "Ada",
     });
-    expect(okUrl.ok).toBe(true);
+    expect(okUrl.ok).toBeTruthy();
 
     const previous = process.env.R2_PUBLIC_URL;
     process.env.R2_PUBLIC_URL = "https://cdn.example.com";
-    expect(isStorageUrl("https://cdn.example.com/ada.png")).toBe(true);
+    expect(isStorageUrl("https://cdn.example.com/ada.png")).toBeTruthy();
     if (previous === undefined) {
       process.env.R2_PUBLIC_URL = undefined;
     } else {
@@ -349,19 +351,19 @@ describe("talksService speakers", () => {
   it("requires speakers.view to list or get a speaker", async () => {
     const { store, event } = await seedEvent();
     const created = await createSpeaker(store, adminActor(), event.id, { name: "Ada" });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
 
     const listDenied = await listSpeakers(store, memberActor(), event.id);
-    expect(listDenied.ok).toBe(false);
+    expect(listDenied.ok).toBeFalsy();
 
     const getDenied = await getSpeaker(store, memberActor(), created.speaker.id);
-    expect(getDenied.ok).toBe(false);
+    expect(getDenied.ok).toBeFalsy();
 
     const fetched = await getSpeaker(store, adminActor(), created.speaker.id);
-    expect(fetched.ok).toBe(true);
+    expect(fetched.ok).toBeTruthy();
     if (!fetched.ok) {
       return;
     }
@@ -371,7 +373,7 @@ describe("talksService speakers", () => {
   it("updates speaker fields and rejects an empty name", async () => {
     const { store, event } = await seedEvent();
     const created = await createSpeaker(store, adminActor(), event.id, { name: "Ada" });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -380,7 +382,7 @@ describe("talksService speakers", () => {
       company: "Anthropic",
       talkTitle: "Keynote",
     });
-    expect(updated.ok).toBe(true);
+    expect(updated.ok).toBeTruthy();
     if (!updated.ok) {
       return;
     }
@@ -388,57 +390,57 @@ describe("talksService speakers", () => {
     expect(updated.speaker.talkTitle).toBe("Keynote");
 
     const empty = await updateSpeaker(store, adminActor(), created.speaker.id, { name: "" });
-    expect(empty.ok).toBe(false);
+    expect(empty.ok).toBeFalsy();
   });
 
   it("deletes a speaker and requires speakers.delete", async () => {
     const { store, event } = await seedEvent();
     const created = await createSpeaker(store, adminActor(), event.id, { name: "Ada" });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
 
     const denied = await deleteSpeaker(store, memberActor(), created.speaker.id);
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const removed = await deleteSpeaker(store, adminActor(), created.speaker.id);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
     const fetched = await getSpeaker(store, adminActor(), created.speaker.id);
-    expect(fetched.ok).toBe(false);
+    expect(fetched.ok).toBeFalsy();
   });
 
   it("reorders speakers for an event", async () => {
     const { store, event } = await seedEvent();
     const first = await createSpeaker(store, adminActor(), event.id, { name: "Ada" });
     const second = await createSpeaker(store, adminActor(), event.id, { name: "Grace" });
-    expect(first.ok && second.ok).toBe(true);
+    expect(first.ok && second.ok).toBeTruthy();
     if (!(first.ok && second.ok)) {
       return;
     }
 
     const bad = await reorderSpeakers(store, adminActor(), event.id, [first.speaker.id]);
-    expect(bad.ok).toBe(false);
+    expect(bad.ok).toBeFalsy();
 
     const reordered = await reorderSpeakers(store, adminActor(), event.id, [
       second.speaker.id,
       first.speaker.id,
     ]);
-    expect(reordered.ok).toBe(true);
+    expect(reordered.ok).toBeTruthy();
 
     const listed = await listSpeakers(store, adminActor(), event.id);
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
-    expect(listed.speakers.map((s) => s.name)).toEqual(["Grace", "Ada"]);
+    expect(listed.speakers.map((s) => s.name)).toStrictEqual(["Grace", "Ada"]);
   });
 
   it("promotes a talk submission into an event speaker", async () => {
     const { store, event } = await seedEvent();
     const { talk } = await seedTalk(store);
     const promoted = await createSpeakerFromSubmission(store, adminActor(), event.id, talk.id);
-    expect(promoted.ok).toBe(true);
+    expect(promoted.ok).toBeTruthy();
     if (!promoted.ok) {
       return;
     }
@@ -455,40 +457,42 @@ describe("talksService comments", () => {
     const { store, talk } = await seedTalk();
     const outsider = memberActor({ id: "usr_other" });
     const denied = await listTalkComments(store, outsider, talk.id);
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
     if (!denied.ok) {
       expect(denied.error.status).toBe(403);
     }
 
     const posted = await createTalkComment(store, memberActor(), talk.id, "Need a title tweak?");
-    expect(posted.ok).toBe(true);
+    expect(posted.ok).toBeTruthy();
     if (!posted.ok) {
       return;
     }
     expect(posted.comment.authorId).toBe("usr_member");
 
     const listed = await listTalkComments(store, adminActor(), talk.id);
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (listed.ok) {
-      expect(listed.comments.map((comment) => comment.content)).toEqual(["Need a title tweak?"]);
+      expect(listed.comments.map((comment) => comment.content)).toStrictEqual([
+        "Need a title tweak?",
+      ]);
     }
 
     const strangerDelete = await deleteTalkComment(store, outsider, posted.comment.id);
-    expect(strangerDelete.ok).toBe(false);
+    expect(strangerDelete.ok).toBeFalsy();
     const removed = await deleteTalkComment(store, memberActor(), posted.comment.id);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
   });
 
   it("blocks owner comments when the talk is content-locked", async () => {
     const { store, talk } = await seedTalk();
     const locked = await setTalkLocks(store, adminActor(), talk.id, { contentLocked: true });
-    expect(locked.ok).toBe(true);
+    expect(locked.ok).toBeTruthy();
     const ownerPost = await createTalkComment(store, memberActor(), talk.id, "Still editing");
-    expect(ownerPost.ok).toBe(false);
+    expect(ownerPost.ok).toBeFalsy();
     if (!ownerPost.ok) {
       expect(ownerPost.error.status).toBe(403);
     }
     const adminPost = await createTalkComment(store, adminActor(), talk.id, "Admin follow-up");
-    expect(adminPost.ok).toBe(true);
+    expect(adminPost.ok).toBeTruthy();
   });
 });

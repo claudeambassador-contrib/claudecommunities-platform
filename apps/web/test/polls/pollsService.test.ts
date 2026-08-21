@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+
 import { createPoll, getPoll, voteOnPoll } from "@/modules/polls/services/pollsService";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 describe("pollsService", () => {
@@ -9,13 +11,13 @@ describe("pollsService", () => {
       options: [{ text: "Yes" }, { text: "No" }],
       question: "Ship it?",
     });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const created = await createPoll(store, adminActor(), {
       options: [{ text: "Yes" }, { text: "No" }],
       question: "Ship it?",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -26,9 +28,9 @@ describe("pollsService", () => {
     }
 
     const voted = await voteOnPoll(store, memberActor(), created.poll.id, yes.id);
-    expect(voted.ok).toBe(true);
+    expect(voted.ok).toBeTruthy();
     const first = await getPoll(store, created.poll.id, memberActor());
-    expect(first.ok).toBe(true);
+    expect(first.ok).toBeTruthy();
     if (first.ok) {
       expect(first.poll.userVotedOptionId).toBe(yes.id);
       expect(first.poll.totalVotes).toBe(1);
@@ -36,9 +38,9 @@ describe("pollsService", () => {
     }
 
     const switched = await voteOnPoll(store, memberActor(), created.poll.id, no.id);
-    expect(switched.ok).toBe(true);
+    expect(switched.ok).toBeTruthy();
     const second = await getPoll(store, created.poll.id, memberActor());
-    expect(second.ok).toBe(true);
+    expect(second.ok).toBeTruthy();
     if (second.ok) {
       expect(second.poll.userVotedOptionId).toBe(no.id);
       expect(second.poll.totalVotes).toBe(1);
@@ -46,6 +48,6 @@ describe("pollsService", () => {
     }
 
     const invalid = await voteOnPoll(store, memberActor(), created.poll.id, "opt_missing");
-    expect(invalid.ok).toBe(false);
+    expect(invalid.ok).toBeFalsy();
   });
 });

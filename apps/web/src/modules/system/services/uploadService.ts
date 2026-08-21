@@ -1,5 +1,6 @@
 import type { ImageUploadPorts } from "@/modules/system/types";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 // Note: @/shared/storage/r2 is imported dynamically below (not at module top).
 // It transitively pulls in @/shared/db/env, which statically imports
 // `cloudflare:workers` — fine at runtime (Workers/wrangler), but a static
@@ -46,11 +47,11 @@ const FOLDER_RE = /^[a-z0-9][a-z0-9/_-]{0,63}$/i;
 
 export function sanitizeFilename(name: string): string {
   const cleaned = name
-    .replace(/[/\\]+/g, "-")
-    .replace(/[^a-zA-Z0-9._-]+/g, "-")
-    .replace(/^[.-]+|[-.]+$/g, "")
-    .replace(/-{2,}/g, "-")
-    .replace(/-+\./g, ".");
+    .replaceAll(/[/\\]+/g, "-")
+    .replaceAll(/[^a-zA-Z0-9._-]+/g, "-")
+    .replaceAll(/^[.-]+|[-.]+$/g, "")
+    .replaceAll(/-{2,}/g, "-")
+    .replaceAll(/-+\./g, ".");
   return cleaned || "file";
 }
 
@@ -116,11 +117,11 @@ export async function storeUpload(
   const { publicUrl, putBytes, StorageError } = await import("@/shared/storage/r2");
   try {
     await putBytes(built.key, await file.arrayBuffer(), file.type || "application/octet-stream");
-  } catch (e) {
-    if (e instanceof StorageError) {
-      return err("storage_unavailable", e.status);
+  } catch (error) {
+    if (error instanceof StorageError) {
+      return err("storage_unavailable", error.status);
     }
-    throw e;
+    throw error;
   }
   return ok({ key: built.key, url: publicUrl(built.key) });
 }

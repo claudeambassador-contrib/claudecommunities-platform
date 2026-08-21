@@ -2,7 +2,9 @@ import { ClerkProvider } from "@clerk/tanstack-react-start";
 import { createRootRoute, HeadContent, Outlet, Scripts, useRouter } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { useCallback } from "react";
+
 import { isClerkPublishableConfigured } from "@/shared/auth/clerk";
+
 import appCss from "../styles.css?url";
 
 const AUTH_OUTAGE = /clerk|publishable key|jwks|handshake/i;

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { FormEvent, ReactElement } from "react";
+
 import { PageHeader } from "@/shared/ui/page";
 
 export const Route = createFileRoute("/$citySlug/community/bug-report")({

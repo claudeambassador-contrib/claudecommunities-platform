@@ -1,9 +1,7 @@
 import { eq } from "drizzle-orm";
-import {
-  EMAIL_PREF_DEFAULTS,
-  type EmailPreferences,
-  type EmailPreferencesInput,
-} from "@/modules/identity/types";
+
+import { EMAIL_PREF_DEFAULTS } from "@/modules/identity/types";
+import type { EmailPreferences, EmailPreferencesInput } from "@/modules/identity/types";
 import type { RegistryTables } from "@/shared/db/registrySchema";
 import type { RegistryStore } from "@/shared/db/registryStore";
 import { first } from "@/shared/db/rows";

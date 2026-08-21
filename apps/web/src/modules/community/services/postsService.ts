@@ -2,7 +2,8 @@ import { createPost, listFeed, listSpaces } from "@/modules/community/services/c
 import type { FeedCard, FeedSpaceOption } from "@/modules/community/types";
 import { listPublicAuthors } from "@/modules/identity/services/usersService";
 import { loadCityPage, requireCityActor } from "@/shared/http/cityPage";
-import { ok, type Result } from "@/shared/http/errors";
+import { ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 export async function loadCommunityFeed(citySlug: string): Promise<
   Result<{

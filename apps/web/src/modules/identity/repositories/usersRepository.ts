@@ -1,5 +1,7 @@
 import { and, eq } from "drizzle-orm";
-import { type UserRow, userMemberships, users } from "@/modules/identity/schema.registry";
+
+import { userMemberships, users } from "@/modules/identity/schema.registry";
+import type { UserRow } from "@/modules/identity/schema.registry";
 import type { RegistryDb } from "@/shared/db/client";
 
 export async function findByClerkId(db: RegistryDb, clerkUserId: string): Promise<UserRow | null> {

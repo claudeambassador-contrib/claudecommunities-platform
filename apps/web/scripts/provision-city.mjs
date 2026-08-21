@@ -9,8 +9,7 @@ import { randomUUID } from "node:crypto";
  *   node scripts/provision-city.mjs sydney "Sydney" au
  */
 import { writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
 const [slugRaw, nameRaw, regionRaw = "au"] = process.argv.slice(2);
 if (!(slugRaw && nameRaw)) {
@@ -21,12 +20,12 @@ if (!(slugRaw && nameRaw)) {
 const slug = slugRaw
   .trim()
   .toLowerCase()
-  .replace(/[^a-z0-9]+/g, "-")
-  .replace(/^-+|-+$/g, "");
+  .replaceAll(/[^a-z0-9]+/g, "-")
+  .replaceAll(/^-+|-+$/g, "");
 const name = nameRaw.trim();
 const region = regionRaw === "nz" ? "nz" : "au";
-const binding = `TENANT_${slug.replace(/-/g, "_").toUpperCase()}`;
-const orgId = randomUUID().replace(/-/g, "").slice(0, 12);
+const binding = `TENANT_${slug.replaceAll("-", "_").toUpperCase()}`;
+const orgId = randomUUID().replaceAll("-", "").slice(0, 12);
 const now = Date.now();
 const tenantId = `ten_${randomUUID()}`;
 const settingsId = `tset_${randomUUID()}`;
@@ -37,7 +36,7 @@ INSERT INTO tenants (
   id, org_id, slug, name, hostname, d1_binding, d1_database_id, r2_prefix,
   status, listed, region, timezone, created_at, updated_at
 ) VALUES (
-  '${tenantId}', '${orgId}', '${slug}', '${name.replace(/'/g, "''")}', NULL,
+  '${tenantId}', '${orgId}', '${slug}', '${name.replaceAll("'", "''")}', NULL,
   '${binding}', 'pending-${slug}', '${r2Prefix}',
   'active', 1, '${region}', 'Australia/Sydney', ${now}, ${now}
 );
@@ -46,7 +45,7 @@ INSERT INTO tenant_settings (id, org_id, config_json, created_at, updated_at)
 VALUES ('${settingsId}', '${orgId}', '{}', ${now}, ${now});
 `;
 
-const APP = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const APP = resolve(import.meta.dirname, "..");
 const out = resolve(APP, `scripts/.provision-${slug}.sql`);
 writeFileSync(out, sql);
 

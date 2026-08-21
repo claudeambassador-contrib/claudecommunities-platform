@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
+
 import type { SocialAccountRow, SocialPostRow } from "@/modules/social/schema.tenant";
 import type {
   ConnectorId,
@@ -14,7 +15,8 @@ import type {
 import { first, iso } from "@/shared/db/rows";
 import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
 /** The only tables this repository may touch. */
@@ -414,7 +416,7 @@ export async function resetStuckPublishing(store: TenantStore, cutoff: Date): Pr
     );
   for (const row of stuck) {
     // Sequential writes keep D1 updates deterministic.
-    // biome-ignore lint/performance/noAwaitInLoops: reset each stuck row
+    // oxlint-disable-next-line no-await-in-loop -- reset each stuck row
     await store.db
       .update(socialPosts)
       .set({

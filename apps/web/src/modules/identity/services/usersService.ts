@@ -1,4 +1,4 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as directoryRepo from "@/modules/identity/repositories/directoryRepository";
 import {
   findEmailPreferences,
@@ -9,26 +9,27 @@ import {
   findByClerkId,
   listMembershipsForUser,
 } from "@/modules/identity/repositories/usersRepository";
-import {
-  type DirectoryMember,
-  EMAIL_PREF_DEFAULTS,
-  type EmailPreferences,
-  type EmailPreferencesInput,
-  type ImportMemberInput,
-  type ImportMemberResult,
-  type InviteRecord,
-  type ListUsersOptions,
-  type MembershipRole,
-  type PublicAuthor,
-  type UserProfile,
-  type UserSummary,
+import { EMAIL_PREF_DEFAULTS } from "@/modules/identity/types";
+import type {
+  DirectoryMember,
+  EmailPreferences,
+  EmailPreferencesInput,
+  ImportMemberInput,
+  ImportMemberResult,
+  InviteRecord,
+  ListUsersOptions,
+  MembershipRole,
+  PublicAuthor,
+  UserProfile,
+  UserSummary,
 } from "@/modules/identity/types";
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import { permissionsForRole } from "@/shared/auth/permissions";
 import type { RegistryDb } from "@/shared/db/client";
 import type { RegistryStore } from "@/shared/db/registryStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 function clampPage(options: ListUsersOptions): { limit: number; offset: number; search?: string } {
   const limit = Math.min(100, Math.max(1, options.limit ?? 50));
@@ -232,7 +233,7 @@ export async function importMembers(
   const result: ImportMemberResult = { created: 0, errors: [], skipped: 0, updated: 0 };
   // Sequential upserts avoid duplicate-email races on the same CSV.
   for (const row of rows) {
-    // biome-ignore lint/performance/noAwaitInLoops: unique-email writes must stay sequential
+    // oxlint-disable-next-line no-await-in-loop -- unique-email writes must stay sequential
     const invited = await upsertMember(store, orgId, row);
     if (!invited.ok) {
       result.errors.push({
@@ -294,7 +295,7 @@ export async function updateEmailPreferences(
 export async function listCampaignRecipients(
   store: RegistryStore,
   orgId: string,
-): Promise<Array<{ email: string; id: string }>> {
+): Promise<{ email: string; id: string }[]> {
   return await directoryRepo.listOrgRecipients(store, orgId);
 }
 
@@ -329,9 +330,7 @@ export async function setMembershipRole(
   return ok({ id: targetUserId, role });
 }
 
-function bestMembershipRole(
-  roles: ReadonlyArray<string | null | undefined>,
-): MembershipRole | null {
+function bestMembershipRole(roles: readonly (string | null | undefined)[]): MembershipRole | null {
   if (roles.includes("owner")) {
     return "owner";
   }

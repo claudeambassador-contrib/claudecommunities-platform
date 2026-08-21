@@ -1,4 +1,4 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as slidesRepo from "@/modules/slides/repositories/slidesRepository";
 import type {
   ShortCircuitResult,
@@ -13,7 +13,8 @@ import type {
 import type { Actor } from "@/shared/auth/actor";
 import { ensureOwnerOrPermission, ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 
 const MAX_PAIRS_PER_JOB = 200;
 const DEFAULT_RENDER_REF_WIDTH = 600;
@@ -21,7 +22,7 @@ const STALE_MS = 30_000;
 const IN_PROGRESS = new Set(["paused", "queued", "running", "waiting", "waitingForPause"]);
 
 function safeName(value: string): string {
-  return value.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_-]/g, "");
+  return value.replaceAll(/\s+/g, "_").replaceAll(/[^a-zA-Z0-9_-]/g, "");
 }
 
 function clampRefWidth(raw: number | undefined): number {

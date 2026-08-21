@@ -12,10 +12,10 @@ export interface SlideDeck {
   slides: SlideDraft[];
 }
 
-const LAYOUTS: SlideLayout[] = ["classic", "centered", "minimal"];
+const LAYOUTS = new Set<SlideLayout>(["classic", "centered", "minimal"]);
 
 function isLayout(value: unknown): value is SlideLayout {
-  return typeof value === "string" && LAYOUTS.includes(value as SlideLayout);
+  return typeof value === "string" && LAYOUTS.has(value as SlideLayout);
 }
 
 function asSlide(value: unknown, index: number): SlideDraft | null {

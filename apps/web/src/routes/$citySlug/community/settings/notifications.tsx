@@ -2,11 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
+
 import {
   getEmailPreferences,
   updateEmailPreferences,
 } from "@/modules/identity/services/usersService";
-import { EMAIL_PREF_DEFAULTS, type EmailPreferences } from "@/modules/identity/types";
+import { EMAIL_PREF_DEFAULTS } from "@/modules/identity/types";
+import type { EmailPreferences } from "@/modules/identity/types";
 import { cityInput, cityMutationHandler } from "@/shared/http/cityFn";
 import { requireCityActor } from "@/shared/http/cityPage";
 import { PageHeader, SignInCard } from "@/shared/ui/page";

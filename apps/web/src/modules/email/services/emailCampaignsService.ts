@@ -1,4 +1,5 @@
 import { and, eq, lte } from "drizzle-orm";
+
 import type {
   CampaignCreateBody,
   CampaignDetail,
@@ -11,7 +12,8 @@ import type {
 import type { Actor } from "@/shared/auth/actor";
 import { ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
 function toCampaign(row: {

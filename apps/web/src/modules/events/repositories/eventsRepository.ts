@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
+
 import type { EventAgendaRow, EventResourceRow, EventRow } from "@/modules/events/schema.tenant";
 import type {
   AgendaItemDetail,
@@ -13,7 +14,8 @@ import type {
 import { first, iso } from "@/shared/db/rows";
 import type { TenantTables } from "@/shared/db/tenantSchema";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Result } from "@/shared/http/errors";
 import { newId } from "@/shared/ids";
 
 /** The only tables this repository may touch. */

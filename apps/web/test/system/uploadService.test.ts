@@ -14,7 +14,7 @@ const { MockStorageError } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@/shared/storage/r2", () => ({
+vi.mock(import("@/shared/storage/r2"), () => ({
   publicUrl: vi.fn((key: string) => `/api/files/${key}`),
   putBytes: vi.fn(async (key: string) => ({ key })),
   StorageError: MockStorageError,
@@ -35,13 +35,13 @@ const TENANT_KEY_RE = /^tenants\/sydney\/uploads\/[0-9a-f-]{36}-a\.png$/;
 const PLAIN_KEY_RE = /^uploads\/[0-9a-f-]{36}-a\.png$/;
 const SANITIZED_KEY_RE = /^uploads\/[0-9a-f-]{36}-photo-1\.PNG$/;
 
-describe("requestImageUploadUrl", () => {
+describe(requestImageUploadUrl, () => {
   it("builds the MCP upload curl for the default folder", () => {
     const result = requestImageUploadUrl({
       baseUrl: "https://example.test/",
       token: "tok_abc",
     });
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     if (!result.ok) {
       return;
     }
@@ -56,51 +56,54 @@ describe("requestImageUploadUrl", () => {
       { baseUrl: "https://example.test", token: "tok" },
       { folder: "events" },
     );
-    expect(withFolder.ok).toBe(true);
+    expect(withFolder.ok).toBeTruthy();
     if (withFolder.ok) {
       expect(withFolder.curlCommand).toContain("folder=events");
     }
 
     const missing = requestImageUploadUrl({ baseUrl: "https://example.test", token: "" });
-    expect(missing.ok).toBe(false);
+    expect(missing.ok).toBeFalsy();
     if (!missing.ok) {
       expect(missing.error.status).toBe(401);
     }
   });
 });
 
-describe("sanitizeFilename", () => {
+describe(sanitizeFilename, () => {
   it("strips path separators and odd characters", () => {
     expect(sanitizeFilename("../../etc/passwd")).toBe("etc-passwd");
     expect(sanitizeFilename("photo (1).PNG")).toBe("photo-1.PNG");
   });
+
   it("falls back for empty results", () => {
     expect(sanitizeFilename("///")).toBe("file");
   });
 });
 
-describe("buildUploadKey", () => {
+describe(buildUploadKey, () => {
   it("prefixes with the tenant r2Prefix when given", () => {
     const result = buildUploadKey({
       filename: "a.png",
       folder: "uploads",
       r2Prefix: "tenants/sydney",
     });
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     if (result.ok) {
       expect(result.key).toMatch(TENANT_KEY_RE);
     }
   });
+
   it("builds an unprefixed key without a tenant", () => {
     const result = buildUploadKey({ filename: "a.png", folder: "uploads", r2Prefix: null });
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     if (result.ok) {
       expect(result.key).toMatch(PLAIN_KEY_RE);
     }
   });
+
   it("rejects a folder with path tricks", () => {
     const result = buildUploadKey({ filename: "a.png", folder: "../secrets", r2Prefix: null });
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
   });
 });
 
@@ -112,14 +115,14 @@ function formDataWith(fields: Record<string, string | File>): FormData {
   return form;
 }
 
-describe("storeUpload", () => {
+describe(storeUpload, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("rejects a missing file", async () => {
     const result = await storeUpload(formDataWith({ folder: "uploads" }));
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
     if (!result.ok) {
       expect(result.error.code).toBe("file_required");
     }
@@ -128,14 +131,14 @@ describe("storeUpload", () => {
   it("rejects an invalid folder without calling putBytes", async () => {
     const file = new File(["hi"], "a.png", { type: "image/png" });
     const result = await storeUpload(formDataWith({ file, folder: "../secrets" }));
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
     expect(vi.mocked(putBytes)).not.toHaveBeenCalled();
   });
 
   it("stores the file and returns a key + url", async () => {
     const file = new File(["hi"], "photo (1).PNG", { type: "image/png" });
     const result = await storeUpload(formDataWith({ file, folder: "uploads" }));
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     if (result.ok) {
       expect(result.key).toMatch(SANITIZED_KEY_RE);
       expect(result.url).toBe(`/api/files/${result.key}`);
@@ -147,7 +150,7 @@ describe("storeUpload", () => {
     vi.mocked(putBytes).mockRejectedValueOnce(new StorageError("nope", 503));
     const file = new File(["hi"], "a.png", { type: "image/png" });
     const result = await storeUpload(formDataWith({ file, folder: "uploads" }));
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
     if (!result.ok) {
       expect(result.error.code).toBe("storage_unavailable");
       expect(result.error.status).toBe(503);
@@ -158,7 +161,7 @@ describe("storeUpload", () => {
     const oversize = new Uint8Array(15 * 1024 * 1024 + 1);
     const file = new File([oversize], "big.png", { type: "image/png" });
     const result = await storeUpload(formDataWith({ file, folder: "uploads" }));
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
     if (!result.ok) {
       expect(result.error.code).toBe("file_too_large");
       expect(result.error.status).toBe(413);
@@ -169,7 +172,7 @@ describe("storeUpload", () => {
   it("rejects a disallowed MIME type without calling putBytes", async () => {
     const file = new File(["<html></html>"], "a.html", { type: "text/html" });
     const result = await storeUpload(formDataWith({ file, folder: "uploads" }));
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
     if (!result.ok) {
       expect(result.error.code).toBe("unsupported_type");
       expect(result.error.status).toBe(415);
@@ -180,7 +183,7 @@ describe("storeUpload", () => {
   it("accepts an allowed MIME type (application/pdf)", async () => {
     const file = new File(["%PDF-1.4"], "doc.pdf", { type: "application/pdf" });
     const result = await storeUpload(formDataWith({ file, folder: "uploads" }));
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTruthy();
     expect(vi.mocked(putBytes)).toHaveBeenCalledOnce();
   });
 });

@@ -1,18 +1,18 @@
 # TanStack Start conversion status
 
 Greenfield app lives in [`apps/web`](../apps/web). There is no production traffic. Staging is the only Cloudflare target.
-Cutover means Start becomes that staging Worker, then the root Next/Prisma
-tree is deleted — see [`start-cutover.md`](./start-cutover.md).
+The root Next/Prisma tree is deleted. Remaining cutover work is staging smoke —
+see [`start-cutover.md`](./start-cutover.md).
 
-| Phase | Status | Notes |
-|---|---|---|
-| 0 Scaffold | Done | Start + Clerk + CF Vite + Ultracite Biome |
-| 1 Data plane | Done | Flattened registry/tenant SQL, TenantStore, iso tests |
-| 2 Kernel | Done | Session sync, permissions, R2, maintenance, region |
-| 3 Domains | Scaffolded | Module services for events, community, courses, talks, email, social, slides, pages, impact-lab, MCP |
-| 4 Worker parity | In progress | Workflows exported from `server.ts`. Cron drains social posts and due email campaigns. `CampaignSendWorkflow` calls `sendCampaign` + Resend. MCP Streamable HTTP at `/mcp`. Staging deploy still owed. |
-| 5 Routes | In progress | Public city chrome works without Clerk keys. Seeded CMS home, merch embed, Remotion player, membership catalog, event agenda, resources list, email campaign builder + Send, social composer, and slide canvas are on Start. Visual slide export / Next EmailBuilder / native LinkedIn connector remain thinner than Next. |
-| 6 Cutover | Prepared | Clean-slate Start D1s (no ETL). **Next not deleted** until staging smoke on Start. |
+| Phase           | Status      | Notes                                                                                                                                                                                                                                                                                                                      |
+| --------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 Scaffold      | Done        | Start + Clerk + CF Vite + Ultracite Biome                                                                                                                                                                                                                                                                                  |
+| 1 Data plane    | Done        | Flattened registry/tenant SQL, TenantStore, iso tests                                                                                                                                                                                                                                                                      |
+| 2 Kernel        | Done        | Session sync, permissions, R2, maintenance, region                                                                                                                                                                                                                                                                         |
+| 3 Domains       | Scaffolded  | Module services for events, community, courses, talks, email, social, slides, pages, impact-lab, MCP                                                                                                                                                                                                                       |
+| 4 Worker parity | In progress | Workflows exported from `server.ts`. Cron drains social posts and due email campaigns. `CampaignSendWorkflow` calls `sendCampaign` + Resend. MCP Streamable HTTP at `/mcp`. Staging deploy still owed.                                                                                                                     |
+| 5 Routes        | In progress | Public city chrome works without Clerk keys. Seeded CMS home, merch embed, Remotion player, membership catalog, event agenda, resources list, email campaign builder + Send, social composer, and slide canvas are on Start. Visual slide export / Next EmailBuilder / native LinkedIn connector remain thinner than Next. |
+| 6 Cutover       | In progress | Clean-slate Start D1s (no ETL). Root Next/Prisma/OpenNext tree removed. Staging smoke still owed.                                                                                                                                                                                                                          |
 
 ## Start routes (vs Next)
 

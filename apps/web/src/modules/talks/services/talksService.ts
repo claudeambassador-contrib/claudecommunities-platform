@@ -1,4 +1,4 @@
-// biome-ignore lint/performance/noNamespaceImport: repository is the persistence boundary
+// oxlint-disable-next-line import/namespace -- repository is the persistence boundary
 import * as talksRepo from "@/modules/talks/repositories/talksRepository";
 import {
   speakerCreateInput,
@@ -20,9 +20,10 @@ import type {
 import type { Actor } from "@/shared/auth/actor";
 import { ensureOwnerOrPermission, ensurePermission } from "@/shared/auth/actor";
 import type { TenantStore } from "@/shared/db/tenantStore";
-import { type Empty, err, ok, type Result } from "@/shared/http/errors";
+import { err, ok } from "@/shared/http/errors";
+import type { Empty, Result } from "@/shared/http/errors";
 
-const VALID_STATUSES: readonly TalkSubmissionStatus[] = ["pending", "approved", "declined"];
+const VALID_STATUSES = new Set<TalkSubmissionStatus>(["pending", "approved", "declined"]);
 
 const NULLABLE_SPEAKER_FIELDS = [
   "bio",
@@ -178,7 +179,7 @@ export async function setTalkStatus(
   if (!perm.ok) {
     return perm;
   }
-  if (!VALID_STATUSES.includes(status)) {
+  if (!VALID_STATUSES.has(status)) {
     return err("bad_request", 400, "status must be pending, approved, or declined");
   }
   return await talksRepo.updateTalkById(store, id, { status });
@@ -363,7 +364,7 @@ export async function reorderSpeakers(
   }
   for (const [index, id] of ids.entries()) {
     // D1 has no interactive transaction — apply order one row at a time.
-    // biome-ignore lint/performance/noAwaitInLoops: sequential D1 writes
+    // oxlint-disable-next-line no-await-in-loop -- sequential D1 writes
     const updated = await talksRepo.updateSpeakerById(store, id, { sortOrder: index });
     if (!updated.ok) {
       return updated;

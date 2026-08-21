@@ -1,4 +1,6 @@
-import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
+import { WorkflowEntrypoint } from "cloudflare:workers";
+import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+
 import { sendCampaign } from "@/modules/email/services/emailSendService";
 import { resendTransportFromEnv } from "@/modules/email/transport";
 import { createRegistryDb, createTenantDb, getD1Binding } from "@/shared/db/client";

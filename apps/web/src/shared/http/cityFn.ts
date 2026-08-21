@@ -1,13 +1,9 @@
 import { z } from "zod";
+
 import type { Permission } from "@/shared/auth/permissions";
 import type { Result } from "@/shared/http/errors";
-import {
-  type Guarded,
-  type GuardedPage,
-  guarded,
-  guardedMutation,
-  type Mutated,
-} from "@/shared/http/guarded";
+import { guarded, guardedMutation } from "@/shared/http/guarded";
+import type { Guarded, GuardedPage, Mutated } from "@/shared/http/guarded";
 
 /** Every city server fn takes the city slug plus whatever the route declares. */
 export type CityData<S extends z.ZodRawShape = Record<never, never>> = z.infer<z.ZodObject<S>> & {
@@ -43,9 +39,7 @@ export type CityData<S extends z.ZodRawShape = Record<never, never>> = z.infer<z
 export function cityInput<S extends z.ZodRawShape = Record<never, never>>(
   shape?: S,
 ): z.ZodType<CityData<S>> {
-  return z.object({ ...(shape ?? {}), citySlug: z.string().min(1) }) as unknown as z.ZodType<
-    CityData<S>
-  >;
+  return z.object({ ...shape, citySlug: z.string().min(1) }) as unknown as z.ZodType<CityData<S>>;
 }
 
 /**

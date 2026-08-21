@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+
 import type { Permission } from "@/shared/auth/permissions";
 import { Can, PermissionsProvider, useCan, usePermissionsSet } from "@/shared/ui/can";
 
@@ -7,7 +8,7 @@ function renderWithPerms(perms: readonly Permission[], ui: React.ReactNode) {
   return render(<PermissionsProvider permissions={perms}>{ui}</PermissionsProvider>);
 }
 
-describe("Can", () => {
+describe(Can, () => {
   it("renders children when the permission is granted", () => {
     renderWithPerms(
       ["pages.edit"],
@@ -69,7 +70,7 @@ describe("Can", () => {
   });
 });
 
-describe("useCan", () => {
+describe(useCan, () => {
   function Probe({ permission }: { permission: Permission | Permission[] }) {
     const can = useCan();
     return <output>{can(permission) ? "yes" : "no"}</output>;
@@ -86,7 +87,7 @@ describe("useCan", () => {
   });
 });
 
-describe("usePermissionsSet", () => {
+describe(usePermissionsSet, () => {
   function Probe() {
     const set = usePermissionsSet();
     return <output>{[...set].sort().join(",")}</output>;

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
 import { z } from "zod";
+
 import { addEventResource, listEventResources } from "@/modules/events/services/eventsService";
 import type { EventResourceDetail } from "@/modules/events/types";
 import { hasPermission } from "@/shared/auth/permissions";
@@ -25,7 +26,7 @@ const getResources = createServerFn({ method: "GET" })
     }
     const canEdit = Boolean(
       page.actor &&
-        (page.actor.isSuperAdmin || hasPermission(page.actor.permissions, "events.edit")),
+      (page.actor.isSuperAdmin || hasPermission(page.actor.permissions, "events.edit")),
     );
     return {
       canEdit,

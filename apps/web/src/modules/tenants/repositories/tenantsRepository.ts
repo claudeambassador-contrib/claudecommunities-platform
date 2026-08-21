@@ -1,5 +1,7 @@
 import { and, eq } from "drizzle-orm";
-import { type TenantRow, tenants } from "@/modules/tenants/schema.registry";
+
+import { tenants } from "@/modules/tenants/schema.registry";
+import type { TenantRow } from "@/modules/tenants/schema.registry";
 import type { RegistryDb } from "@/shared/db/client";
 
 export async function findBySlug(db: RegistryDb, slug: string): Promise<TenantRow | null> {

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { ReactElement } from "react";
+
 import { listPublicTenants } from "@/modules/tenants/services/publicListService";
 import { loadRegistryPage } from "@/shared/http/registryPage";
 import { getRegionConfig } from "@/shared/region";

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
+
 import {
   applyResendEvent,
   verifySvixSignature,
@@ -43,7 +44,7 @@ export const Route = createFileRoute("/api/webhooks/resend")({
         const cities = await registryDb.select().from(tenants).where(eq(tenants.status, "active"));
         for (const city of cities) {
           const store = openTenantStore(city);
-          // biome-ignore lint/performance/noAwaitInLoops: stop after the city that owns the send
+          // oxlint-disable-next-line no-await-in-loop -- stop after the city that owns the send
           const applied = await applyResendEvent(store, { resendId, type });
           if (applied.ok && applied.updated) {
             return Response.json({ received: true, updated: true });

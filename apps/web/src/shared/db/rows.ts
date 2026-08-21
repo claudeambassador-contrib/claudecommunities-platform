@@ -3,6 +3,6 @@ export function first<T>(rows: T[]): T | undefined {
   return rows[0];
 }
 
-export function iso(value: Date | null | undefined): string | null {
+export function iso(value?: Date | null): string | null {
   return value ? value.toISOString() : null;
 }

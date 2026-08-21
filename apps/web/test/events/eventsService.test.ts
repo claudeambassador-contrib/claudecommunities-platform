@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   isAllowedImageUrl,
   isAllowedLumaUrl,
@@ -30,6 +31,7 @@ import {
   updateAgendaItem,
   updateEvent,
 } from "@/modules/events/services/eventsService";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 const START = "2026-09-01T09:00:00.000Z";
@@ -37,34 +39,34 @@ const FUTURE = "2026-12-01T09:00:00.000Z";
 
 describe("event URL validators", () => {
   it("accepts https Zoom and Luma meeting hosts", () => {
-    expect(isAllowedMeetingUrl("https://zoom.us/j/123")).toBe(true);
-    expect(isAllowedMeetingUrl("https://us06web.zoom.us/j/123")).toBe(true);
-    expect(isAllowedMeetingUrl("https://meet.google.com/abc-defg-hij")).toBe(true);
-    expect(isAllowedMeetingUrl("https://lu.ma/meetup")).toBe(true);
+    expect(isAllowedMeetingUrl("https://zoom.us/j/123")).toBeTruthy();
+    expect(isAllowedMeetingUrl("https://us06web.zoom.us/j/123")).toBeTruthy();
+    expect(isAllowedMeetingUrl("https://meet.google.com/abc-defg-hij")).toBeTruthy();
+    expect(isAllowedMeetingUrl("https://lu.ma/meetup")).toBeTruthy();
   });
 
   it("rejects non-https and unknown meeting hosts", () => {
-    expect(isAllowedMeetingUrl("http://zoom.us/j/123")).toBe(false);
-    expect(isAllowedMeetingUrl("https://evil.example/zoom.us")).toBe(false);
-    expect(isAllowedMeetingUrl("not-a-url")).toBe(false);
+    expect(isAllowedMeetingUrl("http://zoom.us/j/123")).toBeFalsy();
+    expect(isAllowedMeetingUrl("https://evil.example/zoom.us")).toBeFalsy();
+    expect(isAllowedMeetingUrl("not-a-url")).toBeFalsy();
   });
 
   it("requires https for Luma ticket URLs", () => {
-    expect(isAllowedLumaUrl("https://luma.com/event")).toBe(true);
-    expect(isAllowedLumaUrl("http://luma.com/event")).toBe(false);
-    expect(isAllowedLumaUrl("javascript:alert(1)")).toBe(false);
+    expect(isAllowedLumaUrl("https://luma.com/event")).toBeTruthy();
+    expect(isAllowedLumaUrl("http://luma.com/event")).toBeFalsy();
+    expect(isAllowedLumaUrl("javascript:alert(1)")).toBeFalsy();
   });
 
   it("allows first-party storage and Luma CDN images only", () => {
-    expect(isAllowedImageUrl("/api/files/sydney/cover.png")).toBe(true);
-    expect(isAllowedImageUrl("https://images.lumacdn.com/photo.jpg")).toBe(true);
-    expect(isAllowedImageUrl("https://evil.example/photo.jpg")).toBe(false);
+    expect(isAllowedImageUrl("/api/files/sydney/cover.png")).toBeTruthy();
+    expect(isAllowedImageUrl("https://images.lumacdn.com/photo.jpg")).toBeTruthy();
+    expect(isAllowedImageUrl("https://evil.example/photo.jpg")).toBeFalsy();
   });
 
   it("allows https resource links", () => {
-    expect(isAllowedResourceUrl("https://drive.google.com/file")).toBe(true);
-    expect(isAllowedResourceUrl("/api/files/sydney/deck.pdf")).toBe(true);
-    expect(isAllowedResourceUrl("http://example.com/x")).toBe(false);
+    expect(isAllowedResourceUrl("https://drive.google.com/file")).toBeTruthy();
+    expect(isAllowedResourceUrl("/api/files/sydney/deck.pdf")).toBeTruthy();
+    expect(isAllowedResourceUrl("http://example.com/x")).toBeFalsy();
   });
 });
 
@@ -76,7 +78,7 @@ describe("eventsService", () => {
       startTime: START,
       title: "Intro Night",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -85,7 +87,7 @@ describe("eventsService", () => {
     expect(created.event.status).toBe("published");
 
     const fetched = await getEvent(store, created.event.id);
-    expect(fetched.ok).toBe(true);
+    expect(fetched.ok).toBeTruthy();
     if (!fetched.ok) {
       return;
     }
@@ -99,7 +101,7 @@ describe("eventsService", () => {
       startTime: START,
       title: "Nope",
     });
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
     if (result.ok) {
       return;
     }
@@ -113,14 +115,14 @@ describe("eventsService", () => {
       startTime: START,
       title: "Bad meet",
     });
-    expect(meeting.ok).toBe(false);
+    expect(meeting.ok).toBeFalsy();
 
     const luma = await createEvent(store, adminActor(), {
       lumaUrl: "http://luma.com/x",
       startTime: START,
       title: "Bad luma",
     });
-    expect(luma.ok).toBe(false);
+    expect(luma.ok).toBeFalsy();
   });
 
   it("rejects an out-of-range title and an invalid timezone via the module zod schema", async () => {
@@ -129,7 +131,7 @@ describe("eventsService", () => {
       startTime: START,
       title: "x".repeat(201),
     });
-    expect(tooLong.ok).toBe(false);
+    expect(tooLong.ok).toBeFalsy();
     if (!tooLong.ok) {
       expect(tooLong.error.status).toBe(400);
     }
@@ -139,7 +141,7 @@ describe("eventsService", () => {
       timezone: "not a tz!",
       title: "Bad tz",
     });
-    expect(badTimezone.ok).toBe(false);
+    expect(badTimezone.ok).toBeFalsy();
     if (!badTimezone.ok) {
       expect(badTimezone.error.status).toBe(400);
     }
@@ -152,14 +154,14 @@ describe("eventsService", () => {
       startTime: START,
       title: "Cover art",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     expect(created.event.coverUrl).toBe("https://images.lumacdn.com/cover.png");
 
     const fetched = await getEvent(store, created.event.id);
-    expect(fetched.ok).toBe(true);
+    expect(fetched.ok).toBeTruthy();
     if (!fetched.ok) {
       return;
     }
@@ -168,7 +170,7 @@ describe("eventsService", () => {
     const updated = await updateEvent(store, adminActor(), created.event.id, {
       coverUrl: "/api/files/sydney/cover.png",
     });
-    expect(updated.ok).toBe(true);
+    expect(updated.ok).toBeTruthy();
     if (!updated.ok) {
       return;
     }
@@ -182,7 +184,7 @@ describe("eventsService", () => {
       startTime: START,
       title: "Bad cover",
     });
-    expect(created.ok).toBe(false);
+    expect(created.ok).toBeFalsy();
     if (created.ok) {
       return;
     }
@@ -198,18 +200,18 @@ describe("eventsService", () => {
       startTime: START,
       title: "Online meetup",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     expect(created.event.meetingUrl).toBe("https://zoom.us/j/123");
 
     const publicEvent = toPublicEventDetail(created.event);
-    expect(Object.hasOwn(publicEvent, "meetingUrl")).toBe(false);
+    expect(Object.hasOwn(publicEvent, "meetingUrl")).toBeFalsy();
     expect(JSON.stringify(publicEvent)).not.toContain("zoom.us");
     // The rest of EventDetail stays public page content.
     expect(publicEvent.title).toBe("Online meetup");
-    expect(publicEvent.isOnline).toBe(true);
+    expect(publicEvent.isOnline).toBeTruthy();
   });
 
   it("treats a null eventType on update as absent instead of writing NULL", async () => {
@@ -219,7 +221,7 @@ describe("eventsService", () => {
       startTime: START,
       title: "Typed",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -229,7 +231,7 @@ describe("eventsService", () => {
       description: "Updated",
       eventType: null,
     });
-    expect(updated.ok).toBe(true);
+    expect(updated.ok).toBeTruthy();
     if (!updated.ok) {
       return;
     }
@@ -248,24 +250,24 @@ describe("eventsService", () => {
       startTime: START,
       title: "Draft",
     });
-    expect(live.ok && draft.ok).toBe(true);
+    expect(live.ok && draft.ok).toBeTruthy();
     if (!(live.ok && draft.ok)) {
       return;
     }
 
     const publicList = await listEvents(store);
-    expect(publicList.ok).toBe(true);
+    expect(publicList.ok).toBeTruthy();
     if (!publicList.ok) {
       return;
     }
-    expect(publicList.events.map((e) => e.title)).toEqual(["Live"]);
+    expect(publicList.events.map((e) => e.title)).toStrictEqual(["Live"]);
 
     const all = await listEvents(store, { includeInactive: true });
-    expect(all.ok).toBe(true);
+    expect(all.ok).toBeTruthy();
     if (!all.ok) {
       return;
     }
-    expect(all.events.map((e) => e.title).sort()).toEqual(["Draft", "Live"]);
+    expect(all.events.map((e) => e.title).sort()).toStrictEqual(["Draft", "Live"]);
   });
 
   it("hides inactive events from public get", async () => {
@@ -275,20 +277,20 @@ describe("eventsService", () => {
       startTime: START,
       title: "Hidden",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
 
     const hidden = await getEvent(store, created.event.id);
-    expect(hidden.ok).toBe(false);
+    expect(hidden.ok).toBeFalsy();
     if (hidden.ok) {
       return;
     }
     expect(hidden.error.status).toBe(404);
 
     const adminView = await getEvent(store, created.event.id, { includeInactive: true });
-    expect(adminView.ok).toBe(true);
+    expect(adminView.ok).toBeTruthy();
   });
 
   it("updates fields and publishes via setEventActive", async () => {
@@ -298,7 +300,7 @@ describe("eventsService", () => {
       startTime: START,
       title: "WIP",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -307,16 +309,16 @@ describe("eventsService", () => {
       location: "Melbourne",
       title: "Ready",
     });
-    expect(updated.ok).toBe(true);
+    expect(updated.ok).toBeTruthy();
     if (!updated.ok) {
       return;
     }
     expect(updated.event.title).toBe("Ready");
 
     const activated = await setEventActive(store, adminActor(), created.event.id, true);
-    expect(activated.ok).toBe(true);
+    expect(activated.ok).toBeTruthy();
     const fetched = await getEvent(store, created.event.id);
-    expect(fetched.ok).toBe(true);
+    expect(fetched.ok).toBeTruthy();
     if (!fetched.ok) {
       return;
     }
@@ -330,15 +332,15 @@ describe("eventsService", () => {
       startTime: START,
       title: "Gone",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
 
     const removed = await deleteEvent(store, adminActor(), created.event.id);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
     const fetched = await getEvent(store, created.event.id, { includeInactive: true });
-    expect(fetched.ok).toBe(false);
+    expect(fetched.ok).toBeFalsy();
   });
 
   it("rejects delete without events.delete", async () => {
@@ -347,12 +349,12 @@ describe("eventsService", () => {
       startTime: START,
       title: "Keep",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     const result = await deleteEvent(store, memberActor(), created.event.id);
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
     if (result.ok) {
       return;
     }
@@ -368,13 +370,13 @@ describe("event RSVP", () => {
       startTime: START,
       title: "RSVP Night",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
 
     const going = await rsvpToEvent(store, memberActor(), created.event.id, "going");
-    expect(going.ok).toBe(true);
+    expect(going.ok).toBeTruthy();
     if (!going.ok) {
       return;
     }
@@ -382,21 +384,21 @@ describe("event RSVP", () => {
     expect(going.counts.going).toBe(1);
 
     const interested = await rsvpToEvent(store, memberActor(), created.event.id, "interested");
-    expect(interested.ok).toBe(true);
+    expect(interested.ok).toBeTruthy();
     if (!interested.ok) {
       return;
     }
-    expect(interested.counts).toEqual({ going: 0, interested: 1 });
+    expect(interested.counts).toStrictEqual({ going: 0, interested: 1 });
 
     const left = await rsvpToEvent(store, memberActor(), created.event.id, "not_going");
-    expect(left.ok).toBe(true);
+    expect(left.ok).toBeTruthy();
     if (!left.ok) {
       return;
     }
     expect(left.status).toBeNull();
 
     const stats = await getRsvpStats(store, created.event.id, memberActor());
-    expect(stats.ok).toBe(true);
+    expect(stats.ok).toBeTruthy();
     if (!stats.ok) {
       return;
     }
@@ -412,23 +414,23 @@ describe("event RSVP", () => {
       startTime: START,
       title: "Luma Event",
     });
-    expect(luma.ok).toBe(true);
+    expect(luma.ok).toBeTruthy();
     if (!luma.ok) {
       return;
     }
     const blocked = await rsvpToEvent(store, memberActor(), luma.event.id, "going");
-    expect(blocked.ok).toBe(false);
+    expect(blocked.ok).toBeFalsy();
 
     const off = await createEvent(store, adminActor(), {
       startTime: START,
       title: "No RSVP",
     });
-    expect(off.ok).toBe(true);
+    expect(off.ok).toBeTruthy();
     if (!off.ok) {
       return;
     }
     const disabled = await rsvpToEvent(store, memberActor(), off.event.id, "going");
-    expect(disabled.ok).toBe(false);
+    expect(disabled.ok).toBeFalsy();
   });
 
   it("enforces going capacity", async () => {
@@ -439,20 +441,20 @@ describe("event RSVP", () => {
       startTime: START,
       title: "Tiny",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
 
     const first = await rsvpToEvent(store, memberActor({ id: "usr_a" }), created.event.id, "going");
-    expect(first.ok).toBe(true);
+    expect(first.ok).toBeTruthy();
     const second = await rsvpToEvent(
       store,
       memberActor({ id: "usr_b" }),
       created.event.id,
       "going",
     );
-    expect(second.ok).toBe(false);
+    expect(second.ok).toBeFalsy();
     if (second.ok) {
       return;
     }
@@ -467,7 +469,7 @@ describe("event agenda", () => {
       startTime: START,
       title: "Agenda Night",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -480,42 +482,42 @@ describe("event agenda", () => {
       title: "Talks",
       type: "custom",
     });
-    expect(welcome.ok && custom.ok).toBe(true);
+    expect(welcome.ok && custom.ok).toBeTruthy();
     if (!(welcome.ok && custom.ok)) {
       return;
     }
 
     const listed = await listAgenda(store, adminActor(), created.event.id);
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
-    expect(listed.items.map((i) => i.title)).toEqual(["Doors", "Talks"]);
+    expect(listed.items.map((i) => i.title)).toStrictEqual(["Doors", "Talks"]);
 
     const reordered = await reorderAgenda(store, adminActor(), created.event.id, [
       { id: custom.item.id },
       { id: welcome.item.id },
     ]);
-    expect(reordered.ok).toBe(true);
+    expect(reordered.ok).toBeTruthy();
     const after = await listAgenda(store, adminActor(), created.event.id);
-    expect(after.ok).toBe(true);
+    expect(after.ok).toBeTruthy();
     if (!after.ok) {
       return;
     }
-    expect(after.items.map((i) => i.title)).toEqual(["Talks", "Doors"]);
+    expect(after.items.map((i) => i.title)).toStrictEqual(["Talks", "Doors"]);
 
     const renamed = await updateAgendaItem(store, adminActor(), custom.item.id, {
       title: "Keynotes",
     });
-    expect(renamed.ok).toBe(true);
+    expect(renamed.ok).toBeTruthy();
     const removed = await deleteAgendaItem(store, adminActor(), welcome.item.id);
-    expect(removed.ok).toBe(true);
+    expect(removed.ok).toBeTruthy();
     const leftover = await listAgenda(store, adminActor(), created.event.id);
-    expect(leftover.ok).toBe(true);
+    expect(leftover.ok).toBeTruthy();
     if (!leftover.ok) {
       return;
     }
-    expect(leftover.items.map((i) => i.title)).toEqual(["Keynotes"]);
+    expect(leftover.items.map((i) => i.title)).toStrictEqual(["Keynotes"]);
   });
 
   it("rejects agenda writes without events.edit", async () => {
@@ -524,14 +526,14 @@ describe("event agenda", () => {
       startTime: START,
       title: "Locked",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     const result = await addAgendaItem(store, memberActor(), created.event.id, {
       title: "Nope",
     });
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
   });
 });
 
@@ -542,7 +544,7 @@ describe("luma interest", () => {
       startTime: FUTURE,
       title: "Waitlist",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -550,24 +552,24 @@ describe("luma interest", () => {
     const registered = await registerLumaInterest(store, memberActor(), created.event.id, {
       now: () => new Date("2026-09-01T00:00:00.000Z"),
     });
-    expect(registered.ok).toBe(true);
+    expect(registered.ok).toBeTruthy();
     if (!registered.ok) {
       return;
     }
-    expect(registered.registered).toBe(true);
+    expect(registered.registered).toBeTruthy();
 
     const status = await getLumaInterestStatus(store, created.event.id, memberActor());
-    expect(status.ok).toBe(true);
+    expect(status.ok).toBeTruthy();
     if (!status.ok) {
       return;
     }
-    expect(status.registered).toBe(true);
+    expect(status.registered).toBeTruthy();
     expect(status.count).toBe(1);
 
     const cleared = await unregisterLumaInterest(store, memberActor(), created.event.id);
-    expect(cleared.ok).toBe(true);
+    expect(cleared.ok).toBeTruthy();
     const after = await getLumaWaitlistCount(store, created.event.id);
-    expect(after.ok).toBe(true);
+    expect(after.ok).toBeTruthy();
     if (!after.ok) {
       return;
     }
@@ -580,7 +582,7 @@ describe("luma interest", () => {
       startTime: FUTURE,
       title: "Hold",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -591,7 +593,7 @@ describe("luma interest", () => {
     const updated = await updateEvent(store, adminActor(), created.event.id, {
       lumaUrl: "https://lu.ma/hold",
     });
-    expect(updated.ok).toBe(true);
+    expect(updated.ok).toBeTruthy();
 
     const pending = await notifyLumaWaitlist(store, created.event.id, {
       notify: ({ userId }) => {
@@ -599,7 +601,7 @@ describe("luma interest", () => {
         return Promise.resolve();
       },
     });
-    expect(pending.ok).toBe(true);
+    expect(pending.ok).toBeTruthy();
     if (!pending.ok) {
       return;
     }
@@ -612,7 +614,7 @@ describe("luma interest", () => {
       startTime: FUTURE,
       title: "Retry",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -626,7 +628,7 @@ describe("luma interest", () => {
     const failed = await notifyLumaWaitlist(store, created.event.id, {
       notify: () => Promise.reject(new Error("smtp down")),
     });
-    expect(failed.ok).toBe(true);
+    expect(failed.ok).toBeTruthy();
     if (!failed.ok) {
       return;
     }
@@ -636,7 +638,7 @@ describe("luma interest", () => {
     const retried = await notifyLumaWaitlist(store, created.event.id, {
       notify: () => Promise.resolve(),
     });
-    expect(retried.ok).toBe(true);
+    expect(retried.ok).toBeTruthy();
     if (!retried.ok) {
       return;
     }
@@ -650,12 +652,12 @@ describe("luma interest", () => {
       startTime: FUTURE,
       title: "Linked",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     const result = await registerLumaInterest(store, memberActor(), created.event.id);
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBeFalsy();
   });
 
   it("notifies the waitlist once when a Luma URL is set", async () => {
@@ -664,7 +666,7 @@ describe("luma interest", () => {
       startTime: FUTURE,
       title: "Soon",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -685,8 +687,8 @@ describe("luma interest", () => {
         },
       },
     );
-    expect(updated.ok).toBe(true);
-    expect(notified).toEqual(["usr_member"]);
+    expect(updated.ok).toBeTruthy();
+    expect(notified).toStrictEqual(["usr_member"]);
 
     const again = await notifyLumaWaitlist(store, created.event.id, {
       notify: ({ userId }) => {
@@ -694,7 +696,7 @@ describe("luma interest", () => {
         return Promise.resolve();
       },
     });
-    expect(again.ok).toBe(true);
+    expect(again.ok).toBeTruthy();
     if (!again.ok) {
       return;
     }
@@ -703,11 +705,11 @@ describe("luma interest", () => {
     const remaining = await listLumaInterestsForUser(store, memberActor(), {
       now: () => new Date("2026-09-01T00:00:00.000Z"),
     });
-    expect(remaining.ok).toBe(true);
+    expect(remaining.ok).toBeTruthy();
     if (!remaining.ok) {
       return;
     }
-    expect(remaining.events).toEqual([]);
+    expect(remaining.events).toStrictEqual([]);
   });
 
   it("lists published events for the sitemap", async () => {
@@ -719,7 +721,7 @@ describe("luma interest", () => {
       title: "Hidden",
     });
     const sitemap = await listEventSitemapEntries(store);
-    expect(sitemap.ok).toBe(true);
+    expect(sitemap.ok).toBeTruthy();
     if (!sitemap.ok) {
       return;
     }
@@ -733,7 +735,7 @@ describe("luma interest", () => {
       startTime: START,
       title: "Workshop",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -741,16 +743,16 @@ describe("luma interest", () => {
       fileUrl: "https://example.com/slides.pdf",
       title: "Slides",
     });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const added = await addEventResource(store, adminActor(), created.event.slug, {
       description: "Deck",
       fileUrl: "https://example.com/slides.pdf",
       title: "Slides",
     });
-    expect(added.ok).toBe(true);
+    expect(added.ok).toBeTruthy();
     const listed = await listEventResources(store, created.event.slug);
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (listed.ok) {
       expect(listed.resources).toHaveLength(1);
       expect(listed.resources[0]?.title).toBe("Slides");

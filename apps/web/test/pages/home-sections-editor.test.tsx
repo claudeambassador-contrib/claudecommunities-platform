@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, type Mock, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { Mock } from "vitest";
+
 import type {
   Block,
   CtaBlock,
@@ -9,7 +11,8 @@ import type {
   RichTextBlock,
   WebinarBlock,
 } from "@/modules/pages/types";
-import { HomeSectionsEditor, type SaveHomeResult } from "@/modules/pages/ui/home-sections-editor";
+import { HomeSectionsEditor } from "@/modules/pages/ui/home-sections-editor";
+import type { SaveHomeResult } from "@/modules/pages/ui/home-sections-editor";
 import type { Permission } from "@/shared/auth/permissions";
 import { PermissionsProvider } from "@/shared/ui/can";
 
@@ -152,11 +155,11 @@ describe("HomeSectionsEditor editing", () => {
     await user.type(screen.getByLabelText(HEADING_RE), "Hi");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledOnce();
     const saved = onSave.mock.calls[0]?.[0] as Block[];
     expect(saved).toHaveLength(1);
     expect(saved[0]).toMatchObject({ heading: "Hi", id: "blk_hero", type: "hero" });
-    expect(await screen.findByText("Saved")).toBeInTheDocument();
+    await expect(screen.findByText("Saved")).resolves.toBeInTheDocument();
   });
 
   it("saves a toggled enabled flag", async () => {
@@ -187,7 +190,7 @@ describe("HomeSectionsEditor editing", () => {
     renderEditor({ blocks: [hero()], onSave });
 
     await user.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Nope")).toBeInTheDocument();
+    await expect(screen.findByText("Nope")).resolves.toBeInTheDocument();
   });
 });
 
@@ -231,7 +234,7 @@ describe("HomeSectionsEditor add and reorder", () => {
 
     await user.click(screen.getByRole("button", { name: "Save" }));
     const saved = onSave.mock.calls[0]?.[0] as Block[];
-    expect(saved.map((b) => b.id)).toEqual(["blk_rich", "blk_hero"]);
+    expect(saved.map((b) => b.id)).toStrictEqual(["blk_rich", "blk_hero"]);
   });
 
   it("disables Move up on the first block and Move down on the last", () => {

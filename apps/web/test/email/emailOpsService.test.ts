@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+
 import {
   createCampaign,
   getCampaign,
@@ -14,6 +15,7 @@ import {
   setAutomationStatus,
 } from "@/modules/email/services/emailOpsService";
 import { EMAIL_SETTINGS_DEFAULTS } from "@/modules/email/types";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 describe("emailCampaignsService builder", () => {
@@ -24,7 +26,7 @@ describe("emailCampaignsService builder", () => {
       name: "Welcome",
       subject: "Hello",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
@@ -44,7 +46,7 @@ describe("emailOpsService", () => {
   it("creates and lists automations for admins only", async () => {
     const store = openMemoryTenant();
     const deniedList = await listAutomations(store, memberActor());
-    expect(deniedList.ok).toBe(false);
+    expect(deniedList.ok).toBeFalsy();
     if (!deniedList.ok) {
       expect(deniedList.error.status).toBe(403);
     }
@@ -53,7 +55,7 @@ describe("emailOpsService", () => {
       name: "Welcome",
       triggerType: "signup",
     });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
     if (!denied.ok) {
       expect(denied.error.status).toBe(403);
     }
@@ -62,26 +64,26 @@ describe("emailOpsService", () => {
       name: "Welcome",
       triggerType: "signup",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
     expect(created.automation.name).toBe("Welcome");
     expect(created.automation.triggerType).toBe("signup");
     expect(created.automation.status).toBe("draft");
-    expect(created.automation.id.startsWith("ea_")).toBe(true);
+    expect(created.automation.id.startsWith("ea_")).toBeTruthy();
 
     const listed = await listAutomations(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (listed.ok) {
-      expect(listed.automations.map((row) => row.name)).toEqual(["Welcome"]);
+      expect(listed.automations.map((row) => row.name)).toStrictEqual(["Welcome"]);
     }
 
     const invalid = await createAutomation(store, adminActor(), {
       name: "Bad",
       triggerType: "unknown",
     });
-    expect(invalid.ok).toBe(false);
+    expect(invalid.ok).toBeFalsy();
 
     const deniedStatus = await setAutomationStatus(
       store,
@@ -89,7 +91,7 @@ describe("emailOpsService", () => {
       created.automation.id,
       "active",
     );
-    expect(deniedStatus.ok).toBe(false);
+    expect(deniedStatus.ok).toBeFalsy();
     if (!deniedStatus.ok) {
       expect(deniedStatus.error.status).toBe(403);
     }
@@ -100,7 +102,7 @@ describe("emailOpsService", () => {
       created.automation.id,
       "active",
     );
-    expect(activated.ok).toBe(true);
+    expect(activated.ok).toBeTruthy();
     if (activated.ok) {
       expect(activated.automation.status).toBe("active");
     }
@@ -109,17 +111,17 @@ describe("emailOpsService", () => {
   it("returns settings defaults without inserting a row", async () => {
     const store = openMemoryTenant();
     const denied = await getEmailSettings(store, memberActor());
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
     if (!denied.ok) {
       expect(denied.error.status).toBe(403);
     }
 
     const loaded = await getEmailSettings(store, adminActor());
-    expect(loaded.ok).toBe(true);
+    expect(loaded.ok).toBeTruthy();
     if (!loaded.ok) {
       return;
     }
-    expect(loaded.settings).toEqual(EMAIL_SETTINGS_DEFAULTS);
+    expect(loaded.settings).toStrictEqual(EMAIL_SETTINGS_DEFAULTS);
 
     const rows = await store.db
       .select()
@@ -131,7 +133,7 @@ describe("emailOpsService", () => {
       senderEmail: "hello@example.com",
       senderName: "Hello",
     });
-    expect(deniedSave.ok).toBe(false);
+    expect(deniedSave.ok).toBeFalsy();
     if (!deniedSave.ok) {
       expect(deniedSave.error.status).toBe(403);
     }
@@ -140,7 +142,7 @@ describe("emailOpsService", () => {
       senderEmail: "not-an-email",
       senderName: "Hello",
     });
-    expect(badEmail.ok).toBe(false);
+    expect(badEmail.ok).toBeFalsy();
 
     const saved = await saveEmailSettings(store, adminActor(), {
       senderEmail: "hello@example.com",
@@ -148,13 +150,13 @@ describe("emailOpsService", () => {
       trackClicks: false,
       trackOpens: true,
     });
-    expect(saved.ok).toBe(true);
+    expect(saved.ok).toBeTruthy();
     if (!saved.ok) {
       return;
     }
-    expect(saved.settings.id?.startsWith("es_")).toBe(true);
+    expect(saved.settings.id?.startsWith("es_")).toBeTruthy();
     expect(saved.settings.senderEmail).toBe("hello@example.com");
-    expect(saved.settings.trackClicks).toBe(false);
+    expect(saved.settings.trackClicks).toBeFalsy();
 
     const persisted = await store.db
       .select()
@@ -163,36 +165,36 @@ describe("emailOpsService", () => {
     expect(persisted).toHaveLength(1);
 
     const partial = await saveEmailSettings(store, adminActor(), { senderName: "Updated" });
-    expect(partial.ok).toBe(true);
+    expect(partial.ok).toBeTruthy();
     if (partial.ok) {
       expect(partial.settings.senderName).toBe("Updated");
       expect(partial.settings.senderEmail).toBe("hello@example.com");
-      expect(partial.settings.trackClicks).toBe(false);
+      expect(partial.settings.trackClicks).toBeFalsy();
     }
   });
 
   it("returns analytics zeros then counts after a send row", async () => {
     const store = openMemoryTenant();
     const denied = await getEmailAnalytics(store, memberActor());
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
     if (!denied.ok) {
       expect(denied.error.status).toBe(403);
     }
 
     const empty = await getEmailAnalytics(store, adminActor());
-    expect(empty.ok).toBe(true);
+    expect(empty.ok).toBeTruthy();
     if (!empty.ok) {
       return;
     }
     expect(empty.totalSends).toBe(0);
     expect(empty.queued).toBe(0);
-    expect(empty.byCampaign).toEqual([]);
+    expect(empty.byCampaign).toStrictEqual([]);
 
     const campaign = await createCampaign(store, adminActor(), {
       name: "Blast",
       subject: "Hi",
     });
-    expect(campaign.ok).toBe(true);
+    expect(campaign.ok).toBeTruthy();
     if (!campaign.ok) {
       return;
     }
@@ -207,12 +209,12 @@ describe("emailOpsService", () => {
     });
 
     const after = await getEmailAnalytics(store, adminActor());
-    expect(after.ok).toBe(true);
+    expect(after.ok).toBeTruthy();
     if (!after.ok) {
       return;
     }
     expect(after.totalSends).toBe(1);
     expect(after.queued).toBe(1);
-    expect(after.byCampaign).toEqual([{ campaignId: campaign.campaign.id, sent: 1 }]);
+    expect(after.byCampaign).toStrictEqual([{ campaignId: campaign.campaign.id, sent: 1 }]);
   });
 });

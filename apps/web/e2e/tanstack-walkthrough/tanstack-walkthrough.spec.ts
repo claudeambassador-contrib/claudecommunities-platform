@@ -1,7 +1,9 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
+
 import {
   captureStep,
   createPresentationContext,
@@ -79,12 +81,12 @@ test.describe(`${SLUG} presentation`, () => {
       const body = (
         (await page
           .locator("body")
-          .innerText()
+          .textContent()
           .catch(() => "")) ?? ""
       ).slice(0, 2000);
       if (status >= 500 || SERVER_ERROR_RE.test(body)) {
         findings.push({
-          detail: body.replace(/\s+/g, " ").slice(0, 280) || "Empty 5xx body",
+          detail: body.replaceAll(/\s+/g, " ").slice(0, 280) || "Empty 5xx body",
           severity: "blocker",
           title: `${label} returned ${status || 500}`,
           url: page.url(),
@@ -98,7 +100,7 @@ test.describe(`${SLUG} presentation`, () => {
       const home = await visit("/", "platform-home", "Platform directory");
       if (!SYDNEY_RE.test(home)) {
         findings.push({
-          detail: home.replace(/\s+/g, " ").slice(0, 280) || "Directory empty or page crashed.",
+          detail: home.replaceAll(/\s+/g, " ").slice(0, 280) || "Directory empty or page crashed.",
           severity: "blocker",
           title: "Sydney not listed on platform home",
           url: page.url(),
@@ -120,7 +122,7 @@ test.describe(`${SLUG} presentation`, () => {
       const events = await visit(`/${CITY}/events`, "events", "Events list");
       if (!SEEDED_MEETUP_RE.test(events)) {
         findings.push({
-          detail: events.replace(/\s+/g, " ").slice(0, 280),
+          detail: events.replaceAll(/\s+/g, " ").slice(0, 280),
           severity: "high",
           title: "Seeded meetup missing from events list",
           url: page.url(),
@@ -178,7 +180,7 @@ test.describe(`${SLUG} presentation`, () => {
         ["community/settings/notifications", "Notification settings"],
       ] as const;
       for (const [path, label] of memberOnly) {
-        // biome-ignore lint/performance/noAwaitInLoops: page navigation must run sequentially on one browser page
+        // oxlint-disable-next-line no-await-in-loop -- page navigation must run sequentially on one browser page
         await visit(`/${CITY}/${path}`, path.replaceAll("/", "-"), label);
       }
 
@@ -215,7 +217,7 @@ test.describe(`${SLUG} presentation`, () => {
         ["admin/analytics", "Analytics"],
       ] as const;
       for (const [path, label] of adminPages) {
-        // biome-ignore lint/performance/noAwaitInLoops: page navigation must run sequentially on one browser page
+        // oxlint-disable-next-line no-await-in-loop -- page navigation must run sequentially on one browser page
         await visit(`/${CITY}/${path}`, path.replaceAll("/", "-"), label);
       }
 
@@ -241,7 +243,7 @@ test.describe(`${SLUG} presentation`, () => {
       await writeFile(
         join(artifacts.rootDir, "issues.json"),
         JSON.stringify({ findings, signedIn }, null, 2),
-        "utf8",
+        "utf-8",
       );
       await page.close();
       const result = await finalizePresentation(artifacts, {
@@ -288,13 +290,13 @@ async function notePage(page: Page, findings: Finding[], label: string): Promise
   const body = (
     (await page
       .locator("body")
-      .innerText()
+      .textContent()
       .catch(() => "")) ?? ""
   ).slice(0, 4000);
   const match = body.match(STUB_RE);
   if (match) {
     findings.push({
-      detail: body.replace(/\s+/g, " ").slice(0, 280),
+      detail: body.replaceAll(/\s+/g, " ").slice(0, 280),
       severity: HIGH_SEVERITY_RE.test(match[0]) ? "high" : "medium",
       title: `${label}: ${match[0]}`,
       url,

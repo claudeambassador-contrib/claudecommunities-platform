@@ -8,10 +8,9 @@
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const APP = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const APP = resolve(import.meta.dirname, "..");
 const EMAIL = process.env.E2E_ADMIN_EMAIL?.trim() || "e2e.admin.sydney+clerk_test@example.com";
 const CITY = process.env.E2E_CITY?.trim() || "sydney";
 
@@ -20,7 +19,7 @@ function loadEnvFile(path: string): Record<string, string> {
     return {};
   }
   const out: Record<string, string> = {};
-  for (const raw of readFileSync(path, "utf8").split("\n")) {
+  for (const raw of readFileSync(path, "utf-8").split("\n")) {
     const line = raw.trim();
     if (!line || line.startsWith("#") || !line.includes("=")) {
       continue;
@@ -42,7 +41,7 @@ function loadEnvFile(path: string): Record<string, string> {
 }
 
 function upsertEnvFile(path: string, updates: Record<string, string>): void {
-  const existing = existsSync(path) ? readFileSync(path, "utf8") : "";
+  const existing = existsSync(path) ? readFileSync(path, "utf-8") : "";
   const keys = new Set(Object.keys(updates));
   const lines = existing.split("\n");
   const next = lines.map((line) => {
@@ -77,7 +76,7 @@ async function clerkJson(
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
+      ...init?.headers,
     },
   });
   const body: unknown = await response.json().catch(() => null);
@@ -145,7 +144,7 @@ upsertEnvFile(resolve(APP, ".env.e2e"), {
 
 const seed = spawnSync("bun", ["scripts/seed-city.ts", CITY, "--email", EMAIL], {
   cwd: APP,
-  encoding: "utf8",
+  encoding: "utf-8",
   stdio: "inherit",
 });
 if (seed.status !== 0) {

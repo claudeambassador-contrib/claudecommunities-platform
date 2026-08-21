@@ -1,12 +1,8 @@
 import type { ChangeEvent, MouseEvent, ReactElement } from "react";
 import { useCallback, useMemo, useState } from "react";
-import {
-  emptySlide,
-  parseSlideDeck,
-  type SlideDraft,
-  type SlideLayout,
-  serializeSlideDeck,
-} from "@/modules/slides/slideDraft";
+
+import { emptySlide, parseSlideDeck, serializeSlideDeck } from "@/modules/slides/slideDraft";
+import type { SlideDraft, SlideLayout } from "@/modules/slides/slideDraft";
 
 export function SlideCanvas({
   initialJson,

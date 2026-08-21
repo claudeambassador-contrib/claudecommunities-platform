@@ -27,7 +27,7 @@ to check the cache bucket exists before seeding it. That API call is returning a
 
 This is **not** a version drift or a transient flake:
 
-- The last *successful* deploy (commit `957b105`, 2026-06-22) already used
+- The last _successful_ deploy (commit `957b105`, 2026-06-22) already used
   `@opennextjs/cloudflare@1.19.11` (published 2026-05-19) and `cloudflare@4.5.0`.
   The **same versions** succeeded on the 22nd and failed on the 23rd.
 - The Cloudflare SDK already retries network errors internally (`maxRetries=2`),

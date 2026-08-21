@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   createCampaign,
   createTemplate,
@@ -7,6 +8,7 @@ import {
   listDueScheduled,
   listTemplates,
 } from "@/modules/email/services/emailCampaignsService";
+
 import { adminActor, memberActor, openMemoryTenant } from "../helpers/tenant";
 
 describe("emailCampaignsService", () => {
@@ -16,16 +18,16 @@ describe("emailCampaignsService", () => {
       name: "Nope",
       subject: "Hi",
     });
-    expect(denied.ok).toBe(false);
+    expect(denied.ok).toBeFalsy();
 
     const created = await createCampaign(store, adminActor(), {
       bodyHtml: "<p>Hello</p>",
       name: "Welcome",
       subject: "Welcome",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     const listed = await listCampaigns(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
@@ -39,29 +41,29 @@ describe("emailCampaignsService", () => {
       name: "Blast",
       subject: "News",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     if (!created.ok) {
       return;
     }
 
-    const started: Array<{ campaignId: string; d1Binding: string; orgId: string }> = [];
+    const started: { campaignId: string; d1Binding: string; orgId: string }[] = [];
     const queued = await enqueueCampaignSend(store, adminActor(), created.campaign.id, {
       start: (input) => {
         started.push(input);
         return Promise.resolve({ workflowId: "wf_1" });
       },
     });
-    expect(queued.ok).toBe(true);
+    expect(queued.ok).toBeTruthy();
     if (!queued.ok) {
       return;
     }
     expect(queued.workflowId).toBe("wf_1");
-    expect(started).toEqual([
+    expect(started).toStrictEqual([
       { campaignId: created.campaign.id, d1Binding: store.binding, orgId: store.orgId },
     ]);
 
     const listed = await listCampaigns(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
@@ -70,7 +72,7 @@ describe("emailCampaignsService", () => {
     const again = await enqueueCampaignSend(store, adminActor(), created.campaign.id, {
       start: ({ campaignId }) => Promise.resolve({ workflowId: `wf_${campaignId}` }),
     });
-    expect(again.ok).toBe(false);
+    expect(again.ok).toBeFalsy();
   });
 
   it("lists due scheduled campaigns for the cron drain", async () => {
@@ -85,14 +87,14 @@ describe("emailCampaignsService", () => {
       scheduledAt: "2026-12-01T00:00:00.000Z",
       subject: "Later",
     });
-    expect(due.ok && later.ok).toBe(true);
+    expect(due.ok && later.ok).toBeTruthy();
 
     const drain = await listDueScheduled(store, new Date("2026-06-01T00:00:00.000Z"));
-    expect(drain.ok).toBe(true);
+    expect(drain.ok).toBeTruthy();
     if (!drain.ok) {
       return;
     }
-    expect(drain.campaigns.map((c) => c.name)).toEqual(["Due"]);
+    expect(drain.campaigns.map((c) => c.name)).toStrictEqual(["Due"]);
   });
 
   it("creates templates", async () => {
@@ -102,9 +104,9 @@ describe("emailCampaignsService", () => {
       name: "Base",
       subject: "Sub",
     });
-    expect(created.ok).toBe(true);
+    expect(created.ok).toBeTruthy();
     const listed = await listTemplates(store, adminActor());
-    expect(listed.ok).toBe(true);
+    expect(listed.ok).toBeTruthy();
     if (!listed.ok) {
       return;
     }
