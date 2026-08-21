@@ -63,6 +63,9 @@
   "env": {
     "staging": {
       "name": "claudecommunities-start-staging",
+      "observability": {
+        "enabled": true,
+      },
       "vars": {
         "VITE_REGION": "au",
         "MAINTENANCE_MODE": "false",

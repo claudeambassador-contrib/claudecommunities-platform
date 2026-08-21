@@ -1,5 +1,10 @@
 # Cloudflare Worker CPU optimization
 
+> **Historical.** This plan is for the retired Next.js + OpenNext Worker
+> (NextServer render CPU, Prisma WASM, ISR / `unstable_cache`). The live app
+> is TanStack Start in [`apps/web`](../apps/web). Do not provision the Next
+> cache bindings described here.
+
 How rendering works on Cloudflare today, why Worker **CPU time** is climbing
 toward the limit, and a prioritized plan to bring it down. Confirmed with the
 operator: the alarming dashboard metric is **Worker CPU time**, not D1 rows-read

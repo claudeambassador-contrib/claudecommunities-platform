@@ -1,5 +1,9 @@
 # Multi-tenancy fan-out plan (foundation → full rollout)
 
+> **Historical.** Next + Prisma fan-out (`npm run test:iso`,
+> `PENDING_TENANT_SCOPE` in ESLint). Isolation on Start is per-city D1;
+> the live iso suite is `bun run test:iso` in `apps/web`.
+
 **Status 2026-06-16.** The Option A **foundation is built and verified green**
 (56 isolation tests, `npm run test:iso`), **`npx tsc --noEmit` is green**, and
 **two isolation ratchets are live in `eslint.config.mjs`** (see below). What

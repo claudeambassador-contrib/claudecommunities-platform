@@ -1,5 +1,12 @@
 # Cloudflare Workers Builds — config after the `wrangler.jsonc` templating (Stage 3a)
 
+> **Historical.** This is the OpenNext Workers Builds recipe
+> (`bun run build:cf` → `opennextjs-cloudflare deploy`, shared `DB` D1, Next
+> tag-cache tokens). That path is gone. Staging deploys from `apps/web`
+> (`bun run deploy:staging` → `gen:wrangler` + Vite/Start Worker). Current
+> setup: [`apps/web/README.md`](../apps/web/README.md) and
+> [`start-cutover.md`](./start-cutover.md).
+
 `wrangler.jsonc` is **no longer committed**. It is generated at build time from
 `wrangler.template.jsonc` by `scripts/gen-wrangler.mjs`, which fills the
 `${TOKEN}` placeholders (account id, worker name, D1/R2 ids, routes, public

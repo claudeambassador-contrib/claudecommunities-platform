@@ -1,5 +1,11 @@
 # Cleanup backlog
 
+> **Historical.** Next service-layer / ESLint lockdown backlog
+> (`PENDING_SERVICE_MIGRATION`, `src/app/api`, `src/lib/prisma`). The live
+> app is DDD modules in [`apps/web`](../apps/web); oxlint enforces
+> repository privacy. Remaining Start gaps are in
+> [`start-conversion-status.md`](./start-conversion-status.md).
+
 Larger structural cleanups identified during the June 2026 comb-over
 (branch `cleanup-fable`), ordered by payoff. The quick wins from that pass
 (dead files, unused deps, duplicated helpers, `alert()` → toast) are already

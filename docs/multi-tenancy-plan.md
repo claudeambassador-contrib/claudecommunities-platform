@@ -1,5 +1,9 @@
 # Full Multi-Tenancy: Implementation Plan
 
+> **Historical.** Next-era plan. Shared-D1 Option A shipped and was later
+> replaced by per-city D1 + Drizzle in [`apps/web`](../apps/web). Do not
+> implement this plan against the live tree.
+
 > **DECISION (2026-06-15) — data plane: Option A (shared D1 + `tenantId`), paid
 > Workers-for-Platforms DROPPED.** The per-tenant-data-worker / dispatch-namespace
 > design below (§3–4, §13) is **superseded**: tenants now share one D1 and

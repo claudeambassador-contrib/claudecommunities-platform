@@ -1,5 +1,11 @@
 # Speaker Slide Generator — Gap Analysis
 
+> **Historical (Next paths).** This gap list is for the retired
+> `src/components/slide-generator/` + `/admin/tools/slide-generator` tree.
+> Start has a thinner slide canvas and `apps/web/src/workflows/slide-export.ts`;
+> visual PNG export is still thinner than Next. See
+> [`start-conversion-status.md`](./start-conversion-status.md) phase 5.
+
 Tracks what the in-app slide generator currently does, what the source
 prototype (`/data/BAKU-Speakers-project-1954067.zip`, the standalone Vite
 app) did, and the deliberate omissions. Use this list when deciding what

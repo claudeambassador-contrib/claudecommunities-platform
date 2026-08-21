@@ -1,5 +1,12 @@
 # Multi-Tenancy — Setup From Scratch
 
+> **Historical.** This runbook is npm + Prisma + a **shared** D1 (`tenantId`
+> chokepoint, `local:d1:migrate`, `opennextjs-cloudflare build`). Isolation is
+> now physical: `REGISTRY` plus one D1 per city, Drizzle in
+> [`apps/web`](../apps/web). Do not run these commands. Current setup:
+> [`apps/web/README.md`](../apps/web/README.md) (`gen:wrangler`,
+> `db:migrate:*`, `db:provision:city`, `db:seed:city`).
+
 How to stand up the multi-tenant app from nothing: local dev, a Cloudflare
 deploy, and provisioning tenants. For the _design_ (isolation contract, the
 chokepoint, routing root-of-trust) see `multi-tenancy-isolation-spec.md`; this

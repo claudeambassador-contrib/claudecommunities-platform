@@ -55,14 +55,17 @@ There is no production Worker yet. Staging is the only Cloudflare target.
 
 ```bash
 cd apps/web
+# Copy repo-root .env.cfinfra.example → .env.cfinfra and fill D1 ids.
 bun run gen:wrangler
-# Create remote REGISTRY + city D1s if missing, then:
 # wrangler d1 migrations apply REGISTRY --remote --env staging
 # wrangler d1 migrations apply TENANT_SYDNEY --remote --env staging
 # wrangler secret put CLERK_SECRET_KEY --env staging
+# wrangler secret put VITE_CLERK_PUBLISHABLE_KEY --env staging
 # wrangler secret put RESEND_API_KEY --env staging
 # wrangler secret put RESEND_WEBHOOK_SECRET --env staging
+# wrangler secret put RENDER_SIGNING_SECRET --env staging
 # wrangler secret put ZERNIO_API_KEY --env staging
+# CLOUDFLARE_ENV=staging must be set at vite build (deploy:staging does this).
 bun run deploy:staging
 ```
 

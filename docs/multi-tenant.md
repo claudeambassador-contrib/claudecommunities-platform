@@ -1,5 +1,11 @@
 # Multi-Region Plan — Australia + New Zealand
 
+> **Historical.** This is the Next.js `NEXT_PUBLIC_REGION` dual-build plan
+> (`src/lib/region.ts`, `.env.nz.*`, `nz:*` OpenNext deploys). On Start,
+> `VITE_REGION` is branding only — isolation is per-city D1, not a second
+> Worker. Current region notes: [`CLAUDE.md`](../CLAUDE.md) and
+> [`apps/web/README.md`](../apps/web/README.md).
+
 **Status:** code complete, reviewed, fully region-localized, and NZ-build-validated · external provisioning + seed pending · 2026-05-30
 
 ## Implementation status

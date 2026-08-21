@@ -1,5 +1,10 @@
 # Home Page CMS — Mini-PRD
 
+> **Historical.** Written against Next `src/app/t/[tenant]/page.tsx` and
+> Prisma `Content`. Start already has a seeded CMS home and city admin
+> pages editor. Treat this as the original product brief, not a current
+> file map. Live routes: [`start-conversion-status.md`](./start-conversion-status.md).
+
 Status: Proposed (v1, **adversarial-review integrated**) · Scope: one tenant-editable home page · Audience: implementation team
 
 > **Review note (v1.1):** This revision integrates an adversarial review that

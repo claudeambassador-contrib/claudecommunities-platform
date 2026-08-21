@@ -1,5 +1,10 @@
 # Deploy patch: non-fatal R2 incremental-cache population
 
+> **Historical.** This patch existed for `@opennextjs/cloudflare` incremental
+> cache on the retired Next Worker. OpenNext and the patch are gone; Start
+> does not populate a Next R2 cache at deploy. Current deploy:
+> [`start-cutover.md`](./start-cutover.md).
+
 **Patch file:** `patches/@opennextjs%2Fcloudflare@1.19.11.patch`
 (wired via `patchedDependencies` in `package.json`, re-applied on every
 `bun install`).

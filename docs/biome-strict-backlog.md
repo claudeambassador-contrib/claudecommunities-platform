@@ -1,5 +1,9 @@
 # Biome strict-rules backlog
 
+> **Historical.** Biome is gone. Lint/format is oxlint + oxfmt in `apps/web`
+> (`oxlint.config.ts`, `oxfmt.config.ts`). This file is the old Biome
+> warn→error ratchet. Current gate: `bun run check` from `apps/web`.
+
 > **RESOLVED (2026-06-20).** The full ratchet has landed on
 > `chore/lint-zero-warnings`: all 939 Biome warnings were cleared, every rule
 > below is now at `"error"` in `biome.json`, and `bun run lint` / `bun run

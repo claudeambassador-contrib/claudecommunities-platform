@@ -1,5 +1,9 @@
 # B5 server batch — region.ts → getTenantConfig() (execution plan)
 
+> **Historical.** Next `src/lib/region.ts` → `getTenantConfig()` migration.
+> On Start, `VITE_REGION` is branding only; copy goes through
+> `apps/web/src/shared` region helpers.
+
 Status tracker for the B5 server-side migration (the 67 server importers of
 `@/lib/region`). Client files (40) are done. `tsc --noEmit` is the green gate
 (clean baseline 0 errors); the app build is RED only for runtime/routing

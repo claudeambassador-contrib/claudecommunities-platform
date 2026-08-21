@@ -86,4 +86,8 @@ Intentional exceptions: `// oxlint-disable-next-line <rule> -- <reason>`.
 - `apps/web/README.md` — local setup, seed, staging deploy
 - `docs/start-cutover.md` — staging smoke + leftover notes
 - `docs/auth.md` — Clerk dashboards / secrets
-- `SECURITY.md` — security audit + remediation status
+- `docs/email-campaigns.md` — campaign workflow + Resend
+- `SECURITY.md` — historical Next/Prisma audit (bannered)
+
+Next/Prisma/OpenNext/Biome files in `docs/` open with a **Historical**
+banner. Do not follow those commands.

@@ -1,5 +1,11 @@
 # Tenant Isolation Specification — Option A (shared D1 + `tenantId`)
 
+> **Historical.** Option A (one shared D1 + Prisma `tenantId` chokepoint)
+> shipped on Next and was **superseded**. Start isolates cities with a
+> physical D1 per city (`REGISTRY` + `TENANT_*`) and Drizzle stores in
+> [`apps/web`](../apps/web). Do not implement this spec against the live
+> tree. Current isolation tests: `apps/web` `bun run test:iso`.
+
 **Decision (2026-06-15): Option A is chosen. Paid Workers-for-Platforms is dropped.**
 All tenants share one D1 database; every row of tenant-owned data carries a
 `tenantId`; isolation is enforced **in application code** at a single chokepoint,

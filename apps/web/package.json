@@ -14,7 +14,7 @@
     "db:seed:city": "bun scripts/seed-city.ts",
     "db:seed:e2e-admin": "bun scripts/seed-e2e-admin.ts",
     "deploy": "bun run build && wrangler deploy",
-    "deploy:staging": "bun run gen:wrangler && bun run build && wrangler deploy --env staging",
+    "deploy:staging": "bun run gen:wrangler && CLOUDFLARE_ENV=staging bun run build && CLOUDFLARE_ENV=staging wrangler deploy --env staging",
     "dev": "vite dev",
     "format": "bun --bun oxfmt",
     "format:check": "bun --bun oxfmt --check",

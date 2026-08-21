@@ -1,5 +1,9 @@
 # Send16 transactional cutover — handoff (Dominik)
 
+> **Historical.** Next-era Send16 branch (`src/lib/send16.ts`,
+> `src/lib/resend.ts`). Start email is Resend via
+> `apps/web/src/modules/email`. See [`email-campaigns.md`](./email-campaigns.md).
+
 Branch: **`spruik-send16-integration`** (rebased on current `main`, post-Bun). Routes the app's
 transactional + campaign email through **Send16** (Claude Community workspace, sending from
 `claudecommunity.com.au`) instead of Resend. Fully reversible.

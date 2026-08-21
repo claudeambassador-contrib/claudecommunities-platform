@@ -78,8 +78,12 @@ docs/                  # Topic docs
 - `CLAUDE.md` — conventions for agents
 - `docs/auth.md` — Clerk configuration, Worker secrets, dashboards
 - `docs/start-cutover.md` — staging smoke
-- `SECURITY.md` — security audit and current remediation status
+- `docs/email-campaigns.md` — `CAMPAIGN_SEND` + Resend
+- `SECURITY.md` — historical Next/Prisma audit (bannered)
 - `cli/README.md` — `ccau` CLI usage
+
+Next.js + Prisma + OpenNext + Biome runbooks in `docs/` are marked
+**Historical** in the first paragraph. Do not follow them.
 
 ## License
 

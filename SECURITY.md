@@ -2,9 +2,11 @@
 
 **Audit date:** 2026-02-27
 
-> Paths below describe the old Next.js + Prisma tree. The live app is now
-> `apps/web` (TanStack Start + Drizzle). Treat this file as the historical
-> finding list; verify remediations against the Start modules.
+> **Historical.** Paths below describe the retired Next.js + Prisma tree
+> (`src/lib/auth.ts`, `src/lib/storage.ts`, `src/app/api`). The live app is
+> `apps/web` (TanStack Start + Drizzle). Treat this file as the finding
+> list from that audit; verify remediations against the Start modules
+> before treating a box as current.
 
 Full security review of the codebase. Three parallel audits covered: API route security, auth/middleware/email, and client-side/XSS. Findings below are verified and prioritized. False positives have been filtered out.
 

@@ -1,5 +1,11 @@
 # Deploy & test runbook — read-side cache / CPU optimization
 
+> **Historical.** OpenNext incremental cache, `NEXT_INC_CACHE_R2_BUCKET`,
+> `NEXT_TAG_CACHE_D1`, `DOQueueHandler`, and request-scoped Prisma applied to
+> the retired Next Worker. Start has none of those bindings. Current deploy:
+> [`apps/web/README.md`](../apps/web/README.md) and
+> [`start-cutover.md`](./start-cutover.md).
+
 Step-by-step instructions to provision, deploy, and verify the read-side cache
 changes on branch `perf/cloudflare-cpu-optimization`. The _why_ and the design
 live in [`cloudflare-cpu-optimization.md`](./cloudflare-cpu-optimization.md);

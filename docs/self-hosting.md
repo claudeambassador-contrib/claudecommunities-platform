@@ -1,5 +1,13 @@
 # Self-hosting on your own Cloudflare account
 
+> **Historical.** This runbook is for the retired Next.js + Prisma + OpenNext
+> tree (`wrangler.selfhost.template.jsonc`, `opennextjs-cloudflare`, a shared
+> `DB` D1 plus Next cache buckets). That stack is gone. The live app is
+> TanStack Start + Drizzle in [`apps/web`](../apps/web): `REGISTRY` plus one
+> D1 per city, generated from `apps/web/wrangler.template.jsonc`. Do not
+> follow these commands. Current setup: [`apps/web/README.md`](../apps/web/README.md)
+> and [`start-cutover.md`](./start-cutover.md).
+
 This runbook lets **anyone** fork this repo and deploy it to **their own, fresh
 Cloudflare account** by supplying only their own values — no code changes, no
 foreign account ids, no shared secrets.

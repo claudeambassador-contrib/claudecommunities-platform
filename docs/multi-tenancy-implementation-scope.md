@@ -2,6 +2,10 @@
 
 # Multi-Tenancy Implementation Scope
 
+> **Historical.** Next + Prisma inventory (`src/app/api`, `prisma/schema.prisma`).
+> The live app is [`apps/web`](../apps/web). Do not use these file counts or
+> paths as current.
+
 > **DECISION (2026-06-15): Option A (shared D1 + `tenantId`) is chosen; paid W4P
 > dropped.** The A/B fork below collapses to A — every "B-only" row is removed,
 > every "A-only" row is now **required**, and "differs" rows take their A branch.
