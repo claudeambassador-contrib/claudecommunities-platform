@@ -29,10 +29,11 @@ complete = both allowlists empty.** `tsc`/`lint`/iso green do NOT prove a file i
 isolated (see masked defects) — they prove it compiles and uses no banned import.
 
 ### Migrated 2026-06-16 — 23 files → `getPrisma()` (defect #3 now provides the tenant)
+
 **13 request-context pages** (after defect #3 resolved): `admin/courses`, `admin/tiers`,
 `courses`, `courses/[slug]`, `pricing`, `community/{events,layout,learn,posts/[id],
 settings/profile}`, `events`, `events/[slug]`, `events/[slug]/resources`. Each was
-triaged first: no raw-SQL, and no GLOBAL-`User` *list* (User accesses are by-id
+triaged first: no raw-SQL, and no GLOBAL-`User` _list_ (User accesses are by-id
 own-user = correct global passthrough). The 6 pages that DO list users
 (`admin`, `admin/analytics`, `cities/[slug]`, `community/{leaderboard,profile/[id],
 search}`) stay on `PENDING_TENANT_SCOPE` — they need the membership join (Step 4),
@@ -40,14 +41,15 @@ not a mechanical swap. The codemod (`/tmp/migrate-getprisma.mjs`) needed a fix f
 destructured-param page signatures (`Page({` opens a param brace, not the body).
 
 ### Migrated 2026-06-16 (10 services → `getPrisma()`)
+
 `activity, badges, claudience, connections, eventAgenda, notifications(service),
 polls, scheduled-courses, talkComments, _slug`. Classification was **empirical,
 not guessed**: a reverse-dependency scan from the 3 workflows + 2 cron routes +
 `worker-scheduled.ts` proved each is unreachable from a non-request entry (so
-`getPrisma()` can't throw *from a workflow*). Re-run that scan before migrating
+`getPrisma()` can't throw _from a workflow_). Re-run that scan before migrating
 any further service. **Caveat (defect #3 below):** these — like every
 `getPrisma()` caller, including the ~18 migrated in earlier batches — require a
-tenant in *request* scope, which the platform plane does not yet provide.
+tenant in _request_ scope, which the platform plane does not yet provide.
 
 ## Adversarial verification (2026-06-16) — leaks the green build masked
 
@@ -61,7 +63,7 @@ isolation contract. It surfaced THREE real cross-tenant leaks that tsc/lint/iso 
    influenced by other tenants' activity (spec §3 #24). **FIXED**: drop the relation-orderBy,
    fetch active members with tenant-filtered counts, rank in JS.
 2. **Scalar-FK cross-tenant write (SYSTEMIC chokepoint gap)** — `scopeNestedWrites` only scopes
-   DMMF *relation* keys; a raw scalar FK in write `data` (`createPost`/`updatePost`
+   DMMF _relation_ keys; a raw scalar FK in write `data` (`createPost`/`updatePost`
    `data:{ spaceId }`) is passed through untouched, so a member can attach a post to ANOTHER
    tenant's Space id → post stored `tenantId=A, spaceId=B` → `include:{space}` read-back leaks
    B's space (the scalar analog of the nested-`connect` IDOR the chokepoint blocks). Affects
@@ -91,7 +93,7 @@ isolation contract. It surfaced THREE real cross-tenant leaks that tsc/lint/iso 
 2. **Raw-SQL chokepoint bypass.** `comments.ts` (`listForPost`), `posts.ts`
    (`listFeed`/`getPost`/`listBookmarkedFeed`), and `community/members/page.tsx`
    read via raw `@/lib/db` with **no `tenantId` filter** — e.g. `SELECT … FROM
-   Comment WHERE postId = ?`. The chokepoint can't see raw SQL. Fix: add an
+Comment WHERE postId = ?`. The chokepoint can't see raw SQL. Fix: add an
    explicit `AND tenantId = ?` (from `getTenantId()`) or move the read to a scoped
    `getPrisma()` call; do `members` together with the User-membership join. These
    are on `PENDING_RAW_SQL_TENANT_AUDIT`; comments/posts were deliberately NOT
@@ -102,7 +104,7 @@ isolation contract. It surfaced THREE real cross-tenant leaks that tsc/lint/iso 
    platform plane (apex host / reserved paths) returned without a tenant, so the
    feature routes still at the apex (`src/app/api/**`, pre-Step-2) resolved as
    "platform" → no tenant → every scoped `getPrisma()` caller (the 10 migrated
-   2026-06-16 *and* the ~18 earlier) **threw**. **Fix:** the platform branch now
+   2026-06-16 _and_ the ~18 earlier) **threw**. **Fix:** the platform branch now
    stamps `HOME_TENANT` (`process.env.HOME_TENANT ?? NEXT_PUBLIC_REGION ?? "au"`)
    on the request headers (even on static routes) — the apex IS the deploy's
    home-region community during the AU/NZ transition, so this is the correct
@@ -122,16 +124,16 @@ isolation contract. It surfaced THREE real cross-tenant leaks that tsc/lint/iso 
 
 ## Done + verified (the security-critical core)
 
-| Module | What | Tests |
-|---|---|---|
-| `src/lib/tenant-models.ts` | fail-closed model→scope map (65 tenant / 15 global) | structural |
-| `src/lib/tenant-scope.ts` | the `$extends` chokepoint, **recursive nested-write scoping** | 33 |
-| `src/lib/tenant-context.ts` | ALS + `x-tenant-id` header, fail-closed `getTenantId()` | 5 |
-| `src/lib/prisma.ts` | `getPrisma` / `getPlatformPrisma` / `withTenant` (+ kept default) | — |
-| `src/lib/tenant-resolve.ts` | URL/host → tenant, reserved slugs, reject `/t/*` | 12 |
-| `src/lib/services/tenants.ts` | `provisionTenant` (a tenant = one DB insert) | 6 |
-| `prisma/schema.prisma` | 62 scoped + 5 registry; `tenantId @default("")` | — |
-| `migrations/0021_tenant_isolation.sql` | table-rebuild + `tenantId='au'` backfill (verified on data) | — |
+| Module                                 | What                                                              | Tests      |
+| -------------------------------------- | ----------------------------------------------------------------- | ---------- |
+| `src/lib/tenant-models.ts`             | fail-closed model→scope map (65 tenant / 15 global)               | structural |
+| `src/lib/tenant-scope.ts`              | the `$extends` chokepoint, **recursive nested-write scoping**     | 33         |
+| `src/lib/tenant-context.ts`            | ALS + `x-tenant-id` header, fail-closed `getTenantId()`           | 5          |
+| `src/lib/prisma.ts`                    | `getPrisma` / `getPlatformPrisma` / `withTenant` (+ kept default) | —          |
+| `src/lib/tenant-resolve.ts`            | URL/host → tenant, reserved slugs, reject `/t/*`                  | 12         |
+| `src/lib/services/tenants.ts`          | `provisionTenant` (a tenant = one DB insert)                      | 6          |
+| `prisma/schema.prisma`                 | 62 scoped + 5 registry; `tenantId @default("")`                   | —          |
+| `migrations/0021_tenant_isolation.sql` | table-rebuild + `tenantId='au'` backfill (verified on data)       | —          |
 
 ## The recipe (every fan-out change follows these — decided, don't re-litigate)
 

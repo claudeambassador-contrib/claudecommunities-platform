@@ -1,10 +1,6 @@
 name: CI
 
-# Quality gate: lint + typecheck + full test suite. The vitest run includes the
-# tenant-isolation suite under test/iso (the Option A multi-tenancy contract —
-# chokepoint scoping, membership joins, cron/workflow re-entry, signed-URL tenant
-# binding). None of these steps touch Cloudflare or need secrets, so the gate
-# runs on every PR and on pushes to the long-lived branches.
+# Quality gate for the TanStack Start + Drizzle app in apps/web.
 on:
   pull_request:
   push:
@@ -19,44 +15,23 @@ concurrency:
 jobs:
   gate:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Bun
-        # This project is Bun-only (committed lockfile is bun.lock; there is no
-        # package-lock.json). actions/setup-node with `cache: npm` + `npm ci`
-        # aborts at setup because no npm lockfile exists.
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
 
       - name: Install dependencies
-        # postinstall runs `prisma generate`, producing the Prisma client so tsc
-        # and vitest can resolve its types. No DATABASE_URL needed for generate
-        # (it only reads the schema).
         run: bun install --frozen-lockfile
 
-      - name: Build MCP UI bundle
-        # Generates src/lib/mcp/ui-bundle.generated.ts (imported by ui-tools.ts).
-        # It is gitignored, so it must be built before typecheck or tsc fails
-        # with "Cannot find module './ui-bundle.generated'".
-        run: bun run build:mcp-ui
-
-      - name: Lint
-        # Biome (src/**, scripts/**) + slim ESLint (Next rules, the route→service
-        # import lockdown, AND the tenant-isolation ratchets: unscoped-prisma /
-        # raw-@/lib/db import bans + the chokepoint-bypass no-restricted-syntax
-        # guard). A cross-tenant regression that reintroduces an unscoped client
-        # or a raw $queryRaw/$transaction fails here.
-        run: bun run lint
-
-      - name: Typecheck
-        run: bun run typecheck
+      - name: Check
+        run: bun run check
 
       - name: Test
-        # Full vitest suite, including test/iso (the multi-tenancy isolation
-        # invariants). Self-contained — no env/secrets required. NOTE: `bun run
-        # test` (the package script = `vitest run`), NOT `bun test` (which would
-        # invoke Bun's own runner instead of vitest).
         run: bun run test

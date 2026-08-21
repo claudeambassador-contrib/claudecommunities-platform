@@ -1,0 +1,9 @@
+# Bun install hardening — mirrors pnpm supply-chain gates.
+# See https://bun.com/docs/pm/cli/install#minimum-release-age
+
+[install]
+# 1440 minutes = 1 day. Bun uses seconds (pnpm uses minutes).
+minimumReleaseAge = 86400
+
+# Strict: no package may bypass the age gate (pnpm minimumReleaseAgeStrict).
+minimumReleaseAgeExcludes = ["eslint-plugin-crap"]

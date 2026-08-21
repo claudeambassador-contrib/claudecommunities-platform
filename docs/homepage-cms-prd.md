@@ -45,7 +45,7 @@ drafting, versioning, or arbitrary page authoring in v1.
 - **Permission:** add **`pages.view`** and **`pages.edit`** to the `PERMISSIONS`
   registry and a "Content" group in `PERMISSION_GROUPS`
   (`src/lib/permissions.ts`).
-  - *Why `pages.*` not `content.*`:* the committed data model keys on a `key`
+  - _Why `pages.*` not `content.*`:_ the committed data model keys on a `key`
     column whose named future is "manage other pages per tenant". `pages.edit`
     aligns the permission name with the table's growth direction; a future
     blog/landing-page editor reuses the same permission instead of inventing a
@@ -103,9 +103,9 @@ export type BlockType =
   | "webinar"
   | "benefits"
   | "audienceSplit"
-  | "events"   // marker only — renders the dynamic <EventsSection/>
+  | "events" // marker only — renders the dynamic <EventsSection/>
   | "discord"
-  | "gallery"  // marker + headings; images still come from config.galleryImages
+  | "gallery" // marker + headings; images still come from config.galleryImages
   | "cta"
   | "richText";
 
@@ -122,10 +122,10 @@ interface BlockBase {
  */
 export interface HeroBlock extends BlockBase {
   type: "hero";
-  badge?: string | null;          // default: `${countryName}'s Claude Code Community`
-  heading?: string | null;        // default: `Claude Code Meetups\nAcross ${countryName}`
-  body?: string | null;           // default: the config-interpolated paragraph
-  primaryCtaLabel?: string | null;   // default: "View Upcoming Events" → #events
+  badge?: string | null; // default: `${countryName}'s Claude Code Community`
+  heading?: string | null; // default: `Claude Code Meetups\nAcross ${countryName}`
+  body?: string | null; // default: the config-interpolated paragraph
+  primaryCtaLabel?: string | null; // default: "View Upcoming Events" → #events
   // Secondary CTA + the signed-in welcome banner stay code-driven (auth-dependent).
   // mapImage stays sourced from config (already tenant-editable via settings).
 }
@@ -137,29 +137,29 @@ export interface HeroBlock extends BlockBase {
 /** Webinar promo bar. Owns its own structured fields (hardcoded in page.tsx today). */
 export interface WebinarBlock extends BlockBase {
   type: "webinar";
-  href: string;          // e.g. "/webinars/claude-code-webinar-australia"
+  href: string; // e.g. "/webinars/claude-code-webinar-australia"
   title: string;
   description: string;
-  thumbnailUrl: string;  // YouTube poster or uploaded image
+  thumbnailUrl: string; // YouTube poster or uploaded image
 }
 
 export interface BenefitCard {
-  icon: string;          // name from a fixed lucide allowlist (see Security)
+  icon: string; // name from a fixed lucide allowlist (see Security)
   title: string;
   desc: string;
 }
 export interface BenefitsBlock extends BlockBase {
   type: "benefits";
-  heading?: string | null;   // default: "Why Join Claude Code Meetups?"
-  cards: BenefitCard[];      // default: today's 4 cards
+  heading?: string | null; // default: "Why Join Claude Code Meetups?"
+  cards: BenefitCard[]; // default: today's 4 cards
 }
 
 export interface AudienceCard {
-  href: string;          // internal path, validated (see Security)
-  icon: string;          // lucide allowlist
+  href: string; // internal path, validated (see Security)
+  icon: string; // lucide allowlist
   title: string;
   desc: string;
-  ctaLabel?: string | null;  // default: "Learn More →"
+  ctaLabel?: string | null; // default: "Learn More →"
 }
 // [review] PER-CARD ACCENT: today the two cards have DIFFERENT gradient bars +
 // icon colors (Professionals: from-[#60A5FA] to-[#A78BFA], text-[#60A5FA];
@@ -171,13 +171,15 @@ export interface AudienceCard {
 // type with color while preserving the byte-for-byte look.)
 export interface AudienceSplitBlock extends BlockBase {
   type: "audienceSplit";
-  heading?: string | null;   // default: "Find Your Community"
+  heading?: string | null; // default: "Find Your Community"
   subheading?: string | null;
-  cards: AudienceCard[];     // default: Professionals + Vibe Coders
+  cards: AudienceCard[]; // default: Professionals + Vibe Coders
 }
 
 /** Marker: still renders the dynamic <EventsSection/>. No CMS data. */
-export interface EventsBlock extends BlockBase { type: "events"; }
+export interface EventsBlock extends BlockBase {
+  type: "events";
+}
 
 export interface DiscordBlock extends BlockBase {
   type: "discord";
@@ -187,15 +189,15 @@ export interface DiscordBlock extends BlockBase {
 /** Marker + headings; images keep coming from config.galleryImages. */
 export interface GalleryBlock extends BlockBase {
   type: "gallery";
-  heading?: string | null;     // default: "From Our Claude Code Meetups"
-  subheading?: string | null;  // default: `Real moments ... across ${countryName}`
+  heading?: string | null; // default: "From Our Claude Code Meetups"
+  subheading?: string | null; // default: `Real moments ... across ${countryName}`
 }
 
 export interface CtaBlock extends BlockBase {
   type: "cta";
   // Signed-in vs signed-out variants stay auth-driven; editable copy:
-  headingSignedOut?: string | null;  // default: "Ready to Join?"
-  bodySignedOut?: string | null;     // default: `Connect with the ${nationality} Claude Code community...`
+  headingSignedOut?: string | null; // default: "Ready to Join?"
+  bodySignedOut?: string | null; // default: `Connect with the ${nationality} Claude Code community...`
   ctaLabelSignedOut?: string | null; // default: "Join the Community"
   // [review] default body uses config.NATIONALITY (e.g. "Australian"), NOT
   // countryName ("Australia") — page.tsx:427. The static /images/claude-haiku.png
@@ -212,12 +214,19 @@ export interface CtaBlock extends BlockBase {
 export interface RichTextBlock extends BlockBase {
   type: "richText";
   heading?: string | null;
-  body: string;   // rendered as plain text (whitespace-pre-line); see Security
+  body: string; // rendered as plain text (whitespace-pre-line); see Security
 }
 
 export type Block =
-  | HeroBlock | WebinarBlock | BenefitsBlock | AudienceSplitBlock
-  | EventsBlock | DiscordBlock | GalleryBlock | CtaBlock | RichTextBlock;
+  | HeroBlock
+  | WebinarBlock
+  | BenefitsBlock
+  | AudienceSplitBlock
+  | EventsBlock
+  | DiscordBlock
+  | GalleryBlock
+  | CtaBlock
+  | RichTextBlock;
 
 export interface PageSections {
   blocks: Block[];
@@ -238,7 +247,7 @@ Two **distinct** layers — keep them separate or the rules contradict each othe
    renders a **non-crashing**, non-blank page with zero region checks.
    **[review] Not "correct" copy for an empty-config tenant:** `countryName`/
    `nationality` default to `""`, so the badge renders `"'s Claude Code
-   Community"`. Pre-existing behavior — a real tenant fills those via settings.
+Community"`. Pre-existing behavior — a real tenant fills those via settings.
 
 2. **Per-tenant seed/backfill row (the AU/NZ specifics).** A `Page` row written
    for existing tenants. The **AU-specific facts** — webinar bar **enabled** with
@@ -263,10 +272,11 @@ index's name.
 
 **[review] The webinar content has NO existing source.** The webinar
 `title`/`description`/`href`/`thumbnailUrl` are hardcoded in `page.tsx:281-286`
-+ `:153`, NOT in `REGION_CONFIGS`. So the seed script cannot "derive" it — define
-the AU webinar block as an explicit hardcoded constant in the seed (and in
-`DEFAULT_HOME_SECTIONS` the webinar block is present but `enabled:false`, with the
-same fields, so the shape matches). NZ seeds the same block `enabled:false`.
+
+- `:153`, NOT in `REGION_CONFIGS`. So the seed script cannot "derive" it — define
+  the AU webinar block as an explicit hardcoded constant in the seed (and in
+  `DEFAULT_HOME_SECTIONS` the webinar block is present but `enabled:false`, with the
+  same fields, so the shape matches). NZ seeds the same block `enabled:false`.
 
 Brand-new tenants (online provisioning via `provisionTenant()` /
 `provisionTenantByEmail()` in `src/lib/services/tenants.ts` — **[review] note:

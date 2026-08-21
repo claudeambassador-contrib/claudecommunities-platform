@@ -1,7 +1,7 @@
 # Multi-Tenancy — Setup From Scratch
 
 How to stand up the multi-tenant app from nothing: local dev, a Cloudflare
-deploy, and provisioning tenants. For the *design* (isolation contract, the
+deploy, and provisioning tenants. For the _design_ (isolation contract, the
 chokepoint, routing root-of-trust) see `multi-tenancy-isolation-spec.md`; this
 doc is the operational runbook.
 
@@ -62,16 +62,16 @@ npm run dev
 
 **Visit a tenant** (any of these reach `acme`, once provisioned):
 
-| Model | URL |
-|---|---|
-| Subdomain | `http://acme.localhost:<port>` — `*.localhost` resolves to loopback automatically, no `/etc/hosts` |
-| Path-prefix | `http://localhost:<port>/acme` |
-| Home tenant | `http://localhost:<port>/` → serves `NEXT_PUBLIC_REGION` (au) |
+| Model       | URL                                                                                                |
+| ----------- | -------------------------------------------------------------------------------------------------- |
+| Subdomain   | `http://acme.localhost:<port>` — `*.localhost` resolves to loopback automatically, no `/etc/hosts` |
+| Path-prefix | `http://localhost:<port>/acme`                                                                     |
+| Home tenant | `http://localhost:<port>/` → serves `NEXT_PUBLIC_REGION` (au)                                      |
 
 > ⚠️ **Port:** if `:3000` is taken, Next binds `:3001` (etc.) — use the port it
 > prints (`✓ Ready on http://localhost:XXXX`).
 
-**Become admin:** sign up *with the owner email you passed to provision*
+**Become admin:** sign up _with the owner email you passed to provision_
 (`you@acme.test`). `resolveSessionUser` links you to the placeholder owner via
 its email link-path, so you inherit the `super_admin` membership — no extra step.
 (For the **home** tenant `au`, which was seeded not provisioned, use §4 instead.)
@@ -120,12 +120,12 @@ three Workflows (`SLIDE_EXPORT`, `PUBLISH_POST`, `CAMPAIGN_SEND`). Replace every
 
 Override per-env only if your hostnames differ from the AU defaults:
 
-| Var | Default | Meaning |
-|---|---|---|
-| `NEXT_PUBLIC_REGION` | `au` | build-baked home-tenant slug |
-| `HOME_TENANT` | = `NEXT_PUBLIC_REGION` | the deploy's home tenant (apex/content) |
-| `PLATFORM_HOSTS` | `claudecommunities.com,localhost,127.0.0.1,workers.dev` | hosts that ARE the platform (anything else = a custom-domain tenant) |
-| `TENANT_SUBDOMAIN_BASES` | `claudecommunities.com,localhost` | bases under which `<label>.<base>` = tenant `<label>` (**must NOT include `workers.dev`**, or preview deploys become tenants) |
+| Var                      | Default                                                 | Meaning                                                                                                                       |
+| ------------------------ | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_REGION`     | `au`                                                    | build-baked home-tenant slug                                                                                                  |
+| `HOME_TENANT`            | = `NEXT_PUBLIC_REGION`                                  | the deploy's home tenant (apex/content)                                                                                       |
+| `PLATFORM_HOSTS`         | `claudecommunities.com,localhost,127.0.0.1,workers.dev` | hosts that ARE the platform (anything else = a custom-domain tenant)                                                          |
+| `TENANT_SUBDOMAIN_BASES` | `claudecommunities.com,localhost`                       | bases under which `<label>.<base>` = tenant `<label>` (**must NOT include `workers.dev`**, or preview deploys become tenants) |
 
 Path-prefix tenancy (`<host>/<slug>`) is always on — no flag.
 
@@ -143,8 +143,8 @@ npm run staging:deploy            # build:cf + opennextjs-cloudflare deploy --en
 > The Prisma D1 client and the **tenant-scope maps** (`tenant-scope-maps.generated.ts`)
 > are regenerated automatically by the `prisma-generate` step inside `build:cf`.
 > Those committed maps are what stop the chokepoint from touching `Prisma.dmmf`
-> at runtime (which throws under workerd). If you ever see *"Prisma.dmmf is not
-> available in edge runtimes"*, a runtime DMMF access was re-introduced.
+> at runtime (which throws under workerd). If you ever see _"Prisma.dmmf is not
+> available in edge runtimes"_, a runtime DMMF access was re-introduced.
 
 ---
 
@@ -161,12 +161,12 @@ run them yourself (tip: type `! <command>` in this session to run a command and
 capture its output here).
 
 **1. Clerk instance** for `staging.claudecommunities.com` — a real publishable +
-secret key and a JWT issuer domain. *Blocks login* (a dummy key renders public
+secret key and a JWT issuer domain. _Blocks login_ (a dummy key renders public
 pages but auth won't work). The `clerk-setup` skill can bootstrap one.
 
 **2. `claudecommunities.com` as an Active zone** on the Cloudflare account, and
-add `staging.claudecommunities.com` as a **custom domain** on the worker. *Blocks
-reaching the site.* (Routing already treats `*.claudecommunities.com` as a
+add `staging.claudecommunities.com` as a **custom domain** on the worker. _Blocks
+reaching the site._ (Routing already treats `*.claudecommunities.com` as a
 platform host.)
 
 **3. Create the resources, paste ids into `wrangler.jsonc` → `staging-platform`:**
@@ -205,8 +205,8 @@ npm run platform:staging:deploy                             # build:cf + deploy 
 > **No `seed.sql` here.** The legacy `scripts/seed.sql` seeds Spaces +
 > LeaderboardLevels at `tenantId=''` and upserts levels on a pre-0021
 > `ON CONFLICT (level)` target that migration 0021 replaced with
-> `(tenantId, level)` — so it errors *"ON CONFLICT clause does not match any …
-> UNIQUE constraint"* on a fresh DB. The platform seed instead generates that
+> `(tenantId, level)` — so it errors _"ON CONFLICT clause does not match any …
+> UNIQUE constraint"_ on a fresh DB. The platform seed instead generates that
 > reference data **scoped to the home tenant** (`scripts/seed-reference.ts`),
 > folded into `seed-admin`. To seed reference data for any other tenant:
 > `npm run seed:reference -- <slug> | wrangler d1 execute DB --remote --env <env> --file=/dev/stdin`.
@@ -216,7 +216,7 @@ npm run platform:staging:deploy                             # build:cf + deploy 
 inherit the seeded `super_admin`. Go to **`/admin` → Tenants**, fill the form,
 and your community is live at `staging.claudecommunities.com/<slug>` (§3.2).
 
-> **Routing note.** `TENANT_SUBDOMAIN_BASES` is set to the staging *host*
+> **Routing note.** `TENANT_SUBDOMAIN_BASES` is set to the staging _host_
 > (`staging.claudecommunities.com`), NOT the apex — otherwise the host itself
 > would be misread as a tenant named `staging`. Path-prefix (`/<slug>`) is always
 > on; `*.staging.claudecommunities.com` subdomain tenancy only activates once you
@@ -247,6 +247,7 @@ reachable at `<host>/<slug>` (path-prefix). The owner email receives
 `super_admin` of that tenant when they sign up with it.
 
 Under the hood:
+
 - UI — `src/app/t/[tenant]/admin/tenants/` (server-gated on the **global**
   `User.role === "super_admin"`, NOT a per-tenant permission — see below).
 - API — `POST /api/admin/tenants` (same global gate) → `provisionTenantByEmail()`
@@ -254,7 +255,7 @@ Under the hood:
   `provisionTenant()`).
 
 > **Why a global gate, not a `<Can>` permission?** System roles seed with
-> `ALL_PERMISSIONS`, so a `tenants.create` permission would hand *every* tenant's
+> `ALL_PERMISSIONS`, so a `tenants.create` permission would hand _every_ tenant's
 > admins the power to mint platform tenants via the unscoped platform client — a
 > cross-tenant escalation. Creating tenants is platform-superuser-only, so it's
 > gated on `User.role` exactly like `/api/admin/tenant-bootstrap`.
@@ -329,19 +330,19 @@ Provisioned tenants (§3.1) skip all of this — their owner is seeded with a
 
 ## 5. Env var reference (`.env.example`)
 
-| Key | Required? | Notes |
-|---|---|---|
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | **yes** | app boots/auth |
-| `CLERK_SECRET_KEY` | **yes** | server auth |
-| `CLERK_JWT_ISSUER_DOMAIN` | yes (MCP/JWT) | token verification |
-| `NEXT_PUBLIC_REGION` | yes | home-tenant slug (`au`/`nz`) |
-| `NEXT_PUBLIC_SITE_URL` | yes | canonical URL |
-| `RESEND_FROM_EMAIL` / `RESEND_API_KEY` | email features | campaigns/notifications |
-| `RENDER_SIGNING_SECRET` | slide export | HMAC for Browser Rendering |
-| `CRON_SECRET` | cron routes | protects scheduled HTTP routes |
-| `SOCIAL_OAUTH_STATE_SECRET`, `LINKEDIN_CLIENT_ID/SECRET` | social posting | LinkedIn connector |
-| `ANTHROPIC_API_KEY`, `CLAUDIENCE_API_KEY`, `NEXT_PUBLIC_GA_ID` | feature-specific | AI / analytics |
-| `MAINTENANCE_MODE`, `MAINTENANCE_BYPASS_TOKEN` | optional (secret) | kill-switch (`*:maintenance:on/off`) |
+| Key                                                            | Required?         | Notes                                |
+| -------------------------------------------------------------- | ----------------- | ------------------------------------ |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`                            | **yes**           | app boots/auth                       |
+| `CLERK_SECRET_KEY`                                             | **yes**           | server auth                          |
+| `CLERK_JWT_ISSUER_DOMAIN`                                      | yes (MCP/JWT)     | token verification                   |
+| `NEXT_PUBLIC_REGION`                                           | yes               | home-tenant slug (`au`/`nz`)         |
+| `NEXT_PUBLIC_SITE_URL`                                         | yes               | canonical URL                        |
+| `RESEND_FROM_EMAIL` / `RESEND_API_KEY`                         | email features    | campaigns/notifications              |
+| `RENDER_SIGNING_SECRET`                                        | slide export      | HMAC for Browser Rendering           |
+| `CRON_SECRET`                                                  | cron routes       | protects scheduled HTTP routes       |
+| `SOCIAL_OAUTH_STATE_SECRET`, `LINKEDIN_CLIENT_ID/SECRET`       | social posting    | LinkedIn connector                   |
+| `ANTHROPIC_API_KEY`, `CLAUDIENCE_API_KEY`, `NEXT_PUBLIC_GA_ID` | feature-specific  | AI / analytics                       |
+| `MAINTENANCE_MODE`, `MAINTENANCE_BYPASS_TOKEN`                 | optional (secret) | kill-switch (`*:maintenance:on/off`) |
 
 Local → `.env.local`. Deploy build-time → `.env.staging`/`.env.prod`
 (+ `.env.nz.*`). Worker runtime secrets → `wrangler secret put … --env <env>`.
@@ -364,7 +365,7 @@ bare tenant-content links; non-tenant slug → home 404. The structural guard
 `test/iso/tenant-links-threaded.test.ts` enforces link-threading in CI; the
 isolation suite (`test/iso/**`) enforces the chokepoint.
 
-> **Still unexercised:** the auth-gate under path-prefix (a *protected*
+> **Still unexercised:** the auth-gate under path-prefix (a _protected_
 > `/acme/...` → Clerk login → return to `/acme/...`) needs a real signed-in
 > session — verify it manually once with real Clerk keys before relying on it.
 

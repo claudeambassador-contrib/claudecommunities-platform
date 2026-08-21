@@ -20,6 +20,7 @@ reasons (B6), not types. Each migrated file must keep tsc at 0 + iso at 99.
 ## Buckets
 
 ### A. Email cluster — INLINE (me), one atomic commit
+
 `lib/email/wrap.ts`, `lib/email/blocks.ts` (client-shared → stay sync, take
 config fields as params), `lib/resend.ts` (server-only → pure templates take
 `config`, `sendEmail`/`sendCampaignEmails` resolve `fromEmail` internally).
@@ -29,6 +30,7 @@ and the 11 `resend` importers (add `await`). Drop `blocks.ts` module-level
 `LOGO_URL`/`BASE_URL` (only `EmailBuilder` consumes them → compute locally).
 
 ### MCP audit result (DONE — tools.ts + ui-tools.ts migrated)
+
 `/mcp` is `selfTenanted` in middleware (no header stamp); tools get scope only
 from `withMcpService` (`runWithTenant(HOME_TENANT)`). But MANY handlers are
 **bare `async`** (getEvents, getCourses, getUserProfile, createEvent,
@@ -42,6 +44,7 @@ URL resolution is correct regardless. **TODO B6/B7**: wrap ALL MCP handlers in
 `getActorPermissions`/`getPrisma` in the bare handlers are properly scoped too.
 
 ### B. Scope-audit — INLINE (me) [NOT fan-out — needs a scope check per file]
+
 - `lib/mcp/tools.ts` (huge + 25× `BASE_URL=appUrl()`) + `lib/mcp/ui-tools.ts`
   — **VERIFY `/api/mcp` stamps a tenant** before migrating, or every tool throws
   (the known "MCP membership gap" — migrating this file triggers it).
@@ -52,6 +55,7 @@ URL resolution is correct regardless. **TODO B6/B7**: wrap ALL MCP handlers in
 - `lib/digest.ts`, `lib/notifications.ts`, `lib/auth.ts`, services that send mail.
 
 ### C. Fan-out — request-scoped, safe (workflow, chunked ≤5)
+
 `api/admin/email/{settings,templates,generate-blocks,generate-subjects,generate-template}/route.ts`,
 `api/admin/email/campaigns/[id]/{send,resume}/route.ts`, `api/bug-report/route.ts`,
 `api/email/track/click/[sendId]/[url]/route.ts` (host-scoped),
@@ -62,6 +66,7 @@ request-path services: `claudience`, `comments`, `eventLumaInterest`, `events`,
 `impactLab`, `posts`, `talks`, `_slug` (all already async).
 
 ### D. DEFER to B6 (static-gen public pages — would throw at build)
+
 homepage `page.tsx`, `events/page`, `events/claude-impact-lab-melbourne/*`,
 `courses/page`, `for/page`, `for/[slug]`, `resources/page`, `resources/[slug]`,
 `webinars/claude-code-webinar-australia`, `professionals`, `vibe-coders`,
@@ -71,6 +76,7 @@ homepage `page.tsx`, `events/page`, `events/claude-impact-lab-melbourne/*`,
 residual until then.
 
 ### E. DEFER to tenant #2 (build-time static data — region.ts stays as residual)
+
 `lib/cities.ts`, `lib/verticals.ts`, `lib/resources.ts`, `remotion/CommunityPromo.tsx`,
 `remotion/WebsiteTour.tsx`, `admin/events/eventFormHelpers.ts` (exported
 `TIMEZONE_OPTIONS` const — region-keyed static data; making it tenant-aware ripples
@@ -79,12 +85,14 @@ to every event-form importer, deferred until tenant #2). region.ts keeps
 source for `scripts/seed-tenant.ts`).
 
 ### F. DEFER — cron with no tenant scope (region residual; cron-tenancy = B6/B7)
+
 `api/cron/send-scheduled/route.ts`: `/api/cron/*` is `selfTenanted` in middleware
 (fail-closed, no header), so `getTenantConfig()` would throw. Its `appUrl()` is a
 build-time home-region URL — exactly right for an unscoped cron — so it KEEPS the
 region.ts call. Fixing this needs per-tenant cron iteration (B6/B7), not a config swap.
 
 ## DONE this session
+
 - Seed (`scripts/seed-tenant.ts` + test) — commit 2839159.
 - A. Email cluster — commit c5323de.
 - MCP (tools.ts + ui-tools.ts) — commit 6dccec5.
@@ -105,17 +113,19 @@ region.ts call. Fixing this needs per-tenant cron iteration (B6/B7), not a confi
   layout). So the provider is guaranteed above every Footer render.
 - `test/resend-templates.test.ts` — closes the advisor's invisible-slip gap: the 6
   branding-heavy `resend.ts` templates (`getNotification/Welcome/Invite/EventReminder/
-  LumaLinkReady/CampaignEmailHtml`) had ZERO coverage. The test feeds a config with
+LumaLinkReady/CampaignEmailHtml`) had ZERO coverage. The test feeds a config with
   DISTINCT `siteUrl`≠`appUrl` and pins logo→siteUrl, every action link→appUrl. On au
   these are byte-identical so tsc/iso/render can't catch a swap; this can.
 
 ## B5 CLOSED — classified inventory of the 38 remaining `@/lib/region` importers
+
 Every remaining importer is a DELIBERATE defer, correct on au via the region.ts residual
 (`getRegionConfig`/helpers/`REGION`/`REGION_CONFIGS`). None is a request-scoped non-page
 consumer (those were the B5 surface and are all migrated). The split below IS the B6/B7
 handoff. Re-derive with `grep -rln "@/lib/region" src`.
 
 **→ B6 (migrate AS the `/t/[tenant]` move forces them dynamic) — 24 pages + 4 metadata routes**
+
 - Pages (force-dynamic + static): `page.tsx` (home), `events/{page,[slug],claude-impact-lab-melbourne/{page,sponsor}}`,
   `courses/{page,[slug]}`, `cities/[slug]`, `for/{page,[slug]}`, `resources/{page,[slug]}`,
   `community/{guidelines,learn,profile/[id]}`, `my-talks/{page,[id]}`, `professionals`,
@@ -129,6 +139,7 @@ handoff. Re-derive with `grep -rln "@/lib/region" src`.
   stamps HOME_TENANT for these (non-selfTenanted platform routes), so they're correct on au now.
 
 **→ B7 (slide-render tenant-binding) — 2**
+
 - `app/internal/slide-render/[…]/page.tsx` + `components/slide-generator/layouts/shared.tsx`
   (`getEventDateText` reads `getRegionConfig().lang` for date locale — sync, cosmetic, used in
   BOTH the client editor and the server PNG render). `/internal` is `selfTenanted` (fail-closed,
@@ -136,19 +147,23 @@ handoff. Re-derive with `grep -rln "@/lib/region" src`.
   binding lands (named B7 item), not before — the server-render side has no config source until then.
 
 **→ tenant #2 (build-time static data; region.ts stays as the seed source) — 6**
+
 - `lib/cities.ts`, `lib/resources.ts`, `lib/verticals.ts`, `remotion/{CommunityPromo,WebsiteTour}.tsx`,
   `admin/events/eventFormHelpers.ts` (`TIMEZONE_OPTIONS` const — making it tenant-aware ripples to
   every event-form importer). All build-time/region-keyed; no per-request scope to migrate to.
 
 **→ cron per-tenant iteration (B6/B7) — 1**
+
 - `api/cron/send-scheduled/route.ts` — `/api/cron/*` is `selfTenanted` (no stamp); its `appUrl()`
   is a build-time home-region URL, exactly right for an unscoped cron. Real fix = per-tenant cron
   iteration, not a config swap.
 
 **→ region.ts is the SOURCE (never migrates) — 1**
+
 - `middleware.ts` — reads `REGION` to seed tenant resolution. The root of the residual.
 
 ## Operational tail (do NOT lose)
+
 The committed seed (`scripts/seed-tenant.ts`) fixes the code, but the live au
 site renders placeholder branding until `npm run production:d1:seed-tenant` runs
 against prod. Order is load-bearing (FK + config): **migrate → seed-tenant**.

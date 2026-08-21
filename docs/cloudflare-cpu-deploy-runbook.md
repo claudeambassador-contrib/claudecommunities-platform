@@ -1,7 +1,7 @@
 # Deploy & test runbook — read-side cache / CPU optimization
 
 Step-by-step instructions to provision, deploy, and verify the read-side cache
-changes on branch `perf/cloudflare-cpu-optimization`. The *why* and the design
+changes on branch `perf/cloudflare-cpu-optimization`. The _why_ and the design
 live in [`cloudflare-cpu-optimization.md`](./cloudflare-cpu-optimization.md);
 this file is the operational checklist.
 
@@ -41,9 +41,10 @@ request-scoped Prisma are independent (no provisioning).
 ## 1. Choose a rollout strategy
 
 Pick one. **Strategy A is recommended** — it isolates the riskiest piece (the
-D1 tag cache, which is load-bearing for cache *reads*).
+D1 tag cache, which is load-bearing for cache _reads_).
 
 ### Strategy A — staged (recommended)
+
 1. **Deploy 1:** R2 incremental cache + `enableCacheInterception`, **`tagCache`
    omitted**. Pages cache and refresh on the time window only. Smallest blast
    radius; proves caching works before the tag cache is in the read path.
@@ -54,6 +55,7 @@ To do Deploy 1, temporarily comment out the `tagCache` line in
 `open-next.config.ts` and the `NEXT_TAG_CACHE_D1` blocks in `wrangler.jsonc`.
 
 ### Strategy B — all at once
+
 Provision everything in §2, deploy once. Faster, but a misconfigured/un-migrated
 tag cache **breaks or degrades cache reads** (see §4 gate 3), so only do this if
 you can run the staging test pass immediately after.
@@ -63,7 +65,7 @@ you can run the staging test pass immediately after.
 ## 2. Provision Cloudflare resources
 
 These commands create the buckets and tag-cache databases. **Run once per
-account.** The `populateCache` step in §3 creates the D1 *table* automatically —
+account.** The `populateCache` step in §3 creates the D1 _table_ automatically —
 you do **not** hand-write any schema.
 
 ```bash
@@ -78,21 +80,23 @@ wrangler d1 create ccau-next-tag-cache-staging
 
 Now edit **`wrangler.jsonc`** and replace the placeholders with the printed ids:
 
-| Placeholder | Block | Paste the id from |
-|---|---|---|
-| `REPLACE_WITH_TAG_CACHE_D1_ID` (base block) | top-level `d1_databases` | `ccau-next-tag-cache` |
-| `REPLACE_WITH_TAG_CACHE_D1_ID` (production block) | `env.production.d1_databases` | `ccau-next-tag-cache` |
-| `REPLACE_WITH_STAGING_TAG_CACHE_D1_ID` (staging block) | `env.staging.d1_databases` | `ccau-next-tag-cache-staging` |
+| Placeholder                                            | Block                         | Paste the id from             |
+| ------------------------------------------------------ | ----------------------------- | ----------------------------- |
+| `REPLACE_WITH_TAG_CACHE_D1_ID` (base block)            | top-level `d1_databases`      | `ccau-next-tag-cache`         |
+| `REPLACE_WITH_TAG_CACHE_D1_ID` (production block)      | `env.production.d1_databases` | `ccau-next-tag-cache`         |
+| `REPLACE_WITH_STAGING_TAG_CACHE_D1_ID` (staging block) | `env.staging.d1_databases`    | `ccau-next-tag-cache-staging` |
 
 > The base block and `env.production` intentionally point at the **same** prod
 > tag-cache DB (the base block is used for local `wrangler dev`; in production
 > the `--env production` block wins). Staging uses its own.
 
 Sanity-check the config + that the resources resolve (no full build needed):
+
 ```bash
 wrangler r2 bucket list | grep ccau-next-cache      # both buckets present
 wrangler d1 list | grep ccau-next-tag-cache         # both DBs present, note ids match wrangler.jsonc
 ```
+
 (The real binding validation happens at `opennextjs-cloudflare deploy` time,
 since the worker entry `.open-next/worker.js` only exists after the build.)
 
@@ -118,6 +122,7 @@ DEPLOY_TARGET=cloudflare opennextjs-cloudflare deploy --env staging
 ```
 
 `populateCache remote --env staging`:
+
 - uploads the prerendered/ISR cache assets to `ccau-next-cache-staging`, and
 - runs `wrangler d1 execute NEXT_TAG_CACHE_D1 --remote --env staging` with
   `CREATE TABLE IF NOT EXISTS revalidations (...)` — creating the tag table.
@@ -139,6 +144,7 @@ Suggested `package.json` edit:
 ## 4. Verify on staging (do not skip)
 
 Open a log stream in one terminal:
+
 ```bash
 wrangler tail --env staging --format pretty
 ```
@@ -146,6 +152,7 @@ wrangler tail --env staging --format pretty
 Run the gates in order. **Gates 1–3 are the silent failure modes.**
 
 ### Gate 1 — build succeeds, pages are not permanently empty
+
 - Confirm `bun run build:cf` completed without error.
 - `/events` and `/courses` prerender at build with **no D1**, so their
   `try/catch → []` can emit an empty shell. Refresh it right after deploy:
@@ -156,50 +163,60 @@ Run the gates in order. **Gates 1–3 are the silent failure modes.**
 - Load `https://staging.claudecommunity.com.au/events` — it should show real
   events, not an empty list.
 
-### Gate 2 — `prisma` inside `unstable_cache` survives a cache MISS  ⚠️ highest risk
+### Gate 2 — `prisma` inside `unstable_cache` survives a cache MISS ⚠️ highest risk
+
 The community widgets now call `prisma` from inside `unstable_cache`. If
 OpenNext's request-context ALS doesn't propagate into that callback, **every
 `/community` render throws on a cache miss**. A warm page load can hide it —
 force a miss:
+
 ```bash
 # Force the widget caches to miss, then load the page:
 #   easiest: publish a post (invalidates the `posts` tag), then immediately
 #   load /community as a logged-in user.
 ```
+
 - In `wrangler tail`, watch for errors from the widget reads (binding/context
   errors, "getCloudflareContext", "Cannot read properties of undefined").
 - **Page must render with the sidebar populated.** If it throws on miss →
   revert **only** Part 2 (see §6), redeploy; Parts 1 & 3 are unaffected.
 
 ### Gate 3 — tag cache is healthy (only if `tagCache` is enabled)
+
 A broken/un-migrated tag cache fails on every cached-route **read**
 (`isStale`/`hasBeenRevalidated`), which forces re-render every time — defeating
 the point.
+
 ```bash
 # Confirm the table exists:
 wrangler d1 execute NEXT_TAG_CACHE_D1 --remote --env staging \
   --command "SELECT name FROM sqlite_master WHERE type='table' AND name='revalidations';"
 # Expect one row: revalidations
 ```
+
 - In `wrangler tail`, loading `/events` twice should NOT log D1 errors mentioning
   `revalidations`.
 
 ### Gate 4 — caching actually happens (the CPU win)
+
 ```bash
 # Two requests; compare cache status header. (curl -sI for headers only.)
 curl -sI https://staging.claudecommunity.com.au/events | grep -i 'x-nextjs-cache\|cf-cache-status\|age'
 curl -sI https://staging.claudecommunity.com.au/events | grep -i 'x-nextjs-cache\|cf-cache-status\|age'
 ```
+
 - Second response should indicate a hit (`x-nextjs-cache: HIT`, or an increasing
   `age`), and in `wrangler tail` the second load should issue **no** D1 queries
   for the events list.
 
 ### Gate 5 — on-demand invalidation works (nice-to-have, not a blocker)
+
 - Publish a new event in admin → reload `/events` within a few seconds → it
   appears (didn't wait the full 5 min). If it only updates after 5 min, the tag
   path isn't firing but the TTL backstop is — acceptable, investigate later.
 
-### Gate 6 — Prisma request-scoping under concurrency  ⚠️
+### Gate 6 — Prisma request-scoping under concurrency ⚠️
+
 ```bash
 # Hammer a few pages in parallel while watching the tail:
 for i in $(seq 1 20); do
@@ -207,12 +224,14 @@ for i in $(seq 1 20); do
   curl -s -o /dev/null https://staging.claudecommunity.com.au/events &
 done; wait
 ```
+
 - In `wrangler tail`, you must see **zero** occurrences of
   `Cannot perform I/O on behalf of a different request`. If any appear, the
   `ctx` key isn't per-request on this runtime → revert **only** `src/lib/prisma.ts`
   (see §6).
 
 ### Gate 7 — sanity on personalized pages
+
 - Sign in as two different users in separate browsers; each must see their own
   data on `/community` (no cross-user bleed). This re-checks the `getCurrentUser`
   `cache()` memoization from the earlier commit too.
@@ -222,6 +241,7 @@ done; wait
 ## 5. Promote to production
 
 Only after gates 1–7 pass on staging:
+
 ```bash
 # If you baked populateCache into the script:
 bun run production:deploy
@@ -233,6 +253,7 @@ bun run build:cf
 DEPLOY_TARGET=cloudflare opennextjs-cloudflare populateCache remote --env production
 DEPLOY_TARGET=cloudflare opennextjs-cloudflare deploy --env production
 ```
+
 Immediately after: trigger a content edit (or `revalidatePath`) so `/events`
 and `/courses` aren't serving an empty build shell, then re-run gates 2, 4, 6
 against `https://claudecommunity.com.au`.
@@ -243,14 +264,14 @@ against `https://claudecommunity.com.au`.
 
 Each layer can be backed out without touching the others.
 
-| Symptom | Revert | How |
-|---|---|---|
-| `/community` throws on cache miss (gate 2) | **Part 2 only** | In `src/app/community/page.tsx`, change the `unstable_cache(fn, keys, opts)` widgets back to plain `async function` calls (or `git revert` just that file's hunk). Redeploy. |
-| `Cannot perform I/O...` under load (gate 6) | **Part 3 only** | Restore the old `createD1Client` in `src/lib/prisma.ts` (fresh client per call — `git show b5c5890^:src/lib/prisma.ts`). Redeploy. |
-| Pages don't cache / tag-cache errors (gates 3–4) | **Part 1 tagCache** | Comment out `tagCache:` in `open-next.config.ts` + the `NEXT_TAG_CACHE_D1` bindings; redeploy (falls back to TTL-only). |
-| `Dummy queue is not implemented` on stale ISR pages | **ISR flips** | The DO queue (`queue: doQueue` + `NEXT_CACHE_DO_QUEUE` binding) is what powers time-based revalidation — don't drop it while ISR pages exist. If you must, revert the ISR pages to `force-dynamic` (row below); then `queue`/the DO binding can be removed too. |
-| Anything page-level is wrong | **ISR flips** | Restore `export const dynamic = "force-dynamic"` on the three pages. |
-| Total backout | everything | Deploy the previous release: `git checkout main && bun run production:deploy`. |
+| Symptom                                             | Revert              | How                                                                                                                                                                                                                                                             |
+| --------------------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/community` throws on cache miss (gate 2)          | **Part 2 only**     | In `src/app/community/page.tsx`, change the `unstable_cache(fn, keys, opts)` widgets back to plain `async function` calls (or `git revert` just that file's hunk). Redeploy.                                                                                    |
+| `Cannot perform I/O...` under load (gate 6)         | **Part 3 only**     | Restore the old `createD1Client` in `src/lib/prisma.ts` (fresh client per call — `git show b5c5890^:src/lib/prisma.ts`). Redeploy.                                                                                                                              |
+| Pages don't cache / tag-cache errors (gates 3–4)    | **Part 1 tagCache** | Comment out `tagCache:` in `open-next.config.ts` + the `NEXT_TAG_CACHE_D1` bindings; redeploy (falls back to TTL-only).                                                                                                                                         |
+| `Dummy queue is not implemented` on stale ISR pages | **ISR flips**       | The DO queue (`queue: doQueue` + `NEXT_CACHE_DO_QUEUE` binding) is what powers time-based revalidation — don't drop it while ISR pages exist. If you must, revert the ISR pages to `force-dynamic` (row below); then `queue`/the DO binding can be removed too. |
+| Anything page-level is wrong                        | **ISR flips**       | Restore `export const dynamic = "force-dynamic"` on the three pages.                                                                                                                                                                                            |
+| Total backout                                       | everything          | Deploy the previous release: `git checkout main && bun run production:deploy`.                                                                                                                                                                                  |
 
 The cache stores are additive — leaving the R2 buckets / D1 tag DB in place
 after a rollback is harmless (nothing reads them once the config is reverted).
@@ -260,6 +281,7 @@ after a rollback is harmless (nothing reads them once the config is reverted).
 ## 7. Monitor the result
 
 The whole point is Worker CPU time. After production deploy:
+
 - **Workers & Pages → ccau → Metrics → CPU time.** Compare median/p99 over the
   days before vs after. Use the **per-route** breakdown to see whether public
   pages (now cached) dropped and whether `/community` improved from the widget

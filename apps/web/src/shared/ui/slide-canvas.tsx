@@ -1,0 +1,150 @@
+import type { ChangeEvent, MouseEvent, ReactElement } from "react";
+import { useCallback, useMemo, useState } from "react";
+
+import { emptySlide, parseSlideDeck, serializeSlideDeck } from "@/modules/slides/slideDraft";
+import type { SlideDraft, SlideLayout } from "@/modules/slides/slideDraft";
+
+export function SlideCanvas({
+  initialJson,
+  onChange,
+}: {
+  initialJson: string;
+  onChange: (json: string) => void;
+}): ReactElement {
+  const initial = useMemo(() => {
+    try {
+      return parseSlideDeck(JSON.parse(initialJson) as unknown);
+    } catch {
+      return parseSlideDeck(null);
+    }
+  }, [initialJson]);
+  const [deck, setDeck] = useState(initial);
+  const [selected, setSelected] = useState(0);
+
+  const commit = useCallback(
+    (next: typeof deck) => {
+      setDeck(next);
+      onChange(JSON.stringify(serializeSlideDeck(next), null, 2));
+    },
+    [onChange],
+  );
+
+  const slide = deck.slides[selected] ?? deck.slides[0];
+
+  const updateSlide = useCallback(
+    (patch: Partial<SlideDraft>) => {
+      if (!slide) {
+        return;
+      }
+      commit({
+        slides: deck.slides.map((item, index) =>
+          index === selected ? { ...item, ...patch } : item,
+        ),
+      });
+    },
+    [commit, deck.slides, selected, slide],
+  );
+
+  const addSlide = useCallback(() => {
+    const next = emptySlide(`slide_${deck.slides.length + 1}`);
+    commit({ slides: [...deck.slides, next] });
+    setSelected(deck.slides.length);
+  }, [commit, deck.slides]);
+
+  const removeSlide = useCallback(() => {
+    if (deck.slides.length <= 1) {
+      return;
+    }
+    const slides = deck.slides.filter((_, index) => index !== selected);
+    commit({ slides });
+    setSelected(Math.max(0, selected - 1));
+  }, [commit, deck.slides, selected]);
+
+  const handleSelect = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+    setSelected(Number(event.currentTarget.dataset.index));
+  }, []);
+
+  const handleField = useCallback(
+    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      const { name, value } = event.currentTarget;
+      if (name === "layout") {
+        updateSlide({ layout: value as SlideLayout });
+        return;
+      }
+      if (name === "title" || name === "speaker" || name === "body") {
+        updateSlide({ [name]: value });
+      }
+    },
+    [updateSlide],
+  );
+
+  if (!slide) {
+    return <p className="muted">No slides.</p>;
+  }
+
+  return (
+    <div className="stack">
+      <div className="row">
+        {deck.slides.map((item, index) => (
+          <button
+            className={index === selected ? "btn btn-primary" : "btn"}
+            data-index={index}
+            key={item.id}
+            onClick={handleSelect}
+            type="button"
+          >
+            {index + 1}. {item.title || "Untitled"}
+          </button>
+        ))}
+        <button className="btn" onClick={addSlide} type="button">
+          Add slide
+        </button>
+        <button className="btn" onClick={removeSlide} type="button">
+          Remove
+        </button>
+      </div>
+      <div
+        className="card stack"
+        style={{
+          aspectRatio: "16 / 9",
+          background: slide.layout === "minimal" ? "var(--fg)" : "var(--bg)",
+          color: slide.layout === "minimal" ? "var(--bg)" : "var(--fg)",
+          justifyContent: slide.layout === "centered" ? "center" : "flex-end",
+          minHeight: 220,
+        }}
+      >
+        <strong className="text-[1.5rem]">{slide.title || "Untitled slide"}</strong>
+        {slide.speaker ? <div>{slide.speaker}</div> : null}
+        {slide.body ? <p className="m-0 whitespace-pre-wrap">{slide.body}</p> : null}
+      </div>
+      <div className="card stack">
+        <label className="field-label">
+          Title
+          <input className="field" name="title" onChange={handleField} value={slide.title} />
+        </label>
+        <label className="field-label">
+          Speaker
+          <input className="field" name="speaker" onChange={handleField} value={slide.speaker} />
+        </label>
+        <label className="field-label">
+          Talk / body
+          <textarea
+            className="field w-full"
+            name="body"
+            onChange={handleField}
+            rows={4}
+            value={slide.body}
+          />
+        </label>
+        <label className="field-label">
+          Layout
+          <select className="field" name="layout" onChange={handleField} value={slide.layout}>
+            <option value="classic">Classic</option>
+            <option value="centered">Centered</option>
+            <option value="minimal">Minimal</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  );
+}

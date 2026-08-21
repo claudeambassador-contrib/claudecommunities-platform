@@ -25,7 +25,7 @@ request quota.)
 
 > **Check the traffic mix before committing to the order above.** The dominant
 > per-request render cost is the **logged-in community feed** (20 posts +
-> sidebar) — and that page *cannot* be edge-cached (it reads the Clerk session).
+> sidebar) — and that page _cannot_ be edge-cached (it reads the Clerk session).
 > Win #1 only helps the public pages (`/events`, `/courses`, …). If the
 > logged-in feed accounts for most CPU-burning requests, then #2 (cross-request
 > widget caching + reducing the feed render) moves the needle more than the R2
@@ -42,6 +42,7 @@ runtime-verified** — the worktree has no `node_modules` / Cloudflare access, s
 the build, preview, and provisioning steps are yours to run.
 
 **In code:**
+
 - `open-next.config.ts` — R2 incremental cache + `withRegionalCache` + D1 tag
   cache + `enableCacheInterception`.
 - `wrangler.jsonc` — `NEXT_INC_CACHE_R2_BUCKET`, `NEXT_TAG_CACHE_D1`,
@@ -59,24 +60,27 @@ the build, preview, and provisioning steps are yours to run.
 - `src/lib/prisma.ts` — request-scoped client (WeakMap keyed on `ctx`).
 
 **You must provision before deploy (the bindings reference resources that don't exist yet):**
+
 ```bash
 wrangler r2 bucket create ccau-next-cache
 wrangler r2 bucket create ccau-next-cache-staging
 wrangler d1 create ccau-next-tag-cache           # paste id → base + production NEXT_TAG_CACHE_D1
 wrangler d1 create ccau-next-tag-cache-staging    # paste id → staging NEXT_TAG_CACHE_D1
 ```
+
 Replace the `REPLACE_WITH_*` `database_id` placeholders in `wrangler.jsonc`.
 
-> **The D1 tag cache is load-bearing for cache *reads*, not just invalidation.**
+> **The D1 tag cache is load-bearing for cache _reads_, not just invalidation.**
 > `d1NextTagCache.isStale`/`hasBeenRevalidated` are queried on every cached-route
 > **read** to decide staleness. If the tag table doesn't exist (placeholder id
 > never filled, or schema not migrated), those reads fail — which either errors
 > the route or forces a re-render every time, **defeating the CPU win**. A
 > half-provisioned tag cache is worse than none. So either:
+>
 > - apply OpenNext's tag schema to the new D1 **before** the first deploy that
 >   references it (see the [OpenNext caching docs](https://opennext.js.org/cloudflare/caching)), **or**
 > - **stage it:** ship `incrementalCache` (R2) + `enableCacheInterception`
->   first with `tagCache` *omitted* (it's optional in the config type), confirm
+>   first with `tagCache` _omitted_ (it's optional in the config type), confirm
 >   pages cache and refresh on TTL, then add `tagCache: d1NextTagCache` +
 >   the D1 binding in a second deploy. Smaller blast radius. (Confirm
 >   interception still works with no tagCache — if not, apply the schema first.)
@@ -85,9 +89,10 @@ Replace the `REPLACE_WITH_*` `database_id` placeholders in `wrangler.jsonc`.
 `ccau-staging`) and works once deployed.
 
 **Verification gates (run these — these failure modes are silent at build time, not type errors):**
+
 1. **[highest risk] `prisma` inside `unstable_cache` on a cache MISS.** The Part 2
    widgets call `prisma` (→ `getCloudflareContext()`, an AsyncLocalStorage read)
-   from *inside* the `unstable_cache` wrapper — the old `Map` called prisma
+   from _inside_ the `unstable_cache` wrapper — the old `Map` called prisma
    directly, so this is new. If OpenNext's request-context ALS doesn't propagate
    into the cached callback, **every `/community` render throws on cache miss**
    (not caught). Test a genuine **miss**, not just a warm load: deploy, then hit
@@ -98,7 +103,7 @@ Replace the `REPLACE_WITH_*` `database_id` placeholders in `wrangler.jsonc`.
    and still deliver.
 2. **Prisma request-scoping under concurrency:** open several pages in parallel
    and watch `wrangler tail` for `Cannot perform I/O on behalf of a different
-   request`. None should appear. (If any do, the `ctx` key isn't per-request on
+request`. None should appear. (If any do, the `ctx` key isn't per-request on
    your runtime — revert `src/lib/prisma.ts` to the per-call client; everything
    else is independent.)
 3. `opennextjs-cloudflare build` succeeds. `/events` and `/courses` prerender at
@@ -135,6 +140,7 @@ queries, and serializes HTML. Nothing is reused between requests.
 Two structural CPU costs per request:
 
 ### a) React SSR compute (the dominant cost)
+
 A logged-in community feed view (`src/app/community/page.tsx` +
 `layout.tsx`) renders ~20 posts with nested author/space/poll/counts plus a
 sidebar of widgets. That React render is pure CPU and runs on every hit. **It
@@ -142,6 +148,7 @@ can only be removed by caching the render output** (full-page for public pages;
 fragment/island for personalized ones).
 
 ### b) Prisma client instantiation (WASM)
+
 `src/lib/prisma.ts` is a Proxy that calls `createD1Client()` —
 `new PrismaClient({ adapter: new PrismaD1(env.DB) })` — on **every model-method
 access**. The community page fires ~12 queries, the layout ~3, auth ~1–2 ⇒
@@ -152,10 +159,11 @@ against CPU.
 
 > Note on the "access vs CPU" ambiguity: on Workers, **CPU time excludes time
 > spent awaiting I/O**. So the ~16 D1 round-trips hurt wall-clock and D1
-> rows-read quota, but only the *compute* (SSR + client construction +
+> rows-read quota, but only the _compute_ (SSR + client construction +
 > serialization) is the CPU number that's alarming. The plan below targets CPU.
 
 ### What caching exists today (and why it barely helps)
+
 - `src/lib/cache.ts` `cached()` is an in-memory `Map` — **per-isolate**. Workers
   spin up many short-lived isolates, so the cross-request hit rate is poor; a
   cold isolate re-runs every query.
@@ -163,7 +171,7 @@ against CPU.
   invalidate; entries only age out by TTL. The operator's "update the cache when
   things get added" is not implemented anywhere.
 - `open-next.config.ts` is the bare `defineCloudflareConfig()` with **no
-  `incrementalCache` configured**, which is *why* ISR / `unstable_cache` /
+  `incrementalCache` configured**, which is _why_ ISR / `unstable_cache` /
   `revalidateTag` currently have nowhere to store.
 
 ---
@@ -172,12 +180,13 @@ against CPU.
 
 ### 1. Configure OpenNext incremental cache (the foundation) + edge-cache public pages
 
-This single piece of infra unlocks both full-page ISR *and* `unstable_cache`
+This single piece of infra unlocks both full-page ISR _and_ `unstable_cache`
 for widget data, with tag-based invalidation on writes (= the operator's "update
 when things get added"). Versions in this repo: `next@16.2.6`,
 `@opennextjs/cloudflare@^1.19.6`, `react@19`.
 
 **`open-next.config.ts`:**
+
 ```ts
 import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
@@ -189,13 +198,14 @@ export default defineCloudflareConfig({
     mode: "long-lived",
     shouldLazilyUpdateOnCacheHit: true,
   }),
-  tagCache: d1NextTagCache,          // small-site option; revalidateTag support
-  enableCacheInterception: true,     // serve cached routes WITHOUT booting NextServer — the CPU win
+  tagCache: d1NextTagCache, // small-site option; revalidateTag support
+  enableCacheInterception: true, // serve cached routes WITHOUT booting NextServer — the CPU win
 });
 ```
 
 **`wrangler.jsonc`** (add to base **and** the `production` / `staging` env
 blocks — this repo duplicates bindings per env):
+
 ```jsonc
 // R2 bucket for cached page payloads
 { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "ccau-next-cache" },
@@ -204,15 +214,18 @@ blocks — this repo duplicates bindings per env):
 // Self-reference service binding (required by the cache machinery)
 { "binding": "WORKER_SELF_REFERENCE", "service": "ccau" }   // "ccau-staging" in staging
 ```
+
 Create the bucket with `wrangler r2 bucket create ccau-next-cache` (and a
 staging bucket). The tag-cache D1 needs OpenNext's tag schema applied — see the
 OpenNext caching docs for the exact init.
 
 **Convert the clean public pages** from `force-dynamic` to time-based ISR:
+
 ```ts
 // remove: export const dynamic = "force-dynamic";
 export const revalidate = 300; // 5 min; stale-by-minutes is fine here
 ```
+
 Verified **clean (0 per-user calls)** and safe to convert now:
 `src/app/events/page.tsx`, `src/app/courses/page.tsx`,
 `src/app/cities/[slug]/page.tsx`, `src/app/for/[slug]/page.tsx`.
@@ -247,7 +260,7 @@ the compute each render does:
   render — each call previously re-issued a Clerk lookup + a fresh Prisma D1
   query. The real payoff is concentrated in the **RSC render** path
   (layout + page sharing scope), where `cache()`'s per-request scope is the
-  blessed Next pattern. **Caveat:** `getCurrentUser` is *also* reached from
+  blessed Next pattern. **Caveat:** `getCurrentUser` is _also_ reached from
   **route handlers** via `getCurrentUserWithPermissions` → `route-auth.ts`, and
   `cache()`'s scope semantics in route handlers on OpenNext/Cloudflare are not
   the same well-trodden path. If the scope were ever broader than one request
@@ -279,7 +292,7 @@ shared client leaks one request's D1 binding into another, producing the exact
 in `prisma.ts` warns about.
 
 Safe shape: memoize on a **per-request** key. The trap: `getCloudflareContext().env`
-may be a *stable per-isolate* object (shared across concurrent requests) rather
+may be a _stable per-isolate_ object (shared across concurrent requests) rather
 than per-request — keying a `WeakMap` on `env` would then behave like a global
 singleton and reintroduce the crash. The per-request object is the
 `ExecutionContext` (`ctx`), so key on that, and fall back to a fresh client when
@@ -290,7 +303,7 @@ no `ctx` is available (e.g. the workflow path, which sets only `env` via
 const clientByCtx = new WeakMap<object, PrismaClient>();
 async function createD1Client(): Promise<PrismaClient> {
   const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-  const cfCtx = (await getCloudflareContext({ async: true }));
+  const cfCtx = await getCloudflareContext({ async: true });
   const key = cfCtx.ctx as object | undefined;
   const env = cfCtx.env;
   if (key) {
@@ -302,10 +315,11 @@ async function createD1Client(): Promise<PrismaClient> {
   return client;
 }
 ```
+
 **Must be verified under concurrency** with `bun run preview` (open several
 pages in parallel and watch for the I/O-context error) before deploying. Also
 worth confirming the payoff is real: if the WASM engine instantiates lazily on
-first query rather than in the constructor, the saving from 16→1 *objects* is
+first query rather than in the constructor, the saving from 16→1 _objects_ is
 smaller than hoped. Keep this change isolated so it's easy to revert.
 
 ---
@@ -322,6 +336,7 @@ smaller than hoped. Keep this change isolated so it's easy to revert.
   the number this work exists to move.
 
 ## Risk notes
+
 - ISR on a page that secretly reads per-user state → cross-user data leak.
   Mitigated by the per-page audit + preview check above.
 - Prisma request-scoping done wrong → site-wide I/O-context crash. Mitigated by

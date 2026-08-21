@@ -71,7 +71,7 @@ ccau call createEvent --args '{"title":"Test","startTime":"2026-06-01T18:00:00Z"
 
 | Flag | Purpose |
 | --- | --- |
-| `-s, --server <url>` | Override the MCP server origin (default `https://claudecommunity.com.au`, also `CLAUDECOMMUNITY_CLI_URL`) |
+| `-s, --server <url>` | Override the MCP server origin (default `https://claudecommunity.com.au`, also `CLAUDECOMMUNITY_CLI_URL`). Local Start: `http://localhost:3001` |
 | `--no-browser` | Don't auto-open a browser; print the URL and read the pasted redirect URL from stdin (for SSH / headless) |
 | `--json` | Output the raw `tools/call` result as JSON instead of pretty text |
 

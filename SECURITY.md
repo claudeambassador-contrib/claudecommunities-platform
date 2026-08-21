@@ -2,6 +2,10 @@
 
 **Audit date:** 2026-02-27
 
+> Paths below describe the old Next.js + Prisma tree. The live app is now
+> `apps/web` (TanStack Start + Drizzle). Treat this file as the historical
+> finding list; verify remediations against the Start modules.
+
 Full security review of the codebase. Three parallel audits covered: API route security, auth/middleware/email, and client-side/XSS. Findings below are verified and prioritized. False positives have been filtered out.
 
 ## Status (last reviewed 2026-05-26, post Neon→D1 migration)
@@ -82,6 +86,7 @@ MEDIUM items (2026-06-30):
 ## CRITICAL — Fix Immediately
 
 ### 1. Events API has ZERO authentication
+
 **Files:** `src/app/api/events/route.ts` (POST), `src/app/api/events/[id]/route.ts` (PUT, DELETE)
 
 POST, PUT, and DELETE have no auth checks. Anyone on the internet can create, modify, or delete any event. GET is fine to leave public.
@@ -89,6 +94,7 @@ POST, PUT, and DELETE have no auth checks. Anyone on the internet can create, mo
 **Fix:** Add `getCurrentUser()` + admin role check to POST/PUT/DELETE handlers, matching the pattern in `src/app/api/admin/invite/route.ts`.
 
 ### 2. Banned users can still use the app
+
 **File:** `src/lib/auth.ts` — `getCurrentUser()` and `ensureUserInDb()`
 
 These functions return banned users without checking `isBanned`. A banned user with a valid Clerk session can still post, comment, like, RSVP, etc. across every authenticated endpoint.
@@ -96,6 +102,7 @@ These functions return banned users without checking `isBanned`. A banned user w
 **Fix:** After fetching the user, add `if (user?.isBanned) return null`. This single change propagates to all endpoints that use `getCurrentUser()`.
 
 ### 3. HTML injection in email templates
+
 **File:** `src/lib/resend.ts` — `getNotificationEmailHtml()`, `getInviteEmailHtml()`, `getCampaignEmailHtml()`
 
 User-provided values (`userName`, `title`, `message`, `personalMessage`) are interpolated directly into HTML templates without escaping. The speaker submission notification sends user-provided name/topic/bio into admin emails — an attacker could craft a submission with `<script>` or `<img onerror=...>` tags.
@@ -103,6 +110,7 @@ User-provided values (`userName`, `title`, `message`, `personalMessage`) are int
 **Fix:** Add an `escapeHtml()` helper to `resend.ts` and apply it to all interpolated user values in every template function.
 
 ### 4. XSS via `dangerouslySetInnerHTML` in LessonContent
+
 **File:** `src/components/LessonContent.tsx:65`
 
 Custom markdown parser uses regex replacements then renders with `dangerouslySetInnerHTML`. Only code blocks are escaped — headers, links, bold, italic, blockquotes all pass user content through raw. Content like `## <img src=x onerror=alert(1)>` executes JS.
@@ -116,6 +124,7 @@ Custom markdown parser uses regex replacements then renders with `dangerouslySet
 ## HIGH — Fix Soon
 
 ### 5. SVG uploads allowed (XSS vector)
+
 **File:** `src/app/api/upload/route.ts:12`
 
 `image/svg+xml` is in `ALLOWED_IMAGE_TYPES`. SVGs can contain `<script>` tags and JS event handlers. If rendered in an `<img>` tag this is safe, but if served directly or used in `dangerouslySetInnerHTML` it's an XSS vector.
@@ -123,6 +132,7 @@ Custom markdown parser uses regex replacements then renders with `dangerouslySet
 **Fix:** Remove `'image/svg+xml'` from `ALLOWED_IMAGE_TYPES`.
 
 ### 6. Upload PUT endpoint accepts user-controlled resourceType
+
 **File:** `src/app/api/upload/route.ts:129`
 
 `resourceType` comes from request body and is passed directly to the storage adapter. Setting `resourceType: 'raw'` bypasses type restrictions.
@@ -130,6 +140,7 @@ Custom markdown parser uses regex replacements then renders with `dangerouslySet
 **Fix:** Remove `resourceType` from destructured body; hardcode to `'image'` or determine from the data URI prefix.
 
 ### 7. No security headers
+
 **File:** `next.config.ts`
 
 No Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, or Referrer-Policy headers configured.
@@ -141,17 +152,21 @@ No Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, or Referrer
 ## MEDIUM — Address When Convenient
 
 ### 8. No rate limiting on public endpoints
+
 `/api/speakers` (POST), `/api/link-preview`, `/api/users/search`, `/api/events` — all lack rate limiting. Vulnerable to spam and resource exhaustion.
 
 ### 9. Link preview SSRF potential
+
 **File:** `src/app/api/link-preview/route.ts` — fetches arbitrary user-provided URLs. Could target internal services. Should block private IP ranges.
 
 ### 10. Event RSVP race condition
+
 **File:** `src/app/api/events/[id]/rsvp/route.ts` — `maxAttendees` capacity check is not atomic. Concurrent requests can exceed the limit.
 
 ---
 
 ## Verified Non-Issues (No Action Needed)
+
 - `.env` IS in `.gitignore` (`.env*` pattern) — secrets are not committed
 - Cron secret check in `/api/digest` correctly falls through to admin auth when env var is unset
 - All Prisma queries are parameterized — no SQL injection risk
@@ -171,6 +186,7 @@ No Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, or Referrer
 6. **`next.config.ts`** — Add security headers
 
 ## Verification
+
 1. Try `curl -X POST /api/events` without auth — should get 401
 2. Ban a test user — verify they can't access authenticated endpoints
 3. Submit speaker form with `<script>alert(1)</script>` in name — verify email shows escaped text
